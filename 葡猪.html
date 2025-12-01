@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>葡豬豬旅遊計畫 | 進階行程編輯</title>
     
-    <!-- PWA: iOS 主畫面圖示 -->
+    <!-- PWA: iOS 主畫面圖示 (已應要求加入) -->
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     
     <!-- Vue 3 -->
@@ -58,7 +58,7 @@
         /* 讓地圖在行動裝置上保持完整高度 */
         #map { height: 100%; }
         
-        /* 覆寫 Leaflet 預設陰影，讓標記更貼合現代 UI */
+        /* 覆寫 Leaflet 預設陰影, 讓標記更貼合現代 UI */
         .leaflet-marker-icon {
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
@@ -72,7 +72,7 @@
         <!-- Header -->
         <header class="bg-teal-600 text-white shrink-0 z-20 shadow-md transition-all duration-300">
             <div class="p-4 flex items-center justify-between pb-2">
-                <!-- *** 新增: 開始新行程按鈕 *** -->
+                <!-- 開始新行程按鈕 -->
                 <button v-if="roomId" @click="startNewTrip" class="text-white hover:text-teal-200 transition active:scale-95 p-1" title="開始新行程">
                     <i class="ph-bold ph-house text-xl"></i>
                 </button>
@@ -130,6 +130,41 @@
 
             <!-- 1. 行程表 (Plan) -->
             <div v-show="viewMode === 'plan' && !loading" class="p-4 pb-16">
+            
+                <!-- 航班資訊卡片 -->
+                <div class="bg-indigo-50 p-4 rounded-xl shadow-sm mb-4 border border-indigo-200">
+                    <div @click="showFlightDetails = !showFlightDetails" class="flex justify-between items-center cursor-pointer">
+                        <h3 class="font-bold text-indigo-700 flex items-center gap-2">
+                            <i class="ph-bold ph-airplane-takeoff"></i> 航班/交通資訊
+                        </h3>
+                        <i class="ph-bold ph-caret-down text-indigo-500 transition-transform" :class="{'rotate-180': showFlightDetails}"></i>
+                    </div>
+                    <!-- 可展開的詳細內容 -->
+                    <div v-show="showFlightDetails" class="mt-4 space-y-3 pt-3 border-t border-indigo-200">
+                        <!-- 去程 -->
+                        <div class="space-y-1 p-2 bg-white rounded-lg border border-indigo-100 shadow-sm">
+                            <div class="font-bold text-sm text-indigo-600 flex items-center gap-1">
+                                <i class="ph-bold ph-arrow-circle-right"></i> 去程 (Outbound)
+                            </div>
+                            <input v-model="currentTrip.travelDetails.outbound.flight" placeholder="航班號碼/車次" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0">
+                            <input v-model="currentTrip.travelDetails.outbound.time" placeholder="時間/航線 (TPE -> LIS)" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-slate-500">
+                            <input v-model="currentTrip.travelDetails.outbound.pnr" placeholder="PNR 訂位代號" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-orange-500">
+                            <input v-model="currentTrip.travelDetails.outbound.note" placeholder="備註 (如: 轉機資訊)" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-slate-400">
+                        </div>
+                        <!-- 回程 -->
+                        <div class="space-y-1 p-2 bg-white rounded-lg border border-indigo-100 shadow-sm">
+                            <div class="font-bold text-sm text-indigo-600 flex items-center gap-1">
+                                <i class="ph-bold ph-arrow-circle-left"></i> 回程 (Inbound)
+                            </div>
+                            <input v-model="currentTrip.travelDetails.inbound.flight" placeholder="航班號碼/車次" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0">
+                            <input v-model="currentTrip.travelDetails.inbound.time" placeholder="時間/航線 (LIS -> TPE)" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-slate-500">
+                            <input v-model="currentTrip.travelDetails.inbound.pnr" placeholder="PNR 訂位代號" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-orange-500">
+                            <input v-model="currentTrip.travelDetails.inbound.note" placeholder="備註 (如: 轉機資訊)" class="w-full text-xs border-none p-0 bg-transparent focus:ring-0 text-slate-400">
+                        </div>
+                    </div>
+                </div>
+                <!-- 航班資訊卡片結束 -->
+
                 <!-- 每日標題卡片 -->
                 <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100">
                     <div class="flex items-center gap-2 mb-1">
@@ -156,7 +191,7 @@
                                         <!-- 編輯時間功能 -->
                                         <input v-model="item.time" type="time" class="text-sm font-black bg-slate-100 rounded px-1 w-full text-center border-none text-slate-600 focus:ring-0">
                                     </div>
-                                    <!-- 編輯行程類型功能 (已更新) -->
+                                    <!-- 編輯行程類型功能 -->
                                     <select v-model="item.type" class="text-[10px] w-full bg-transparent border-none text-center p-0 cursor-pointer text-slate-400 focus:ring-0">
                                         <option value="spot">📍 景點</option>
                                         <option value="restaurant">🍴 餐廳</option>
@@ -180,7 +215,7 @@
                                             <input v-model="item.openingTime" class="w-20 bg-transparent border-none p-0 text-slate-600 focus:ring-0 text-xs" placeholder="開放時間">
                                         </div>
                                         
-                                        <!-- *** 歐元輸入與台幣顯示的區塊 (已修改) *** -->
+                                        <!-- 歐元輸入與台幣顯示的區塊 -->
                                         <!-- 歐元輸入 -->
                                         <div class="flex items-center gap-1 bg-slate-50 rounded px-1 py-0.5 border border-slate-200">
                                             <i class="ph-bold ph-ticket text-slate-400"></i>
@@ -200,8 +235,6 @@
                                             <span class="text-xs font-semibold text-green-700">{{ item.entryFee.toLocaleString() }}</span>
                                             <span class="text-[10px] text-green-400">NT$</span>
                                         </div>
-                                        <!-- *** 歐元輸入與台幣顯示的區塊結束 *** -->
-
                                     </div>
 
                                     <!-- 新增：推薦菜色/必點清單 (餐廳/咖啡廳限定) -->
@@ -230,7 +263,7 @@
 
             <!-- 2. 地圖 (Map) -->
             <div v-show="viewMode === 'map'" class="h-full flex flex-col relative">
-                <!-- 地圖搜尋欄 (新功能) -->
+                <!-- 地圖搜尋欄 -->
                 <div class="absolute top-4 left-4 right-4 z-[1000] p-1 bg-white rounded-xl shadow-xl flex gap-2">
                     <input v-model="mapSearchQuery" @keyup.enter="performMapSearch" placeholder="輸入地點關鍵字 (推薦使用英文)" class="flex-1 border-none text-sm px-2 py-1.5 focus:ring-0">
                     <button @click="performMapSearch" :disabled="!mapSearchQuery" class="shrink-0 bg-teal-600 text-white rounded-lg px-3 py-1.5 font-bold text-sm transition active:scale-95 disabled:opacity-50 hover:bg-teal-700">
@@ -247,7 +280,7 @@
                         <i v-else class="ph-bold ph-crosshair"></i>
                         {{ isLocating ? '定位中...' : '我的位置' }}
                     </button>
-                    <!-- 顯示行程地點 (保留按鈕，但現在會自動觸發) -->
+                    <!-- 顯示行程地點 -->
                     <button @click="plotPlannedLocations(true)" class="bg-white text-slate-600 px-4 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition hover:bg-slate-100">
                         <i class="ph-bold ph-map-pin"></i> 重新整理景點
                     </button>
@@ -362,7 +395,7 @@
 
         createApp({
             setup() {
-                // --- 新增：歐元到台幣的模擬匯率 ---
+                // --- 歐元到台幣的模擬匯率 ---
                 const MOCK_EXCHANGE_RATE_EUR_TO_TWD = 35.00; // 模擬匯率
                 
                 const viewMode = ref('plan');
@@ -371,29 +404,34 @@
                 const loading = ref(false);
                 const showRoomModal = ref(true);
                 const inputRoomId = ref('');
-                // 從 URL 參數讀取 room ID
                 const urlParams = new URLSearchParams(window.location.search);
                 const roomId = ref(urlParams.get('room') || ''); 
                 const isLocating = ref(false); 
+                
+                // 控制航班資訊卡片是否展開
+                const showFlightDetails = ref(false); 
                 
                 // 地圖搜尋狀態
                 const mapSearchQuery = ref('');
                 let map = null;
                 let userMarker = null;
-                let geocodingMarkers = L.layerGroup(); // 用於搜尋結果的標記
-                let tripMarkers = L.layerGroup();      // 用於行程地點的標記
+                let geocodingMarkers = L.layerGroup(); 
+                let tripMarkers = L.layerGroup();      
 
                 // 通用警報與確認框狀態
                 const alertMessage = ref('');
                 const confirmPrompt = ref('');
                 let confirmResolve = null;
                 
-                // *** 新增: 儲存 onValue 監聽器的取消函數 ***
                 let unsubscribe = null; 
 
-                // --- 更新後的預設行程結構：加入 euroFee ---
+                // --- 預設行程結構 ---
                 const defaultTrip = { 
                     destination: '里斯本 X 葡豬豬之旅', 
+                    travelDetails: {
+                        outbound: { flight: 'CX359', time: 'TPE 18:00 -> LIS 08:00', note: '轉機一次', pnr: 'ABCDEF' },
+                        inbound: { flight: 'TK1385', time: 'LIS 10:00 -> TPE 09:00', note: '土耳其航空', pnr: 'GHIJKL' },
+                    },
                     days: [
                         { fullDate: new Date().toISOString().split('T')[0], title: 'Day 1: 抵達與啟程', items: [
                             { 
@@ -421,7 +459,7 @@
                     expenses: [] 
                 };
                 const currentTrip = ref(JSON.parse(JSON.stringify(defaultTrip)));
-                const isRemoteUpdate = ref(false); // 避免在接收到 Firebase 數據時觸發本地寫入
+                const isRemoteUpdate = ref(false); 
 
                 // 計算屬性
                 const days = computed(() => currentTrip.value.days || []);
@@ -430,16 +468,16 @@
                 const totalExpense = computed(() => expenses.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
                 const newExpense = reactive({ item: '', amount: null, payer: '' });
                 
-                // 專門用於地圖繪製的響應式鍵 (優化地圖自動更新)
+                // 用來觸發地圖繪製的計算屬性 (當 viewMode 是 map 時，行程內容變動會更新此 key)
                 const plottingKey = computed(() => {
                     const items = currentDay.value.items || [];
-                    // 只有當視圖是 'map' 時，才計算與繪圖相關的數據串
-                    return viewMode.value === 'map' 
-                        ? items.map(i => `${i.location}|${i.activity}|${i.type}`).join(';') 
-                        : null;
+                    if (viewMode.value === 'map') {
+                         return items.map(i => `${i.location}|${i.activity}|${i.type}`).join(';'); 
+                    }
+                    return null; // 在非地圖模式下，不觸發監聽
                 });
 
-                // --- 模態框操作 (保持不變) ---
+                // --- 模態框操作 ---
                 const showAlert = (message) => {
                     alertMessage.value = message;
                 };
@@ -464,12 +502,11 @@
                 };
 
 
-                // --- Firebase 連線與同步 (已更新，加入取消監聽邏輯) ---
+                // --- Firebase 連線與同步 ---
                 const connectToFirebase = () => {
                     if (!roomId.value) return;
                     loading.value = true;
                     
-                    // 1. Detach previous listener if it exists
                     if (unsubscribe) {
                         unsubscribe(); 
                         unsubscribe = null;
@@ -477,7 +514,6 @@
 
                     const tripRef = dbRef(db, 'trips/' + roomId.value);
                     
-                    // 2. Attach new listener and save the function to unsubscribe
                     unsubscribe = onValue(tripRef, (snapshot) => {
                         isConnected.value = true;
                         const val = snapshot.val();
@@ -487,17 +523,14 @@
                             // 確保結構完整性
                             if(!val.days || val.days.length === 0) val.days = JSON.parse(JSON.stringify(defaultTrip.days));
                             if(!val.expenses) val.expenses = [];
+                            if(!val.travelDetails) val.travelDetails = JSON.parse(JSON.stringify(defaultTrip.travelDetails));
 
                             // 處理舊數據結構，確保所有 item 都有 euroFee 欄位 (數據遷移保護)
                             if (val.days) {
                                 val.days.forEach(day => {
                                     if (day.items) {
                                         day.items.forEach(item => {
-                                            // 如果沒有 euroFee 欄位，就從 entryFee 倒推或設為 0
-                                            if (typeof item.euroFee !== 'number') {
-                                                item.euroFee = 0; 
-                                            }
-                                            // 確保 entryFee 是存在的，作為 TWD 顯示值
+                                            if (typeof item.euroFee !== 'number') { item.euroFee = 0; }
                                             if (typeof item.entryFee !== 'number' || item.entryFee === 0 && item.euroFee > 0) {
                                                 item.entryFee = Math.round(item.euroFee * MOCK_EXCHANGE_RATE_EUR_TO_TWD);
                                             }
@@ -512,7 +545,6 @@
                             currentTrip.value = JSON.parse(JSON.stringify(defaultTrip));
                         }
                         
-                        // 確保當前選中的 Day Index 不超出範圍
                         if (currentDayIdx.value >= days.value.length) {
                              currentDayIdx.value = Math.max(0, days.value.length - 1);
                         }
@@ -524,7 +556,6 @@
                         isConnected.value = false;
                         loading.value = false;
                         console.error("Firebase 連線錯誤:", error.message);
-                        // 清除監聽器
                         if (unsubscribe) unsubscribe = null; 
                     });
                 };
@@ -532,40 +563,34 @@
                 // 深度監聽 currentTrip，當本地數據變化時，同步寫入 Firebase
                 watch(currentTrip, (newVal) => {
                     if (roomId.value && !loading.value && !isRemoteUpdate.value) {
-                        // 避免儲存時將空陣列變成 null
                         newVal.days = newVal.days || [];
                         newVal.expenses = newVal.expenses || [];
+                        newVal.travelDetails = newVal.travelDetails || JSON.parse(JSON.stringify(defaultTrip.travelDetails));
                         
                         const tripRef = dbRef(db, 'trips/' + roomId.value);
                         set(tripRef, newVal).catch(e => console.error("Firebase 寫入失敗:", e));
                     }
                 }, { deep: true });
 
-                // --- 房間管理 (新增 startNewTrip) ---
-                
-                // *** 新增: 離開當前行程並開始新的流程 ***
+                // --- 房間管理 ---
                 const startNewTrip = async () => {
                     const result = await showConfirm('確定要離開目前的行程並開始新的行程嗎？ (您隨時可以透過行程 ID 重新加入)');
                     if (result) {
-                        // 1. 取消目前的 Firebase 監聽
                         if (unsubscribe) {
                             unsubscribe();
                             unsubscribe = null;
                         }
                         
-                        // 2. 清除 URL 參數
                         const url = new URL(window.location); 
                         url.searchParams.delete('room');
                         window.history.pushState({}, '', url); 
 
-                        // 3. 重設所有狀態
                         roomId.value = '';
                         inputRoomId.value = '';
                         currentTrip.value = JSON.parse(JSON.stringify(defaultTrip));
                         currentDayIdx.value = 0;
                         isConnected.value = false;
 
-                        // 4. 顯示模態框讓使用者選擇新行程
                         showRoomModal.value = true;
                     }
                 };
@@ -580,7 +605,6 @@
                     finalizeJoin(); 
                 };
                 const finalizeJoin = () => { 
-                    // 更新 URL 參數
                     const url = new URL(window.location); 
                     url.searchParams.set('room', roomId.value); 
                     window.history.pushState({}, '', url); 
@@ -594,7 +618,7 @@
                     showAlert("行程連結已複製！分享給旅伴即可共同編輯。"); 
                 };
                 
-                // --- 行程操作 (保持不變) ---
+                // --- 行程操作 ---
                 const addDay = () => {
                     const last = days.value[days.value.length-1]; 
                     const next = new Date(last ? last.fullDate : new Date()); 
@@ -604,7 +628,6 @@
                     currentDayIdx.value = days.value.length - 1;
                 };
 
-                // --- 更新 addItem 邏輯，加入新欄位 ---
                 const addItem = () => { 
                     if(!currentDay.value.items) currentDay.value.items = []; 
                     currentDay.value.items.push({ 
@@ -614,14 +637,13 @@
                         location: '', 
                         note: '',
                         openingTime: '', 
-                        euroFee: 0,      // 新欄位: 歐元
-                        entryFee: 0,     // Derived TWD fee
+                        euroFee: 0,      
+                        entryFee: 0,     
                         recommendedDishes: '' 
                     }); 
                 };
                 
                 const confirmAndDeleteItem = async (idx) => {
-                    // 阻止事件冒泡到父層
                     event.stopPropagation(); 
                     const item = currentDay.value.items[idx];
                     const result = await showConfirm(`確定要刪除行程 "${item.activity}" 嗎？`);
@@ -638,24 +660,19 @@
                     }
                 };
                 
-                // --- 新增：歐元換算台幣函數 ---
+                // --- 歐元換算台幣函數 ---
                 const updateTwdFee = (item) => {
-                    // 確保輸入是有效數字且非負
                     let euro = (Number(item.euroFee) || 0);
                     if (euro < 0) euro = 0;
-
-                    // 限制小數點位數並更新 euroFee
                     item.euroFee = parseFloat(euro.toFixed(2));
-                    
-                    // 計算並四捨五入到整數，更新 entryFee (TWD)
                     item.entryFee = Math.round(item.euroFee * MOCK_EXCHANGE_RATE_EUR_TO_TWD);
                 };
 
                 const getTypeColor = (type) => { 
                     return ({ 
                         spot: 'bg-teal-500', 
-                        restaurant: 'bg-orange-500', // 新名稱
-                        cafe: 'bg-yellow-500',       // 新類型
+                        restaurant: 'bg-orange-500', 
+                        cafe: 'bg-yellow-500',       
                         shop: 'bg-purple-500', 
                         transport: 'bg-blue-500', 
                         hotel: 'bg-indigo-500' 
@@ -665,14 +682,14 @@
                 const formatDate = (dateStr) => {
                     if (!dateStr) return '';
                     try {
-                        const date = new Date(dateStr + 'T00:00:00'); // 避免時區問題
+                        const date = new Date(dateStr + 'T00:00:00'); 
                         return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' });
                     } catch {
                         return dateStr;
                     }
                 };
                 
-                // --- 分帳操作 (保持不變) ---
+                // --- 分帳操作 ---
                 const addExpense = () => { 
                     if(newExpense.item && newExpense.amount > 0) { 
                         expenses.value.unshift({ 
@@ -688,19 +705,15 @@
                     }
                 };
                 
-                // --- 地圖與定位 (保持不變) ---
+                // --- 地圖與定位 (已修復標註邏輯) ---
                 
                 const initMap = () => {
-                    if (viewMode.value !== 'map') return;
-                    
                     const mapContainer = document.getElementById('map');
-                    if (!mapContainer) return;
+                    if (!mapContainer || viewMode.value !== 'map') return;
 
-                    // 如果地圖已存在，則先移除
                     if (map) { map.remove(); map = null; }
                     
-                    // 預設中心：里斯本 (38.7223, -9.1393)
-                    const defaultLat = 38.7223;
+                    const defaultLat = 38.7223; // Lisbon default
                     const defaultLng = -9.1393;
                     
                     map = L.map('map').setView([defaultLat, defaultLng], 13); 
@@ -709,7 +722,6 @@
                         maxZoom: 19,
                     }).addTo(map);
 
-                    // 確保 Layer Groups 被加入
                     geocodingMarkers.clearLayers();
                     tripMarkers.clearLayers();
                     geocodingMarkers.addTo(map);
@@ -719,13 +731,11 @@
                          userMarker.addTo(map);
                     }
                     
-                    // 首次地圖渲染完成後，強制地圖計算其尺寸
                     map.whenReady(() => {
                         map.invalidateSize();
                     });
                 };
 
-                // 核心：獲取真實定位
                 const locateUser = () => {
                     if (!navigator.geolocation) return showAlert("您的瀏覽器不支援定位功能。");
                     isLocating.value = true;
@@ -738,7 +748,6 @@
                             map.flyTo([latitude, longitude], 16);
 
                             if(userMarker) map.removeLayer(userMarker);
-                            // 自定義 GPS 標記
                             const myIcon = L.divIcon({ className: 'gps-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
                             userMarker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map).bindPopup("我現在的位置").openPopup();
                             
@@ -758,11 +767,10 @@
                     );
                 };
                 
-                // 核心：地理編碼服務
                 const geocodeLocation = async (query) => {
                     if (!query) return;
                     
-                    // 使用 Nominatim Geocoding Service。設定 accept-language=en 優先取得英文結果
+                    // 使用 OpenStreetMap 的 Nominatim 服務進行地理編碼
                     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en`;
                     
                     try {
@@ -779,13 +787,12 @@
                     }
                 };
 
-                // 繪製行程地點
                 const plotPlannedLocations = async (shouldAlert = true) => {
-                    if (!map) return; // 地圖未初始化則退出
+                    if (!map) return; 
                     
-                    tripMarkers.clearLayers(); // 清除舊的行程標記
+                    tripMarkers.clearLayers(); // 清除上次的行程標記
                     
-                    // 找出當天所有不重複且非空的地點關鍵字
+                    // 取得當前所有地點，並去重 (如果兩個行程有相同地點，只查一次座標)
                     const locationsToGeocode = currentDay.value.items
                         .map(item => ({ location: item.location, activity: item.activity, type: item.type }))
                         .filter(item => item.location && item.location.trim())
@@ -804,9 +811,19 @@
                     loading.value = true;
                     let bounds = [];
                     let locationsFound = 0;
+                    
+                    // 用於緩存已查詢的座標
+                    const geocodeCache = {};
 
                     for (const item of locationsToGeocode) {
-                        const results = await geocodeLocation(item.location);
+                        let results = [];
+                        
+                        if (geocodeCache[item.location]) {
+                            results = geocodeCache[item.location];
+                        } else {
+                            results = await geocodeLocation(item.location);
+                            geocodeCache[item.location] = results;
+                        }
                         
                         if (results && results.length > 0) {
                             const firstResult = results[0];
@@ -820,9 +837,8 @@
                                 </div>
                             `;
                             
-                            // 自定義標記圖標
-                            const color = getTypeColor(item.type).replace('bg-', 'bg-');
-                            const markerHtml = `<div class="p-1 rounded-full text-white shadow-md ${color}"><i class="ph-bold ph-map-pin-line text-lg"></i></div>`;
+                            const colorClass = getTypeColor(item.type).replace('bg-', '');
+                            const markerHtml = `<div class="p-1 rounded-full text-white shadow-md bg-${colorClass}"><i class="ph-bold ph-map-pin-line text-lg"></i></div>`;
                             const customIcon = L.divIcon({ html: markerHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 24] });
 
                             L.marker([lat, lng], {icon: customIcon})
@@ -844,13 +860,12 @@
                     }
                 };
                 
-                // 獨立地圖搜尋
                 const performMapSearch = async () => {
                     if (!mapSearchQuery.value) return;
                     if (!map) initMap();
                     
                     loading.value = true;
-                    geocodingMarkers.clearLayers(); // 清除舊的搜尋結果標記
+                    geocodingMarkers.clearLayers(); 
                     
                     const results = await geocodeLocation(mapSearchQuery.value);
                     
@@ -861,7 +876,6 @@
                         
                         map.flyTo([lat, lng], 16);
 
-                        // 搜尋結果的自定義標記
                         const markerHtml = `<div class="p-1 rounded-full text-white shadow-md bg-pink-500"><i class="ph-bold ph-magnifying-glass-plus text-lg"></i></div>`;
                         const customIcon = L.divIcon({ html: markerHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 24] });
 
@@ -879,25 +893,39 @@
 
                 // --- 監聽器與生命週期 ---
                 
-                // 監聽器 1: 切換到地圖模式時初始化地圖
+                // 監聽器 1: 切換到地圖模式時，初始化地圖並繪製地點 (已修復)
                 watch(viewMode, (v) => { 
                     if(v==='map') nextTick(() => {
                         initMap();
+                        // 確保地圖初始化後，立即繪製行程地點
+                        plotPlannedLocations(false);
                     }); 
                 });
                 
-                // 監聽器 2: 繪製邏輯 (當地圖可見且景點資料變化時，自動重繪)
+                // 監聽器 2: 行程內容或日期改變時，重新繪製地圖
                 watch(plottingKey, (newKey) => {
+                    // 只有在地圖模式且地圖已初始化時才執行繪製
                     if (viewMode.value === 'map' && map) {
-                        // 使用微小延遲確保 DOM 和 Leaflet 穩定性
+                        // 給 Leaflet 一點時間處理可能的 DOM 變動
                         setTimeout(() => {
                             if (map) {
-                                 map.invalidateSize(); // 確保地圖尺寸正確
+                                 map.invalidateSize(); 
                                  plotPlannedLocations(false);
                             }
                         }, 50); 
                     }
-                }, { immediate: false });
+                }, { immediate: false }); // 避免在初始化時運行，由 watch(viewMode) 處理
+
+                // 監聽器 3: 每日索引改變時，也會觸發 plottingKey 變動，自動更新地圖
+                watch(currentDayIdx, () => {
+                    if (viewMode.value === 'map') {
+                        // 只需要確保 viewMode 監聽器會處理它
+                        if (map) {
+                             plotPlannedLocations(false);
+                        }
+                    }
+                });
+
 
                 onMounted(() => { 
                     if (roomId.value) { 
@@ -911,12 +939,12 @@
                 return {
                     viewMode, currentTrip, currentDayIdx, days, currentDay, expenses, totalExpense, newExpense,
                     loading, isConnected, showRoomModal, inputRoomId, roomId, isLocating, alertMessage, confirmPrompt,
+                    showFlightDetails, 
                     // 地圖搜尋相關
                     mapSearchQuery, performMapSearch, plotPlannedLocations,
                     // 常用函數
                     createNewRoom, joinRoom, copyShareLink, addDay, addItem, removeCurrentDay: confirmAndDeleteDay, addExpense, 
                     getTypeColor, initMap, locateUser, formatDate, closeAlert, confirmProceed, confirmCancel, confirmAndDeleteItem,
-                    // 新增功能
                     updateTwdFee, startNewTrip,
                 };
             }
@@ -924,4 +952,5 @@
     </script>
 </body>
 </html>
+
 
