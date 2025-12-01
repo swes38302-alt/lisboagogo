@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
-    <meta charset="UTF-8">
+	<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>葡豬豬旅遊計畫 | 智慧提示版</title>
+    <title>旅遊計畫 | 通用版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -37,11 +37,8 @@
             70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
             100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
-        
-        /* 錯誤提示彈出動畫 */
         .slide-down-enter-active, .slide-down-leave-active { transition: all 0.3s ease-out; }
         .slide-down-enter-from, .slide-down-leave-to { transform: translateY(-100%); opacity: 0; }
-        
         input:focus, select:focus { outline: none; }
     </style>
 </head>
@@ -56,7 +53,7 @@
                     <div class="flex items-center gap-2 mb-1">
                          <div v-if="isConnected" class="w-2.5 h-2.5 bg-green-400 rounded-full sync-pulse border border-white" title="已連線"></div>
                          <div v-else class="w-2.5 h-2.5 bg-red-400 rounded-full border border-white" title="離線/儲存中"></div>
-                         <input v-model="currentTrip.destination" class="bg-transparent border-none text-lg font-bold text-white placeholder-teal-200 w-full p-0 focus:ring-0 truncate leading-tight" placeholder="旅程名稱...">
+                         <input v-model="currentTrip.destination" class="bg-transparent border-none text-lg font-bold text-white placeholder-teal-200 w-full p-0 focus:ring-0 truncate leading-tight" placeholder="輸入國家/城市...">
                     </div>
                     <button @click="copyShareLink" class="text-[10px] bg-teal-800/40 px-2 py-0.5 rounded text-teal-100 self-start flex items-center gap-1">
                         <i class="ph-bold ph-users"></i> ID: {{ roomId }} (複製)
@@ -67,7 +64,10 @@
                         <i :class="['ph-duotone', weatherDisplay.icon, 'text-xl']"></i>
                         <span class="text-lg font-bold font-mono">{{ weatherDisplay.temp }}</span>
                     </div>
-                    <div class="text-[10px] text-teal-100 flex items-center gap-1 justify-end mt-0.5 opacity-80">{{ weatherDisplay.label }}</div>
+                    <!-- 天氣地點改為動態顯示 -->
+                    <div class="text-[10px] text-teal-100 flex items-center gap-1 justify-end mt-0.5 opacity-80 max-w-[80px] truncate">
+                        {{ currentTrip.destination || '目的地' }}
+                    </div>
                 </div>
             </div>
 
@@ -96,7 +96,7 @@
             
             <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-50">
                 <i class="ph-duotone ph-spinner animate-spin text-4xl text-teal-500 mb-3"></i>
-                <p class="text-sm font-medium text-slate-500">正在同步雲端資料...</p>
+                <p class="text-sm font-medium text-slate-500">正在前往新目的地...</p>
             </div>
 
             <!-- 1. 行程表 View -->
@@ -107,7 +107,7 @@
                             <i class="ph-bold ph-calendar-blank text-teal-500"></i>
                             <input type="date" v-model="currentDay.fullDate" class="text-xs text-slate-500 bg-transparent border-none p-0">
                         </div>
-                        <input v-model="currentDay.title" class="text-base font-bold w-full border-none p-0 placeholder-slate-300 bg-transparent" placeholder="當日主題 (例如: 波多一日遊)">
+                        <input v-model="currentDay.title" class="text-base font-bold w-full border-none p-0 placeholder-slate-300 bg-transparent" placeholder="當日主題...">
                     </div>
                 </div>
 
@@ -122,11 +122,11 @@
                                 <div class="flex flex-col items-center w-1/3">
                                     <input v-model="currentDay.flight.startTime" type="time" class="text-2xl font-black bg-transparent border-b border-white/30 w-full text-center text-white focus:border-white font-mono p-0">
                                     <div class="text-[9px] opacity-60 mt-1">起飛</div>
-                                    <input v-model="currentDay.flight.startAirport" class="text-sm font-bold bg-transparent border-none text-center w-full text-teal-100 uppercase p-0" placeholder="TPE">
+                                    <input v-model="currentDay.flight.startAirport" class="text-sm font-bold bg-transparent border-none text-center w-full text-teal-100 uppercase p-0" placeholder="AAA">
                                 </div>
                                 <div class="flex flex-col items-center justify-center w-1/3 px-2">
                                     <i class="ph-fill ph-airplane text-2xl mb-1 transform rotate-90"></i>
-                                    <input v-model="currentDay.flight.number" class="text-[10px] font-mono tracking-widest opacity-80 bg-transparent border-none text-center w-full text-white uppercase p-0" placeholder="BR198">
+                                    <input v-model="currentDay.flight.number" class="text-[10px] font-mono tracking-widest opacity-80 bg-transparent border-none text-center w-full text-white uppercase p-0" placeholder="航班">
                                 </div>
                                 <div class="flex flex-col items-center w-1/3">
                                     <input v-model="currentDay.flight.endTime" type="time" class="text-2xl font-black bg-transparent border-b border-white/30 w-full text-center text-white focus:border-white font-mono p-0">
@@ -136,7 +136,7 @@
                                             <option value="1" class="text-slate-800">+1天</option>
                                         </select>
                                     </div>
-                                    <input v-model="currentDay.flight.endAirport" class="text-sm font-bold bg-transparent border-none text-center w-full text-teal-100 uppercase p-0" placeholder="LIS">
+                                    <input v-model="currentDay.flight.endAirport" class="text-sm font-bold bg-transparent border-none text-center w-full text-teal-100 uppercase p-0" placeholder="BBB">
                                 </div>
                             </div>
                         </div>
@@ -165,12 +165,10 @@
                                 <div class="flex-1 min-w-0 space-y-1 pt-1">
                                     <input v-model="item.activity" class="w-full font-bold text-sm border-none p-0 text-slate-800 placeholder-slate-300 bg-transparent" placeholder="行程名稱">
                                     <div class="flex items-center gap-1 bg-slate-50 rounded px-1.5 py-1" :class="{'border border-teal-200': item.lat, 'border border-red-200 bg-red-50': item.searchStatus === 'failed'}">
-                                         <!-- 狀態圖示：成功=綠, 失敗=紅, 未知=灰 -->
                                          <i v-if="item.lat" class="ph-bold ph-check-circle text-teal-500 text-xs" title="已定位"></i>
                                          <i v-else-if="item.searchStatus === 'failed'" class="ph-bold ph-warning-circle text-red-500 text-xs" title="找不到"></i>
                                          <i v-else class="ph-fill ph-map-pin text-xs text-slate-300"></i>
-                                         
-                                         <input v-model="item.location" @change="markLocationDirty(item)" class="flex-1 text-xs text-slate-600 border-none p-0 bg-transparent truncate" :class="{'text-red-500': item.searchStatus === 'failed'}" placeholder="輸入地點 (例如: 聖胡斯塔電梯)">
+                                         <input v-model="item.location" @change="markLocationDirty(item)" class="flex-1 text-xs text-slate-600 border-none p-0 bg-transparent truncate" :class="{'text-red-500': item.searchStatus === 'failed'}" placeholder="例如: 東京鐵塔">
                                     </div>
                                     <input v-model="item.note" class="w-full text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border-none placeholder-orange-300" placeholder="備註...">
                                 </div>
@@ -186,16 +184,16 @@
 
             <!-- 2. 地圖 View (包含智慧提示) -->
             <div v-show="viewMode === 'map'" class="h-full flex flex-col relative text-center">
-                <!-- 錯誤通知視窗 -->
+                
                 <transition name="slide-down">
                     <div v-if="errorMsg" class="absolute top-0 left-0 right-0 bg-red-500 text-white z-[2000] p-3 text-left shadow-lg">
                         <div class="flex justify-between items-start">
                              <div class="flex gap-2">
                                 <i class="ph-bold ph-warning text-xl shrink-0 mt-0.5"></i>
                                 <div class="text-xs">
-                                    <p class="font-bold mb-1 text-sm">找不到以下地點：</p>
+                                    <p class="font-bold mb-1 text-sm">找不到地點：</p>
                                     <p>{{ errorMsg }}</p>
-                                    <p class="mt-1 opacity-80 text-[10px]">💡 建議：試著縮短關鍵字 (如: "葡萄牙里斯本貝倫塔" 改為 "貝倫塔")</p>
+                                    <p class="mt-1 opacity-80 text-[10px]">💡 請嘗試使用當地語言或檢查拼字</p>
                                 </div>
                              </div>
                              <button @click="errorMsg = ''" class="text-white/80 hover:text-white"><i class="ph-bold ph-x text-lg"></i></button>
@@ -219,13 +217,12 @@
 
             <!-- 3. 分帳 View -->
             <div v-show="viewMode === 'money'" class="p-4 pb-32">
-                 <!-- (同之前版本，省略重複代碼保持清爽) -->
                  <div class="bg-slate-800 text-white rounded-2xl p-6 shadow-lg mb-4 text-center relative overflow-hidden"><div class="relative z-10"><div class="text-xs text-slate-400 mb-1">總支出 Total Expense</div><div class="text-3xl font-bold font-mono tracking-tight">NT$ {{ totalExpense.toLocaleString() }}</div></div><i class="ph-duotone ph-coins absolute -right-6 -bottom-6 text-8xl text-white/5 rotate-12"></i></div><div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-6"><div class="text-xs font-bold text-slate-400 mb-2 ml-1">快速記帳</div><div class="flex gap-2 mb-2"><input v-model="newExpense.item" placeholder="項目" class="flex-[2] bg-slate-100 border-none rounded-lg px-3 py-2 text-sm"><input v-model="newExpense.payer" placeholder="誰付?" class="flex-1 bg-slate-100 border-none rounded-lg px-3 py-2 text-sm text-center"></div><div class="flex gap-2"><input v-model.number="newExpense.amount" type="number" placeholder="金額" class="flex-1 bg-slate-100 border-none rounded-lg pl-3 pr-3 py-2 text-sm font-mono"><button @click="addExpense" class="bg-teal-600 text-white rounded-lg px-4 py-2 font-bold text-sm hover:bg-teal-700"><i class="ph-bold ph-plus"></i></button></div></div><div v-if="expenses.length > 0" class="space-y-2"><div v-for="(exp, idx) in expenses" :key="idx" class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">{{ exp.payer ? exp.payer[0] : '?' }}</div><div class="flex flex-col"><span class="font-bold text-slate-700 text-sm">{{ exp.item }}</span><span class="text-[10px] text-slate-400">{{ exp.date }}</span></div></div><div class="flex items-center gap-3"><span class="font-bold font-mono text-slate-700">NT$ {{ exp.amount }}</span><button @click="expenses.splice(idx, 1)" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-x"></i></button></div></div></div>
             </div>
 
             <!-- 4. 翻譯 View -->
             <div v-show="viewMode === 'translate'" class="p-6 h-full flex flex-col items-center pb-32 overflow-y-auto">
-                 <div class="text-center mb-8 mt-4"><h2 class="text-2xl font-bold text-slate-800 mb-2">翻譯工具箱</h2><p class="text-sm text-slate-400">選擇翻譯模式</p></div><div class="w-full space-y-4"><a href="https://translate.google.com/?op=images" target="_blank" class="block w-full group"><div class="bg-gradient-to-br from-orange-400 to-red-500 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden"><div class="relative z-10 flex items-center justify-between"><div><div class="text-xs opacity-80 mb-1">相機</div><div class="text-xl font-bold">📷 照相翻譯</div></div><i class="ph-bold ph-camera text-3xl opacity-60"></i></div></div></a><a href="https://translate.google.com/?sl=zh-TW&tl=pt&op=translate" target="_blank" class="block w-full group"><div class="bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden"><div class="relative z-10 flex items-center justify-between"><div><div class="text-xs opacity-80 mb-1">中文 -> 葡文</div><div class="text-xl font-bold">🗣️ 對話翻譯</div></div><i class="ph-bold ph-microphone text-3xl opacity-60"></i></div></div></a></div>
+                 <div class="text-center mb-8 mt-4"><h2 class="text-2xl font-bold text-slate-800 mb-2">翻譯工具箱</h2><p class="text-sm text-slate-400">選擇翻譯模式</p></div><div class="w-full space-y-4"><a href="https://translate.google.com/?op=images" target="_blank" class="block w-full group"><div class="bg-gradient-to-br from-orange-400 to-red-500 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden"><div class="relative z-10 flex items-center justify-between"><div><div class="text-xs opacity-80 mb-1">相機</div><div class="text-xl font-bold">📷 照相翻譯</div></div><i class="ph-bold ph-camera text-3xl opacity-60"></i></div></div></a><a href="https://translate.google.com/?sl=zh-TW&op=translate" target="_blank" class="block w-full group"><div class="bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden"><div class="relative z-10 flex items-center justify-between"><div><div class="text-xs opacity-80 mb-1">自動偵測</div><div class="text-xl font-bold">🗣️ 對話翻譯</div></div><i class="ph-bold ph-microphone text-3xl opacity-60"></i></div></div></a></div>
             </div>
         </main>
 
@@ -233,12 +230,12 @@
         <div v-if="showRoomModal" class="fixed inset-0 bg-slate-900/80 z-[999] flex items-center justify-center p-6 backdrop-blur-sm">
             <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl">
                 <div class="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-6"><i class="ph-duotone ph-airplane-tilt text-4xl text-teal-600"></i></div>
-                <h2 class="text-2xl font-black text-slate-800 mb-2">葡豬豬旅遊計畫</h2>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">旅遊計畫</h2>
                 <div class="space-y-3">
-                    <input v-model="inputRoomId" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-center font-mono text-lg uppercase placeholder-slate-400" placeholder="輸入房間 ID">
-                    <button @click="joinRoom" class="w-full bg-teal-600 text-white font-bold py-3 rounded-xl shadow-lg">進入行程</button>
+                    <input v-model="inputRoomId" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-center font-mono text-lg uppercase placeholder-slate-400" placeholder="輸入行程 ID">
+                    <button @click="joinRoom" class="w-full bg-teal-600 text-white font-bold py-3 rounded-xl shadow-lg">進入舊行程</button>
                     <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-slate-200"></div><span class="flex-shrink mx-4 text-slate-300 text-xs">或</span><div class="flex-grow border-t border-slate-200"></div></div>
-                    <button @click="createNewRoom" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg">建立新行程</button>
+                    <button @click="createNewRoom" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl shadow-lg">規劃新旅程 (去不同國家)</button>
                 </div>
             </div>
         </div>
@@ -274,10 +271,11 @@
                 const roomId = ref(new URLSearchParams(window.location.search).get('room'));
                 const isLocating = ref(false);
                 const isGeocoding = ref(false); 
-                const geocodeProgress = ref('0/0'); // 顯示進度
-                const errorMsg = ref(''); // 錯誤訊息
+                const geocodeProgress = ref('0/0');
+                const errorMsg = ref(''); 
 
-                const defaultTrip = { destination: '新旅程', days: [{ fullDate: new Date().toISOString().split('T')[0], title: '', items: [], flight: null }], expenses: [] };
+                // 預設值現在很乾淨，沒有寫死任何國家
+                const defaultTrip = { destination: '我的旅程', days: [{ fullDate: new Date().toISOString().split('T')[0], title: '', items: [], flight: null }], expenses: [] };
                 const currentTrip = ref(JSON.parse(JSON.stringify(defaultTrip)));
                 const isRemoteUpdate = ref(false);
 
@@ -286,7 +284,12 @@
                 const expenses = computed(() => currentTrip.value.expenses || []);
                 const totalExpense = computed(() => expenses.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
                 const newExpense = reactive({ item: '', amount: null, payer: '' });
-                const weatherDisplay = computed(() => ({ temp: '18°C', icon: 'ph-cloud-sun', label: '葡萄牙 (Portugal)' }));
+                const weatherDisplay = computed(() => ({ temp: '🌤️', icon: 'ph-sun', label: '' }));
+
+                // Browser Title Logic
+                watch(() => currentTrip.value.destination, (newVal) => {
+                    document.title = (newVal || '旅遊計畫') + ' | 行程表';
+                });
 
                 // Firebase
                 const connectToFirebase = () => {
@@ -326,13 +329,13 @@
                 const removeCurrentDay = () => { if(days.value.length<=1) return alert('不可全刪'); if(confirm('刪除?')) { days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } }
                 const addExpense = () => { if(newExpense.item && newExpense.amount) { expenses.value.unshift({ ...newExpense, date: new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'}) }); newExpense.item = ''; newExpense.amount = null; } };
                 const getTypeColor = (type) => ({ spot: 'bg-teal-500', food: 'bg-orange-500', shop: 'bg-purple-500', transport: 'bg-blue-500', hotel: 'bg-indigo-500' })[type] || 'bg-slate-400';
-                const toggleFlightCard = () => { if (currentDay.value.flight) { currentDay.value.flight = null; } else { currentDay.value.flight = { startTime: '10:00', startAirport: 'TPE', endTime: '14:00', endAirport: 'LIS', number: '', arrivalOffset: 0 }; } };
+                const toggleFlightCard = () => { if (currentDay.value.flight) { currentDay.value.flight = null; } else { currentDay.value.flight = { startTime: '10:00', startAirport: 'AAA', endTime: '14:00', endAirport: 'BBB', number: '', arrivalOffset: 0 }; } };
 
                 // Map & Geocoding Logic
                 const markLocationDirty = (item) => { 
                     item.lat = null; 
                     item.lng = null; 
-                    item.searchStatus = 'pending'; // 狀態重置
+                    item.searchStatus = 'pending';
                 };
                 
                 const fetchCoordinates = async (query) => {
@@ -347,27 +350,29 @@
                 let map = null; let userMarker = null;
                 const initMap = async () => {
                     if (map) { map.remove(); map = null; }
-                    map = L.map('map').setView([38.722, -9.139], 13);
+                    
+                    // ★★★ 地圖預設值的改進 ★★★
+                    // 如果還沒有任何點，先顯示全世界，或者預設一個中性區域
+                    // 這裡改為: 預設顯示 世界地圖 (Zoom 2)
+                    map = L.map('map').setView([20, 0], 2); 
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
 
                     const items = currentDay.value.items || [];
                     const bounds = [];
                     const itemsToSearch = [];
                     
-                    // 1. 先畫現有的，並收集需要搜尋的
                     items.forEach((item, idx) => {
                         if (item.lat && item.lng) {
                             L.marker([item.lat, item.lng]).addTo(map).bindPopup(`<b>${idx+1}. ${item.activity}</b><br>${item.location}`);
                             bounds.push([item.lat, item.lng]);
-                        } else if (item.location && item.searchStatus !== 'failed') { // 失敗過的不要一直重試，除非修改過文字
+                        } else if (item.location && item.searchStatus !== 'failed') { 
                              itemsToSearch.push({item, idx});
                         }
                     });
 
-                    // 2. 處理搜尋
                     if (itemsToSearch.length > 0) {
                         isGeocoding.value = true;
-                        errorMsg.value = ''; // 清空舊錯誤
+                        errorMsg.value = '';
                         const failedNames = [];
                         
                         for (let i = 0; i < itemsToSearch.length; i++) {
@@ -382,18 +387,19 @@
                                 L.marker([coords.lat, coords.lng]).addTo(map).bindPopup(`<b>${idx+1}. ${item.activity}</b><br>${item.location}`);
                                 bounds.push([coords.lat, coords.lng]);
                             } else {
-                                item.searchStatus = 'failed'; // 標記為失敗
+                                item.searchStatus = 'failed'; 
                                 failedNames.push(item.location);
                             }
-                            await new Promise(r => setTimeout(r, 800)); // Rate limit
+                            await new Promise(r => setTimeout(r, 800)); 
                         }
                         
                         if (failedNames.length > 0) {
-                            errorMsg.value = failedNames.join(', '); // 顯示錯誤提示
+                            errorMsg.value = failedNames.join(', '); 
                         }
                         isGeocoding.value = false;
                     }
 
+                    // 如果有標記點，縮放過去；如果沒有，就保持在世界地圖
                     if(bounds.length > 0) map.fitBounds(bounds, {padding: [50,50]});
                 };
 
@@ -417,7 +423,7 @@
                 return {
                     viewMode, currentTrip, currentDayIdx, days, currentDay, expenses, totalExpense, newExpense, weatherDisplay,
                     loading, isConnected, showRoomModal, inputRoomId, roomId, isLocating, 
-                    isGeocoding, geocodeProgress, errorMsg, // 新增的狀態
+                    isGeocoding, geocodeProgress, errorMsg,
                     createNewRoom, joinRoom, copyShareLink, addDay, addItem, removeCurrentDay, addExpense, getTypeColor, 
                     initMap, locateUser, toggleFlightCard, markLocationDirty
                 };
