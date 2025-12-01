@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <!-- 確保手機裝置的響應式設計和 PWA 體驗 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>葡豬豬旅遊計畫 | 進階行程編輯</title>
+    
+    <!-- PWA: iOS 主畫面圖示 -->
+    <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -69,8 +71,15 @@
 
         <!-- Header -->
         <header class="bg-teal-600 text-white shrink-0 z-20 shadow-md transition-all duration-300">
-            <div class="p-4 flex justify-between items-center pb-2">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
+            <div class="p-4 flex items-center justify-between pb-2">
+                <!-- *** 新增: 開始新行程按鈕 *** -->
+                <button v-if="roomId" @click="startNewTrip" class="text-white hover:text-teal-200 transition active:scale-95 p-1" title="開始新行程">
+                    <i class="ph-bold ph-house text-xl"></i>
+                </button>
+                <div v-else class="w-8 h-8"></div> <!-- 保持對齊的佔位符 -->
+                
+                <!-- 旅程名稱與連線狀態 -->
+                <div class="flex items-center gap-3 min-w-0 flex-1 mx-3">
                     <!-- 連線狀態指示燈 -->
                     <div class="relative shrink-0">
                          <div v-if="isConnected" class="w-3 h-3 bg-green-400 rounded-full sync-pulse border border-white" title="已連線"></div>
@@ -170,11 +179,29 @@
                                             <i class="ph-bold ph-clock text-slate-400"></i>
                                             <input v-model="item.openingTime" class="w-20 bg-transparent border-none p-0 text-slate-600 focus:ring-0 text-xs" placeholder="開放時間">
                                         </div>
+                                        
+                                        <!-- *** 歐元輸入與台幣顯示的區塊 (已修改) *** -->
+                                        <!-- 歐元輸入 -->
                                         <div class="flex items-center gap-1 bg-slate-50 rounded px-1 py-0.5 border border-slate-200">
                                             <i class="ph-bold ph-ticket text-slate-400"></i>
-                                            <input v-model.number="item.entryFee" type="number" class="w-14 bg-transparent border-none p-0 text-slate-600 focus:ring-0 text-xs text-right" placeholder="費用">
-                                            <span class="text-[10px] text-slate-400">NT$</span>
+                                            <input 
+                                                v-model.number="item.euroFee" 
+                                                @input="updateTwdFee(item)" 
+                                                type="number" 
+                                                min="0"
+                                                step="0.01"
+                                                class="w-14 bg-transparent border-none p-0 text-slate-600 focus:ring-0 text-xs text-right" 
+                                                placeholder="歐元">
+                                            <span class="text-[10px] text-slate-400">€</span>
                                         </div>
+                                        <!-- 台幣預估顯示 -->
+                                        <div class="flex items-center gap-1 bg-green-50 rounded px-1 py-0.5 border border-green-200">
+                                            <span class="text-[10px] text-green-500 font-medium">預估</span>
+                                            <span class="text-xs font-semibold text-green-700">{{ item.entryFee.toLocaleString() }}</span>
+                                            <span class="text-[10px] text-green-400">NT$</span>
+                                        </div>
+                                        <!-- *** 歐元輸入與台幣顯示的區塊結束 *** -->
+
                                     </div>
 
                                     <!-- 新增：推薦菜色/必點清單 (餐廳/咖啡廳限定) -->
@@ -305,12 +332,12 @@
     <script type="module">
         import { createApp, ref, reactive, watch, computed, nextTick, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
         
-        // Firebase Realtime Database Imports (非 Canvas 的 Firestore)
+        // Firebase Realtime Database Imports
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        // 導入 onValue, ref as dbRef, set
         import { getDatabase, ref as dbRef, onValue, set } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
 
         // 由於我們不在 Canvas 環境中，需要手動提供 Firebase Realtime Database 配置
-        // 這是為了一個可運行且可協作的 Web App 範例。
         const firebaseConfig = {
             // IMPORTANT: 實際應用中請替換為您自己的配置
             apiKey: "YOUR_API_KEY_HERE", 
@@ -325,7 +352,6 @@
         // 檢查是否提供了示範用的配置，否則使用預留配置
         if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
              // 警告: 這是一個公共測試用的 RDB，不保證資料持久性或安全性。
-             // 實際應用中請替換為您的 `__firebase_config` 內容，並使用 Firestore。
              console.warn("Firebase 警告: 正在使用公共示範數據庫。請自行配置。");
              firebaseConfig.databaseURL = "https://lisboaaa-2c65b-default-rtdb.firebaseio.com";
              firebaseConfig.projectId = "lisboaaa-2c65b";
@@ -336,6 +362,9 @@
 
         createApp({
             setup() {
+                // --- 新增：歐元到台幣的模擬匯率 ---
+                const MOCK_EXCHANGE_RATE_EUR_TO_TWD = 35.00; // 模擬匯率
+                
                 const viewMode = ref('plan');
                 const currentDayIdx = ref(0);
                 const isConnected = ref(false);
@@ -358,31 +387,34 @@
                 const alertMessage = ref('');
                 const confirmPrompt = ref('');
                 let confirmResolve = null;
+                
+                // *** 新增: 儲存 onValue 監聽器的取消函數 ***
+                let unsubscribe = null; 
 
-                // --- 更新後的預設行程結構 ---
+                // --- 更新後的預設行程結構：加入 euroFee ---
                 const defaultTrip = { 
                     destination: '里斯本 X 葡豬豬之旅', 
                     days: [
                         { fullDate: new Date().toISOString().split('T')[0], title: 'Day 1: 抵達與啟程', items: [
                             { 
                                 time: '09:00', type: 'spot', activity: '羅西歐廣場', location: 'Rossio Square', note: '里斯本市中心的大廣場', 
-                                openingTime: '全天開放', entryFee: 0, recommendedDishes: '' 
+                                openingTime: '全天開放', euroFee: 0, entryFee: 0, recommendedDishes: '' 
                             },
                             { 
                                 time: '11:00', type: 'restaurant', activity: '葡式蛋塔店', location: 'Pastéis de Belém', note: '這家店超級好吃，一定要排隊！', 
-                                openingTime: '10:00 - 20:00', entryFee: 0, recommendedDishes: '經典葡式蛋撻, 咖啡' 
+                                openingTime: '10:00 - 20:00', euroFee: 0, entryFee: 0, recommendedDishes: '經典葡式蛋撻, 咖啡' 
                             },
                             { 
                                 time: '13:00', type: 'cafe', activity: 'A Brasileira 咖啡廳', location: 'A Brasileira', note: '歷史悠久，詩人費爾南多·佩索亞常去的咖啡館', 
-                                openingTime: '08:00 - 00:00', entryFee: 0, recommendedDishes: 'Bica 濃縮咖啡, 蛋糕' 
+                                openingTime: '08:00 - 00:00', euroFee: 0, entryFee: 0, recommendedDishes: 'Bica 濃縮咖啡, 蛋糕' 
                             },
                             { 
                                 time: '15:00', type: 'transport', activity: '搭乘 28 號電車', location: 'Alfama 區', note: '體驗復古電車，注意扒手！', 
-                                openingTime: '06:00 - 22:30', entryFee: 150, recommendedDishes: '' 
+                                openingTime: '06:00 - 22:30', euroFee: 4.5, entryFee: Math.round(4.5 * MOCK_EXCHANGE_RATE_EUR_TO_TWD), recommendedDishes: '' 
                             },
                             { 
                                 time: '18:00', type: 'hotel', activity: '入住飯店', location: 'Lisbon Marriott Hotel', note: '確認訂單編號', 
-                                openingTime: '24小時', entryFee: 0, recommendedDishes: '' 
+                                openingTime: '24小時', euroFee: 0, entryFee: 0, recommendedDishes: '' 
                             }
                         ] }
                     ], 
@@ -432,13 +464,21 @@
                 };
 
 
-                // --- Firebase 連線與同步 (保持不變) ---
+                // --- Firebase 連線與同步 (已更新，加入取消監聽邏輯) ---
                 const connectToFirebase = () => {
                     if (!roomId.value) return;
                     loading.value = true;
+                    
+                    // 1. Detach previous listener if it exists
+                    if (unsubscribe) {
+                        unsubscribe(); 
+                        unsubscribe = null;
+                    }
+
                     const tripRef = dbRef(db, 'trips/' + roomId.value);
                     
-                    onValue(tripRef, (snapshot) => {
+                    // 2. Attach new listener and save the function to unsubscribe
+                    unsubscribe = onValue(tripRef, (snapshot) => {
                         isConnected.value = true;
                         const val = snapshot.val();
                         
@@ -447,6 +487,24 @@
                             // 確保結構完整性
                             if(!val.days || val.days.length === 0) val.days = JSON.parse(JSON.stringify(defaultTrip.days));
                             if(!val.expenses) val.expenses = [];
+
+                            // 處理舊數據結構，確保所有 item 都有 euroFee 欄位 (數據遷移保護)
+                            if (val.days) {
+                                val.days.forEach(day => {
+                                    if (day.items) {
+                                        day.items.forEach(item => {
+                                            // 如果沒有 euroFee 欄位，就從 entryFee 倒推或設為 0
+                                            if (typeof item.euroFee !== 'number') {
+                                                item.euroFee = 0; 
+                                            }
+                                            // 確保 entryFee 是存在的，作為 TWD 顯示值
+                                            if (typeof item.entryFee !== 'number' || item.entryFee === 0 && item.euroFee > 0) {
+                                                item.entryFee = Math.round(item.euroFee * MOCK_EXCHANGE_RATE_EUR_TO_TWD);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
                             currentTrip.value = val;
                         } else {
                             // 如果房間不存在，則初始化
@@ -465,7 +523,9 @@
                     }, (error) => {
                         isConnected.value = false;
                         loading.value = false;
-                        showAlert("Firebase 連線錯誤: " + error.message);
+                        console.error("Firebase 連線錯誤:", error.message);
+                        // 清除監聽器
+                        if (unsubscribe) unsubscribe = null; 
                     });
                 };
 
@@ -481,7 +541,35 @@
                     }
                 }, { deep: true });
 
-                // --- 房間管理 (保持不變) ---
+                // --- 房間管理 (新增 startNewTrip) ---
+                
+                // *** 新增: 離開當前行程並開始新的流程 ***
+                const startNewTrip = async () => {
+                    const result = await showConfirm('確定要離開目前的行程並開始新的行程嗎？ (您隨時可以透過行程 ID 重新加入)');
+                    if (result) {
+                        // 1. 取消目前的 Firebase 監聽
+                        if (unsubscribe) {
+                            unsubscribe();
+                            unsubscribe = null;
+                        }
+                        
+                        // 2. 清除 URL 參數
+                        const url = new URL(window.location); 
+                        url.searchParams.delete('room');
+                        window.history.pushState({}, '', url); 
+
+                        // 3. 重設所有狀態
+                        roomId.value = '';
+                        inputRoomId.value = '';
+                        currentTrip.value = JSON.parse(JSON.stringify(defaultTrip));
+                        currentDayIdx.value = 0;
+                        isConnected.value = false;
+
+                        // 4. 顯示模態框讓使用者選擇新行程
+                        showRoomModal.value = true;
+                    }
+                };
+
                 const createNewRoom = () => { 
                     roomId.value = Math.random().toString(36).substr(2, 6).toUpperCase(); 
                     finalizeJoin(); 
@@ -506,7 +594,7 @@
                     showAlert("行程連結已複製！分享給旅伴即可共同編輯。"); 
                 };
                 
-                // --- 行程操作 ---
+                // --- 行程操作 (保持不變) ---
                 const addDay = () => {
                     const last = days.value[days.value.length-1]; 
                     const next = new Date(last ? last.fullDate : new Date()); 
@@ -525,9 +613,10 @@
                         activity: '新景點', 
                         location: '', 
                         note: '',
-                        openingTime: '', // 新欄位
-                        entryFee: 0,     // 新欄位
-                        recommendedDishes: '' // 新欄位
+                        openingTime: '', 
+                        euroFee: 0,      // 新欄位: 歐元
+                        entryFee: 0,     // Derived TWD fee
+                        recommendedDishes: '' 
                     }); 
                 };
                 
@@ -549,7 +638,19 @@
                     }
                 };
                 
-                // --- 更新 getTypeColor 邏輯，加入新類型 ---
+                // --- 新增：歐元換算台幣函數 ---
+                const updateTwdFee = (item) => {
+                    // 確保輸入是有效數字且非負
+                    let euro = (Number(item.euroFee) || 0);
+                    if (euro < 0) euro = 0;
+
+                    // 限制小數點位數並更新 euroFee
+                    item.euroFee = parseFloat(euro.toFixed(2));
+                    
+                    // 計算並四捨五入到整數，更新 entryFee (TWD)
+                    item.entryFee = Math.round(item.euroFee * MOCK_EXCHANGE_RATE_EUR_TO_TWD);
+                };
+
                 const getTypeColor = (type) => { 
                     return ({ 
                         spot: 'bg-teal-500', 
@@ -814,12 +915,13 @@
                     mapSearchQuery, performMapSearch, plotPlannedLocations,
                     // 常用函數
                     createNewRoom, joinRoom, copyShareLink, addDay, addItem, removeCurrentDay: confirmAndDeleteDay, addExpense, 
-                    getTypeColor, initMap, locateUser, formatDate, closeAlert, confirmProceed, confirmCancel, confirmAndDeleteItem
+                    getTypeColor, initMap, locateUser, formatDate, closeAlert, confirmProceed, confirmCancel, confirmAndDeleteItem,
+                    // 新增功能
+                    updateTwdFee, startNewTrip,
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
-
 
