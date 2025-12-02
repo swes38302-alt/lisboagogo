@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡豬豬之旅 V8.5 | 完整最終版</title>
+    <title>葡豬豬之旅 V9.4 | 顏值回歸版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -26,17 +26,21 @@
         .hide-scroll::-webkit-scrollbar { display: none; }
         .h-dynamic-screen { height: 100vh; height: 100dvh; }
         
+        /* ★ 機票樣式修復 (Boarding Pass Style Fix) */
         .boarding-pass {
-            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); /* 漸層背景 */
             color: white;
             z-index: 1;
             transition: all 0.3s ease;
             position: relative;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        /* 機票中間的切線 */
         .dashed-line { border-top: 2px dashed rgba(255,255,255,0.3); margin: 0; width: 100%; position: absolute; top: 50%; left: 0; z-index: 0; }
         
+        /* 機票中間的懸浮框 (航班號) */
         .center-floating-box { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
-        .center-content { pointer-events: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(15, 118, 110, 0.4); padding: 4px 12px; border-radius: 12px; backdrop-filter: blur(2px); }
+        .center-content { pointer-events: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(15, 118, 110, 0.4); padding: 4px 12px; border-radius: 12px; backdrop-filter: blur(2px); border: 1px solid rgba(255,255,255,0.1); }
         
         .flight-no-input { background: transparent; border: none; color: white; width: 90px; text-align: center; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 0; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         .flight-no-input:focus { outline: none; color: #FEF3C7; }
@@ -51,31 +55,67 @@
         .weather-font { font-family: 'Oswald', sans-serif; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         
-        /* ★ V8.5 地圖層級修復：確保地圖在下，控制項在上 */
         #map { height: 100%; width: 100%; z-index: 0; position: relative; } 
         .leaflet-top, .leaflet-bottom { z-index: 400 !important; }
         
         input:focus, select:focus, textarea:focus { outline: none; border-color: #10B981 !important; }
         
-        .custom-pin { display: flex; justify-content: center; align-items: center; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.2s; }
-        
         .connector-active { background: #F1F5F9; color: #64748B; padding: 6px 0; margin: -4px 4px; border-left: 2px dashed #CBD5E1; border-right: 2px dashed #CBD5E1; cursor: pointer; font-size: 12px; font-weight: bold; text-align: center; }
         .link-btn { background: white; border: 1px solid #E2E8F0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        
-        /* V8.4 行程串聯樣式 */
-        .subtle-link-btn { color: #E2E8F0; transition: all 0.2s; cursor: pointer; padding: 2px; font-size: 14px; display: flex; align-items: center; gap: 4px; }
-        .subtle-link-btn:hover { color: #14b8a6; transform: scale(1.1); }
-        
-        .minimal-link {
-            position: relative; height: 16px; margin: 0 24px; border-left: 2px dashed #CBD5E1; display: flex; align-items: center;
+
+        /* 連結按鈕 (微型版) */
+        .subtle-link-btn { 
+            pointer-events: auto;
+            color: #94A3B8; background: white; border: 1px solid #E2E8F0; 
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 10px; cursor: pointer; transition: all 0.2s; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            z-index: 60;
         }
-        .minimal-add-btn {
-            position: absolute; left: -9px; width: 16px; height: 16px; background: white; border: 1px solid #CBD5E1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 10px; cursor: pointer; transition: all 0.2s;
-        }
-        .minimal-add-btn:hover { border-color: #10B981; color: #10B981; transform: scale(1.1); }
+        .subtle-link-btn:hover { color: #fff; background: #2DD4BF; border-color: #2DD4BF; transform: scale(1.2); }
         
-        .transport-strip-expanded {
-            background-color: #F1F5F9; border-left: 2px dashed #CBD5E1; border-right: 2px dashed #CBD5E1; margin: 0 12px; padding: 4px 8px; display: flex; align-items: center; justify-content: center; color: #64748B; font-size: 11px; font-weight: bold; gap: 8px; border-radius: 4px;
+        /* 虛線分割線 (群組內部) */
+        .group-divider {
+            position: absolute; bottom: 0; left: 16px; right: 16px; height: 1px;
+            border-bottom: 1px dashed #E2E8F0;
+        }
+
+        /* 交通條全寬樣式 */
+        .transport-strip-full {
+            width: 100%;
+            background-color: #F8FAFC; 
+            border-top: 1px dashed #E2E8F0;
+            border-bottom: 1px dashed #E2E8F0;
+            padding: 4px 8px; /* 一點點高即可 */
+            display: flex; align-items: center; justify-content: center; 
+            color: #64748B; font-size: 11px; font-weight: bold; gap: 8px; 
+            z-index: 40; position: relative;
+            pointer-events: auto;
+        }
+
+        .gps-pulsing-icon {
+            width: 20px; height: 20px;
+            background-color: #3B82F6;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        .gps-pulsing-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px; height: 40px;
+            background-color: rgba(59, 130, 246, 0.4);
+            border-radius: 50%;
+            z-index: -1;
+            animation: gps-pulse 2s infinite;
+        }
+        @keyframes gps-pulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
         }
 
         .header-tabs::-webkit-scrollbar { display: none; }
@@ -116,7 +156,7 @@
 
         <!-- 旅程管理 Modal -->
         <div v-if="showTripList" class="modal-overlay" @click.self="showTripList = false">
-            <div class="bg-white w-4/5 max-w-sm rounded-2xl shadow-2xl p-4 animate__animated animate__zoomIn pointer-events-auto">
+            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-4 animate__animated animate__zoomIn pointer-events-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i class="ph-fill ph-house text-teal-600"></i> 我的旅程</h2>
                     <button @click="showTripList = false" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-lg"></i></button>
@@ -131,7 +171,12 @@
                     </div>
                 </div>
                 <div class="pt-3 border-t border-slate-100">
-                    <div class="flex gap-2"><input v-model="newTripNameInput" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-teal-500 focus:bg-white transition" placeholder="輸入旅程名稱..."><button @click="createNewTrip" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 transition whitespace-nowrap"><i class="ph-bold ph-plus"></i> 新增</button></div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input v-model="newTripNameInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-teal-500 focus:bg-white transition" placeholder="輸入旅程名稱...">
+                        <button @click="createNewTrip" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 transition whitespace-nowrap w-full sm:w-auto flex justify-center items-center gap-1">
+                            <i class="ph-bold ph-plus"></i> 新增
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -141,7 +186,7 @@
                 <i class="ph-duotone ph-spinner-gap animate-spin text-4xl text-teal-500 mb-2"></i><p class="text-xs text-slate-400">{{ loadingText }}</p>
             </div>
             
-            <!-- 1. 航班 -->
+            <!-- 1. 航班 (★ 修復：恢復高顏值漸層設計) -->
             <div v-show="viewMode === 'flight'" class="p-4 space-y-0 pb-20">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 relative overflow-hidden"><div class="absolute -right-6 -top-6 text-teal-50 opacity-20"><i class="ph-fill ph-airplane-tilt text-9xl"></i></div><h2 class="font-bold text-slate-700 mb-3 text-sm relative z-10">新增航班</h2>
                     <div class="flex gap-2 mb-2 relative z-10"><input v-model="newFlight.dep" placeholder="TPE" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none focus:ring-1 focus:ring-teal-500"><div class="self-center text-slate-300"><i class="ph-bold ph-airplane-tilt"></i></div><input v-model="newFlight.arr" placeholder="HKG" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none focus:ring-1 focus:ring-teal-500"></div>
@@ -158,47 +203,81 @@
                 </template>
             </div>
 
-            <!-- 2. 行程 -->
+            <!-- 2. 行程 (維持 V9.3 修復後的完美排版) -->
             <div v-show="viewMode === 'plan'" class="p-4 pb-20">
                 <div v-if="days.length > 0" class="flex overflow-x-auto hide-scroll space-x-2 mb-4"><div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center border-2 cursor-pointer transition" :class="currentDayIdx === index ? 'bg-teal-500 text-white border-teal-500' : 'bg-white border-slate-100 text-slate-400'"><span class="text-[10px] font-bold">D{{ index + 1 }}</span><span class="text-sm font-black">{{ new Date(day.fullDate).getDate() }}</span></div><button @click="addDay" class="shrink-0 w-10 h-14 rounded-xl border-2 border-dashed border-teal-300 text-teal-400 flex items-center justify-center"><i class="ph-bold ph-plus"></i></button></div><div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100"><div class="flex justify-between"><input type="date" v-model="currentDay.fullDate" class="text-xs text-slate-400 bg-transparent border-none p-0"><button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div><input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題"></div>
                 
                 <div class="space-y-0 pl-2">
                     <template v-for="(item, idx) in currentDay.items" :key="idx">
-                        <div class="bg-white p-3 shadow-sm border border-slate-100 flex gap-3 relative transition hover:shadow-md z-10"
-                             :class="[item.connected ? 'rounded-b-none border-b-0 mb-0' : 'rounded-xl mb-3', (idx > 0 && currentDay.items[idx-1].connected) ? 'rounded-t-none border-t-0 bg-slate-50/50' : 'rounded-xl']">
+                        <div class="p-3 shadow-sm bg-white relative transition hover:shadow-md z-10 flex gap-3"
+                             :class="[
+                                item.connected || (idx > 0 && currentDay.items[idx-1].connected) 
+                                    ? 'border-2 border-dashed border-teal-400/60 shadow-none'
+                                    : 'border border-slate-100 rounded-xl mb-5',
+                                item.connected ? 'border-b-0 rounded-b-none mb-0' : '',
+                                (idx > 0 && currentDay.items[idx-1].connected) ? 'border-t-0 rounded-t-none' : '',
+                                (item.connected && (!idx || !currentDay.items[idx-1].connected)) ? 'rounded-t-xl' : '',
+                                (!item.connected && (idx > 0 && currentDay.items[idx-1].connected)) ? 'rounded-b-xl mb-5' : ''
+                             ]">
+                            
+                            <div v-if="idx > 0 && currentDay.items[idx-1].connected && !currentDay.items[idx-1].showTransport" class="group-divider"></div>
                             <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-md" :class="getTypeColor(item.type)"></div>
-                            <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1"><input v-model="item.time" type="time" class="text-xs font-black bg-slate-100 rounded px-1 w-full text-center border-none p-1 text-slate-600"><select v-model="item.type" class="text-[10px] w-full bg-white border border-slate-200 rounded p-1 text-slate-500 font-bold cursor-pointer text-center"><option value="spot">景點</option><option value="restaurant">餐廳</option><option value="cafe">咖啡</option><option value="shop">購物</option><option value="transport">交通</option><option value="hotel">住宿</option></select></div>
-                            <div class="flex-1 min-w-0 space-y-2"><div class="flex justify-between items-start"><input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full placeholder-slate-300 focus:ring-0 text-slate-800" placeholder="行程名稱"><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 ml-2"><i class="ph-bold ph-x"></i></button></div><div class="relative"><div class="flex items-center gap-1 bg-slate-50 rounded-lg p-1.5 pr-2 border transition-colors" :class="item.error ? 'border-rose-300 bg-rose-50' : 'border-transparent'"><i :class="item.error ? 'ph-warning-circle text-rose-500' : 'ph-map-pin text-slate-400'" class="ph-bold text-xs ml-1"></i><input v-model="item.location" @input="item.error = false" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-400" :class="item.error ? 'text-rose-600' : 'text-slate-700'" placeholder="輸入地點"></div><div v-if="item.error" class="text-[10px] text-rose-500 mt-1 ml-1 font-bold animate-pulse">⚠️ 找不到地點</div></div><div class="flex gap-2"><div class="flex-1 flex items-center gap-1 bg-slate-50 rounded px-2 py-1"><i class="ph-bold ph-ticket text-slate-400 text-xs"></i><input v-model="item.ticket" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-300" placeholder="費用"></div><div class="flex-1 flex items-center gap-1 bg-slate-50 rounded px-2 py-1"><i class="ph-bold ph-clock text-slate-400 text-xs"></i><input v-model="item.openTime" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-300" placeholder="時間"></div></div><textarea v-model="item.note" rows="1" class="w-full text-xs text-orange-600 bg-orange-50/50 rounded border-none p-1.5 placeholder-orange-300 resize-none focus:ring-0" placeholder="備註..."></textarea></div>
+                            
+                            <!-- 左側時間欄 (Layout Fixed) -->
+                            <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1">
+                                <input v-model="item.time" type="time" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-600">
+                                <select v-model="item.type" class="text-[10px] w-full bg-transparent border border-slate-200 rounded p-1 text-slate-500 font-bold cursor-pointer text-center"><option value="spot">景點</option><option value="restaurant">餐廳</option><option value="cafe">咖啡</option><option value="shop">購物</option><option value="transport">交通</option><option value="hotel">住宿</option></select>
+                            </div>
+
+                            <!-- 右側內容欄 -->
+                            <div class="flex-1 min-w-0 space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800" placeholder="行程名稱">
+                                    <button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 ml-2"><i class="ph-bold ph-x"></i></button>
+                                </div>
+                                <div class="relative">
+                                    <div class="flex items-center gap-1 bg-slate-50 rounded-lg p-1.5 pr-2 border transition-colors" :class="item.error ? 'border-rose-300 bg-rose-50' : 'border-transparent'">
+                                        <i :class="item.error ? 'ph-warning-circle text-rose-500' : 'ph-map-pin text-slate-400'" class="ph-bold text-xs ml-1"></i>
+                                        <input v-model="item.location" @input="item.error = false" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-400" :class="item.error ? 'text-rose-600' : 'text-slate-700'" placeholder="輸入地點">
+                                    </div>
+                                    <div v-if="item.error" class="text-[10px] text-rose-500 mt-1 ml-1 font-bold animate-pulse">⚠️ 找不到地點</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <div class="flex-1 flex items-center gap-1 bg-slate-50 rounded px-2 py-1"><i class="ph-bold ph-ticket text-slate-400 text-xs"></i><input v-model="item.ticket" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-300" placeholder="費用"></div>
+                                    <div class="flex-1 flex items-center gap-1 bg-slate-50 rounded px-2 py-1"><i class="ph-bold ph-clock text-slate-400 text-xs"></i><input v-model="item.openTime" class="w-full bg-transparent border-none p-0 text-xs focus:ring-0 placeholder-slate-300" placeholder="時間"></div>
+                                </div>
+                                <textarea v-model="item.note" rows="3" class="w-full text-xs text-orange-600 bg-orange-50/50 rounded border-none p-1.5 placeholder-orange-300 resize-y focus:ring-0" placeholder="備註..."></textarea>
+                            </div>
+                            
+                            <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="absolute left-0 right-0 -bottom-2.5 z-50 flex justify-center pointer-events-none">
+                                <template v-if="!item.showTransport">
+                                    <div @click="item.showTransport = true" class="subtle-link-btn" title="加入交通"><i class="ph-bold ph-plus"></i></div>
+                                    <div @click="item.connected = false" class="absolute right-2 text-slate-200 hover:text-red-400 cursor-pointer p-1 pointer-events-auto" title="斷開連結"><i class="ph-bold ph-link-break"></i></div>
+                                </template>
+                            </div>
                         </div>
 
-                        <!-- ★ 行程連結區：極簡模式 -->
-                        <div v-if="idx < currentDay.items.length - 1">
-                            <div v-if="!item.connected" class="flex justify-center -my-2.5 relative z-0 h-4 items-center">
-                                <div @click="item.connected = true; item.showTransport = false" class="subtle-link-btn" title="連結行程"><i class="ph-bold ph-link"></i></div>
+                        <div v-if="item.connected && item.showTransport && idx < currentDay.items.length - 1">
+                             <div class="transport-strip-full animate__animated animate__fadeIn">
+                                <i class="ph-fill ph-car-profile text-slate-400"></i>
+                                <input v-model="item.transportNote" class="bg-transparent border-none text-[10px] w-full text-center text-slate-600 focus:ring-0 p-0 placeholder-slate-400" placeholder="輸入交通方式 (例如: Uber 15分)">
+                                <button @click="item.showTransport = false" class="text-slate-300 hover:text-teal-500 px-1"><i class="ph-bold ph-minus-circle"></i></button>
+                                <div class="w-px h-3 bg-slate-200 mx-1"></div>
+                                <button @click="item.connected = false" class="text-slate-300 hover:text-red-400 px-1"><i class="ph-bold ph-link-break"></i></button>
                             </div>
-                            <div v-else>
-                                <div v-if="!item.showTransport" class="minimal-link">
-                                    <div @click="item.showTransport = true" class="minimal-add-btn" title="加入交通"><i class="ph-bold ph-plus"></i></div>
-                                    <div @click="item.connected = false" class="absolute right-0 -mr-6 text-slate-200 hover:text-red-300 cursor-pointer p-1"><i class="ph-bold ph-link-break text-xs"></i></div>
-                                </div>
-                                <div v-else class="transport-strip-expanded animate__animated animate__fadeIn">
-                                    <i class="ph-fill ph-car-profile text-slate-400"></i>
-                                    <input v-model="item.transportNote" class="bg-transparent border-none text-[10px] w-full text-center text-slate-600 focus:ring-0 p-0 placeholder-slate-400" placeholder="輸入交通方式 (例如: UBike 5分)">
-                                    <button @click="item.showTransport = false" class="text-slate-300 hover:text-teal-500"><i class="ph-bold ph-minus-circle"></i></button>
-                                </div>
-                            </div>
+                        </div>
+
+                        <div v-if="!item.connected && idx < currentDay.items.length - 1" class="flex justify-center -mt-2.5 mb-2.5 relative z-20 h-4 items-center">
+                            <div @click="item.connected = true; item.showTransport = false" class="subtle-link-btn text-slate-300 shadow-sm" title="連結"><i class="ph-bold ph-link-simple"></i></div>
                         </div>
                     </template>
                 </div>
                 <button @click="addItem" class="w-full mt-4 py-2 border-2 border-dashed border-teal-200 rounded-xl text-teal-400 font-bold text-xs hover:bg-teal-50">+ 新增行程</button>
             </div>
             
-            <!-- 3. 地圖 (V8.5 修復：將控制項置於下方，並提高 Z-Index) -->
+            <!-- 3. 地圖 -->
             <div v-show="viewMode === 'map'" class="h-full flex flex-col relative w-full">
-                <!-- 地圖本體 -->
                 <div id="map" class="flex-1"></div>
-                
-                <!-- ★ 修復：天數切換器，確保 z-index 足夠高，且放在地圖之後 -->
                 <div class="absolute top-4 left-0 right-0 z-[5000] flex justify-center pointer-events-none">
                     <div class="bg-white/95 backdrop-blur-sm shadow-lg rounded-full px-1 py-1 flex items-center gap-1 pointer-events-auto border border-white/50 ring-1 ring-black/5">
                         <button @click="prevDay" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" :disabled="currentDayIdx <= 0" :class="{'opacity-30 cursor-not-allowed': currentDayIdx <= 0}"><i class="ph-bold ph-caret-left text-lg"></i></button>
@@ -206,7 +285,6 @@
                         <button @click="nextDay" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" :disabled="currentDayIdx >= days.length - 1" :class="{'opacity-30 cursor-not-allowed': currentDayIdx >= days.length - 1}"><i class="ph-bold ph-caret-right text-lg"></i></button>
                     </div>
                 </div>
-                
                 <div class="absolute bottom-6 left-4 right-4 z-[5000] flex justify-center gap-3"><button @click="locateUser" class="bg-slate-800 text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-slate-700 active:scale-95 border border-slate-600"><i class="ph-bold ph-navigation-arrow"></i> 我的位置</button></div>
             </div>
 
@@ -251,7 +329,7 @@
                 const newExpense = reactive({ item:'', amount:null });
                 const weather = reactive({ temp: '--', icon: 'sun' });
 
-                let map=null, markersLayer=null, routeLine=null;
+                let map=null, markersLayer=null, routeLine=null, userMarker=null;
 
                 const syncData = () => {
                     if(!db) return;
@@ -275,6 +353,16 @@
                     currentTripName.value = t.name || '未命名旅程';
                     flights.value = t.flights ? Object.values(t.flights) : [];
                     days.value = t.days ? t.days : [{ fullDate: new Date().toISOString().split('T')[0], title: 'Day 1', items: [] }];
+                    if(days.value) {
+                        days.value.forEach(day => {
+                            if(day.items) {
+                                day.items.forEach(item => {
+                                    if(item.connected === undefined) item.connected = false;
+                                    if(item.showTransport === undefined) item.showTransport = false;
+                                });
+                            }
+                        });
+                    }
                     expenses.value = t.expenses ? t.expenses : [];
                 };
 
@@ -289,7 +377,6 @@
                     newTripNameInput.value = '';
                 };
 
-                // 刪除修復 V8.5
                 const deleteTrip = (id) => {
                     if(!confirm("確定要刪除這個旅程紀錄嗎？此動作無法復原！")) return;
                     const newTripsList = { ...allTrips.value }; 
@@ -330,7 +417,28 @@
                 const initMap = () => { if(map) return; map = L.map('map').setView([38.72,-9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 20 }).addTo(map); markersLayer = L.layerGroup().addTo(map); };
                 const getCustomIcon = (t) => { let c='#64748b',i='ph-map-pin'; if(t=='spot'){c='#10b981';i='ph-flag-banner'} if(t=='restaurant'){c='#f97316';i='ph-fork-knife'} if(t=='cafe'){c='#eab308';i='ph-coffee'} if(t=='shop'){c='#a855f7';i='ph-shopping-bag'} if(t=='transport'){c='#3b82f6';i='ph-train'} if(t=='hotel'){c='#6366f1';i='ph-bed'} return L.divIcon({ html:`<div class="custom-pin" style="background-color:${c};width:34px;height:34px;"><i class="ph-fill ${i}" style="color:white;font-size:18px;"></i></div>`, className:'', iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-34] }); };
                 const drawRoute = async () => { if(!map) initMap(); markersLayer.clearLayers(); if(routeLine){map.removeLayer(routeLine);routeLine=null;} const items=currentDay.value.items||[]; items.forEach(i=>i.error=false); const locs=items.filter(i=>i.location&&i.location.trim()); if(!locs.length) { loading.value=false; return; } loading.value=true; let arr=[],bounds=[]; for(let i=0;i<locs.length;i++){ try{ const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locs[i].location)}&format=json&limit=1`); const d=await r.json(); if(d.length){ const lat=parseFloat(d[0].lat),lon=parseFloat(d[0].lon); L.marker([lat,lon],{icon:getCustomIcon(locs[i].type)}).addTo(markersLayer).bindPopup(locs[i].activity); arr.push([lat,lon]); bounds.push([lat,lon]); }else{ locs[i].error=true; } }catch{ locs[i].error=true; } } if(arr.length>1) routeLine=L.polyline(arr,{color:'#475569',weight:3,opacity:0.6,dashArray:'8,8'}).addTo(map); if(bounds.length) map.fitBounds(bounds,{padding:[60,60]}); loading.value=false; };
-                const locateUser = () => { navigator.geolocation.getCurrentPosition(p=>{ const {latitude,longitude}=p.coords; map.flyTo([latitude,longitude],15); L.marker([latitude,longitude],{icon:L.divIcon({className:'gps-marker',iconSize:[20,20]})}).addTo(map); })};
+                
+                const locateUser = () => {
+                    if (!navigator.geolocation) { alert("瀏覽器不支援定位功能"); return; }
+                    loading.value = true;
+                    loadingText.value = "正在獲取您的位置...";
+                    navigator.geolocation.getCurrentPosition(
+                        (p) => {
+                            loading.value = false;
+                            const { latitude, longitude } = p.coords;
+                            if (userMarker) map.removeLayer(userMarker);
+                            const userIcon = L.divIcon({ className: 'gps-pulsing-icon', iconSize: [20, 20], iconAnchor: [10, 10] });
+                            userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
+                            userMarker.bindPopup("<b>😊 你在這裡</b>").openPopup();
+                            map.flyTo([latitude, longitude], 16);
+                        },
+                        (err) => {
+                            loading.value = false;
+                            console.error(err);
+                            alert("無法獲取位置，請確認瀏覽器已允許定位權限。");
+                        }
+                    );
+                };
 
                 onMounted(() => { syncData(); fetchWeather(); });
                 watch(viewMode, v=>{ if(v=='map') nextTick(()=>{ initMap(); map.invalidateSize(); drawRoute(); }) });
