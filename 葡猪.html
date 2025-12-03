@@ -4,7 +4,7 @@
 <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡萄牙之旅 V11.22 | 選單終極修復版</title>
+    <title>葡萄牙之旅 V11.24 | 全局選單重構版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -93,9 +93,26 @@
         .drag-handle:active { cursor: grabbing; color: var(--theme-primary); background-color: #f1f5f9; }
         .sortable-ghost { opacity: 0.3; background-color: #f0f9ff; border: 2px dashed var(--theme-light); }
         .sortable-drag { opacity: 1; background-color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(1.02); }
-        .type-selector-btn { width: 28px; height: 28px; border-radius: 50%; background-color: #F1F5F9; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s; font-size: 14px; z-index: 50; }
+        
+        .type-selector-btn { 
+            width: 28px; height: 28px; border-radius: 50%; background-color: #F1F5F9; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; position: relative; transition: all 0.2s; font-size: 14px; 
+            z-index: 50; border: none; outline: none; padding: 0; appearance: none;
+        }
         .type-selector-btn:hover { background-color: #E2E8F0; transform: scale(1.05); }
-        .type-popup { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 200; background: white; padding: 6px; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1); display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; width: 130px; border: 1px solid #F1F5F9; animation: fadeIn 0.15s ease-out forwards; }
+        
+        /* ★ 新增：全局浮動選單樣式 */
+        .global-type-popup { 
+            position: fixed; 
+            z-index: 9999; /* 最高層級 */
+            background: white; padding: 6px; border-radius: 12px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2); 
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; width: 130px; 
+            border: 1px solid #F1F5F9; 
+            animation: fadeIn 0.15s ease-out forwards; 
+        }
+
         .type-option { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px; border-radius: 8px; cursor: pointer; transition: background-color 0.1s; }
         .type-option:hover { background-color: #F8FAFC; }
         .trip-card { border: 1px solid #E2E8F0; border-radius: 16px; padding: 12px 16px; margin-bottom: 8px; background: white; transition: all 0.2s; cursor: pointer; position: relative; }
@@ -123,6 +140,24 @@
 <body class="text-slate-700 h-dynamic-screen flex flex-col overflow-hidden fixed inset-0">
 
     <div id="app" v-cloak class="flex flex-col h-full max-w-md mx-auto w-full bg-white shadow-2xl sm:border-x sm:border-slate-200 relative">
+
+        <!-- ★ 結構新增：全局浮動選單 (Global Floating Menu) -->
+        <!-- 這樣做可以完全避開 SortableJS 的干擾 -->
+        <div v-if="globalMenu.visible" 
+             class="fixed inset-0 z-[9998]" 
+             @click="closeGlobalMenu">
+             <!-- 透明背景層，點擊關閉 -->
+        </div>
+        <div v-if="globalMenu.visible" 
+             class="global-type-popup"
+             :style="{ top: globalMenu.y + 'px', left: globalMenu.x + 'px' }">
+            <div v-for="type in TYPES_LIST" :key="type.val" 
+                 @click="confirmTypeSelection(type.val)" 
+                 class="type-option">
+                <span class="text-xl">{{ type.emoji }}</span>
+                <span class="text-[10px] font-bold text-slate-600">{{ type.label }}</span>
+            </div>
+        </div>
 
         <header class="bg-theme-main text-white shrink-0 z-20 shadow-md relative transition-all duration-500">
             <div class="px-4 py-3 flex justify-between items-center">
@@ -276,17 +311,22 @@
                 
                 <div id="itinerary-list" class="space-y-0 pl-2" :key="listKey">
                     <div v-for="(item, idx) in currentDay.items" :key="item.id" class="itinerary-wrapper relative group" :class="[(item.connected || (isConnectedToPrev(idx))) ? 'mb-0' : 'mb-5']" :data-id="idx">
-                        <!-- ★ 1. 卡片層級修復：選單打開時 Z-Index = 50 -->
-                        <div class="p-3 shadow-sm bg-white relative transition flex gap-3 border border-slate-100 rounded-xl" :class="[isConnectedToNext(idx) ? 'card-connected-bottom' : '', isConnectedToPrev(idx) ? 'card-connected-top' : '', (isConnectedToNext(idx) || isConnectedToPrev(idx)) ? 'card-dashed-border' : '', item.showTypeMenu ? 'z-50' : 'z-10']">
+                        <div class="p-3 shadow-sm bg-white relative transition flex gap-3 border border-slate-100 rounded-xl" :class="[isConnectedToNext(idx) ? 'card-connected-bottom' : '', isConnectedToPrev(idx) ? 'card-connected-top' : '', (isConnectedToNext(idx) || isConnectedToPrev(idx)) ? 'card-dashed-border' : '']">
                             <div v-if="isConnectedToPrev(idx) && !getPrevItem(idx)?.showTransport" class="group-divider"></div>
                             <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-md" :class="getTypeColor(item.type)"></div>
                             
                             <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1 relative">
                                 <input v-model="item.time" type="time" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-600">
-                                <!-- ★ 2. 增加 no-drag 避免被當成拖曳元素 -->
-                                <div @click.stop="toggleTypeMenu(item)" class="type-selector-btn no-drag" :class="item.showTypeMenu ? 'ring-2 ring-blue-200' : ''"><span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span></div>
+                                
+                                <!-- ★ V11.24 邏輯重構：按鈕綁定 openGlobalMenu -->
+                                <button type="button" 
+                                    @click="openGlobalMenu($event, item)" 
+                                    class="type-selector-btn no-drag" 
+                                    :class="globalMenu.activeItem === item ? 'ring-2 ring-blue-200' : ''">
+                                    <span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span>
+                                </button>
+                                
                                 <span class="text-[9px] font-bold text-slate-400 mt-0.5 scale-90">{{ getTypeName(item.type) }}</span>
-                                <div v-if="item.showTypeMenu" class="type-popup no-drag" @click.stop><div v-for="type in TYPES_LIST" :key="type.val" @click.stop="selectType(item, type.val)" class="type-option"><span class="text-xl">{{ type.emoji }}</span><span class="text-[10px] font-bold text-slate-600">{{ type.label }}</span></div></div>
                             </div>
 
                             <div class="flex-1 min-w-0 space-y-2">
@@ -394,23 +434,40 @@
                 const currentDay = computed(() => days.value[currentDayIdx.value] || {});
                 const sortedFlights = computed(() => flights.value);
                 const listKey = ref(0); 
+                
+                // ★ 新增：全局選單狀態
+                const globalMenu = reactive({ visible: false, x: 0, y: 0, activeItem: null });
+
                 let map, markersLayer, routeLine, userMarker, sortableInstance;
 
-                const toggleTypeMenu = (item) => { 
-                    const wasOpen = item.showTypeMenu; 
-                    if (days.value) {
-                       days.value.forEach(d => { if(d.items) d.items.forEach(i => i.showTypeMenu = false); }); 
+                // ★ 新增：開啟全局選單
+                const openGlobalMenu = (event, item) => {
+                    // 取得點擊按鈕的座標
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    
+                    globalMenu.x = rect.left + (rect.width / 2) - 65; // 置中 (popup width 130/2)
+                    globalMenu.y = rect.bottom + 5; // 顯示在按鈕下方
+                    
+                    // 邊界檢查 (防止超出螢幕)
+                    if (globalMenu.x < 10) globalMenu.x = 10;
+                    
+                    globalMenu.activeItem = item;
+                    globalMenu.visible = true;
+                };
+
+                // ★ 新增：關閉全局選單
+                const closeGlobalMenu = () => {
+                    globalMenu.visible = false;
+                    globalMenu.activeItem = null;
+                };
+
+                // ★ 新增：確認選擇
+                const confirmTypeSelection = (typeVal) => {
+                    if (globalMenu.activeItem) {
+                        globalMenu.activeItem.type = typeVal;
                     }
-                    item.showTypeMenu = !wasOpen; 
+                    closeGlobalMenu();
                 };
-                
-                const selectType = (item, typeVal) => { 
-                    item.type = typeVal; 
-                    item.showTypeMenu = false; 
-                };
-                
-                const closeAllTypeMenus = () => { if(currentDay.value?.items) currentDay.value.items.forEach(i => i.showTypeMenu = false); };
-                onMounted(() => { document.addEventListener('click', closeAllTypeMenus); });
 
                 const getTypeName = (v) => TYPES_LIST.find(t => t.val === v)?.label || '景點';
                 const getTypeEmoji = (v) => TYPES_LIST.find(t => t.val === v)?.emoji || '📍';
@@ -564,9 +621,8 @@
                                 animation: 150, 
                                 ghostClass: 'sortable-ghost', 
                                 dragClass: 'sortable-drag',
-                                // ★ 3. 關鍵修復：這裡設定 filter，忽略帶有 .no-drag class 的元素
                                 filter: '.no-drag',
-                                preventOnFilter: false, // 允許被過濾的元素正常觸發點擊事件
+                                preventOnFilter: false, 
                                 onEnd: (evt) => {
                                     if(evt.oldIndex === evt.newIndex) return;
                                     const item = currentDay.value.items.splice(evt.oldIndex, 1)[0];
@@ -639,8 +695,11 @@
                     showSettings, showTripList, importPortugalTrip,
                     settings, flights, newFlight, addFlight, removeFlight, sortedFlights, calculateLayover, days, currentDayIdx, currentDay, addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays, drawRoute, locateUser, expenses, newExpense, addExpense, totalExpense, 
                     getTypeColor, weather, allTrips, currentTripId, switchTrip, createNewTrip, applyGlobalTheme, getWeatherIcon,
-                    TYPES_LIST, toggleTypeMenu, selectType, getTypeName, getTypeEmoji, getTypeColor, autoResize,
-                    listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation
+                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize,
+                    listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation,
+                    
+                    // 新增的全局選單功能
+                    globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection
                 };
             }
         });
