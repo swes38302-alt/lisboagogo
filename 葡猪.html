@@ -1826,6 +1826,10 @@
                                 animation: 200,
                                 ghostClass: 'sortable-ghost',
                                 dragClass: 'sortable-drag',
+                                scroll: true,
+                                scrollSensitivity: 60,
+                                scrollSpeed: 15,
+                                bubbleScroll: true,
                                 onEnd: (evt) => {
                                     if (evt.oldIndex === evt.newIndex) return;
                                     const newOrder = [...tripOrderList.value];
@@ -1856,6 +1860,10 @@
                                 dragClass: 'sortable-drag',
                                 filter: '.no-drag',
                                 preventOnFilter: false,
+                                scroll: true,
+                                scrollSensitivity: 60,
+                                scrollSpeed: 15,
+                                bubbleScroll: true,
                                 onEnd: (evt) => {
                                     if(evt.oldIndex === evt.newIndex) return;
                                     const item = currentDay.value.items.splice(evt.oldIndex, 1)[0];
