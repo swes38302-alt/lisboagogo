@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡萄牙之旅 V12.6 | 完整系統</title>
+    <title>葡萄牙之旅 V12.7 | 手機優化版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -1045,31 +1045,36 @@
                 <div class="absolute bottom-6 left-4 right-4 z-[5000] flex justify-center gap-3"><button @click="locateUser" class="bg-[#1E293B] text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-[#0F172A] active:scale-95 border border-slate-600"><i class="ph-bold ph-navigation-arrow"></i> 我的位置</button></div>
             </div>
             
-            <!-- ★ 待辦清單視圖 -->
+            <!-- ★ 待辦清單視圖 (優化手機布局) -->
             <div v-show="viewMode === 'todo'" class="p-4 pb-20">
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl mb-4 border border-blue-100">
                     <h2 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2">
                         <i class="ph-duotone ph-check-square text-theme-main text-lg"></i> 
                         新增待辦事項
                     </h2>
-                    <div class="flex gap-2 mb-2">
+                    
+                    <!-- ★ 優化：改為垂直堆疊布局 -->
+                    <div class="space-y-2">
                         <input v-model="newTodo.text" 
                                @keyup.enter="addTodo"
                                placeholder="例如：訂佩納宮門票" 
-                               class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm">
-                        <select v-model="newTodo.category" class="bg-white border-none rounded-lg px-3 py-2 text-sm">
-                            <option value="before">出發前</option>
-                            <option value="during">旅程中</option>
-                            <option value="after">返家後</option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2">
-                        <input v-model="newTodo.deadline" 
-                               type="date" 
-                               class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm">
+                               class="w-full bg-white border-none rounded-lg px-3 py-2 text-sm">
+                        
+                        <div class="flex gap-2">
+                            <select v-model="newTodo.category" 
+                                    class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm">
+                                <option value="before">出發前</option>
+                                <option value="during">旅程中</option>
+                                <option value="after">返家後</option>
+                            </select>
+                            <input v-model="newTodo.deadline" 
+                                   type="date" 
+                                   class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        
                         <button @click="addTodo" 
-                                class="bg-theme-main text-white px-6 py-2 rounded-lg font-bold text-sm">
-                            新增
+                                class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm">
+                            <i class="ph-bold ph-plus mr-1"></i> 新增
                         </button>
                     </div>
                 </div>
@@ -1128,7 +1133,7 @@
                 </div>
             </div>
             
-            <!-- 分帳視圖 -->
+            <!-- ★ 分帳視圖 (優化手機布局) -->
             <div v-show="viewMode === 'money'" class="p-4 pb-20">
                 <!-- 總支出卡片 -->
                 <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
@@ -1137,7 +1142,7 @@
                     <!-- Main Currency -->
                     <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense }}</div>
                     
-                    <!-- ★ Added: TWD Conversion -->
+                    <!-- ★ TWD Conversion -->
                     <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">
                         ≈ NT$ {{ Math.round(totalExpense * settings.rate).toLocaleString() }}
                     </div>
@@ -1147,7 +1152,7 @@
                         <div class="text-[10px] text-slate-400 mb-1">每人必須分擔</div>
                         <div class="flex items-center justify-center gap-2">
                             <span class="text-lg font-bold font-mono">{{ settings.currency }} {{ splitCalculation.perPerson }}</span>
-                            <!-- ★ Added: TWD Conversion for Per Person -->
+                            <!-- ★ TWD Conversion for Per Person -->
                             <span class="text-xs text-cyan-400 font-mono font-bold">
                                 (NT$ {{ Math.round(splitCalculation.perPerson * settings.rate).toLocaleString() }})
                             </span>
@@ -1180,7 +1185,7 @@
                     </div>
                 </div>
 
-                <!-- ★ 新增功能：個人收支概況 -->
+                <!-- ★ 個人收支概況 -->
                 <div v-if="participants.length > 0" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
                         <i class="ph-duotone ph-chart-pie-slice text-theme-main"></i> 个人收支概况
@@ -1220,19 +1225,28 @@
                     </div>
                 </div>
 
-                <!-- 新增手动费用 (Select下拉) -->
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex gap-2 mb-4 items-center">
-                    <div class="flex-[2] flex flex-col gap-1">
-                        <input v-model="newExpense.item" placeholder="项目 (例如: Uber)" class="bg-slate-50 border-none rounded text-sm p-2 w-full">
-                        <select v-model="newExpense.payer" class="bg-slate-50 border-none rounded text-xs p-2 w-full text-slate-600">
-                            <option value="" disabled selected>选择付款人</option>
-                            <option v-for="p in participants" :value="p">{{ p }}</option>
-                        </select>
-                    </div>
-                    <div class="flex-1 flex flex-col gap-1 h-full">
-                        <input v-model.number="newExpense.amount" type="number" placeholder="金额" class="bg-slate-50 border-none rounded text-sm p-2 w-full">
-                        <button @click="addExpense" class="bg-theme-main text-white py-1.5 rounded text-sm font-bold w-full h-full flex items-center justify-center gap-1">
-                            <i class="ph-bold ph-plus"></i>
+                <!-- ★ 新增手动费用 (優化垂直布局) -->
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                    <div class="space-y-2">
+                        <input v-model="newExpense.item" 
+                               placeholder="项目 (例如: Uber)" 
+                               class="w-full bg-slate-50 border-none rounded text-sm p-2">
+                        
+                        <div class="flex gap-2">
+                            <select v-model="newExpense.payer" 
+                                    class="flex-1 bg-slate-50 border-none rounded text-sm p-2 text-slate-600">
+                                <option value="" disabled selected>选择付款人</option>
+                                <option v-for="p in participants" :value="p">{{ p }}</option>
+                            </select>
+                            <input v-model.number="newExpense.amount" 
+                                   type="number" 
+                                   placeholder="金额" 
+                                   class="w-24 bg-slate-50 border-none rounded text-sm p-2">
+                        </div>
+                        
+                        <button @click="addExpense" 
+                                class="w-full bg-theme-main text-white py-2 rounded text-sm font-bold flex items-center justify-center gap-1">
+                            <i class="ph-bold ph-plus"></i> 新增費用
                         </button>
                     </div>
                 </div>
@@ -1256,22 +1270,27 @@
                             </div>
                         </div>
 
-                        <!-- ★ 编辑模式 -->
-                        <div v-else class="flex gap-2 items-end">
-                             <div class="flex-[2] flex flex-col gap-1">
-                                <input v-model="exp.item" class="bg-slate-100 border-none rounded text-sm p-1.5 w-full">
-                                <select v-model="exp.payer" class="bg-slate-100 border-none rounded text-xs p-1.5 w-full">
+                        <!-- ★ 编辑模式 (優化垂直布局) -->
+                        <div v-else class="space-y-2">
+                            <input v-model="exp.item" 
+                                   class="w-full bg-slate-100 border-none rounded text-sm p-2">
+                            <div class="flex gap-2">
+                                <select v-model="exp.payer" 
+                                        class="flex-1 bg-slate-100 border-none rounded text-sm p-2">
                                     <option v-for="p in participants" :value="p">{{ p }}</option>
                                 </select>
+                                <input v-model.number="exp.amount" 
+                                       type="number" 
+                                       class="w-24 bg-slate-100 border-none rounded text-sm p-2 text-right">
                             </div>
-                            <div class="flex-1 flex flex-col gap-1">
-                                <input v-model.number="exp.amount" type="number" class="bg-slate-100 border-none rounded text-sm p-1.5 w-full text-right">
-                                <button @click="editingExpenseIdx = -1" class="bg-green-500 text-white rounded p-1 w-full flex justify-center"><i class="ph-bold ph-check"></i></button>
-                            </div>
+                            <button @click="editingExpenseIdx = -1" 
+                                    class="w-full bg-green-500 text-white rounded p-2 flex justify-center items-center gap-1">
+                                <i class="ph-bold ph-check"></i> 完成
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 来自行程的费用 (只读，提示去行程改) -->
+                    <!-- 来自行程的费用 (只读) -->
                     <template v-for="day in days">
                         <template v-for="item in day.items">
                             <div v-if="item.isPaid && item.ticket" class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm opacity-80">
@@ -1367,7 +1386,7 @@
                 
                 const expenses = ref([]),
                       newExpense = reactive({ item:'', amount:null, payer:'' }),
-                      editingExpenseIdx = ref(-1), // ★ 编辑状态
+                      editingExpenseIdx = ref(-1),
                       weather = reactive({ temp: '--', icon: 'sun' });
                 
                 const participants = ref([]),
@@ -1533,7 +1552,6 @@
                     }
                 };
                 
-                // ★ 匯入完整葡萄牙行程
                 const importPortugalTrip = () => {
                     const id='trip_portugal_'+Date.now();
                     const portugalTrip = {
@@ -1699,7 +1717,6 @@
                     switchTrip(id);
                     if(db) {
                         db.ref('trips/'+id).set(portugalTrip);
-                        // ★ 新旅程加入排序列表頂部 (保留V12.4系统逻辑)
                         const newOrder = [id, ...tripOrder.value];
                         tripOrder.value = newOrder;
                         db.ref('tripOrder').set(newOrder);
@@ -1943,7 +1960,6 @@
                     return total;
                 });
                 
-                // ★ 優化後的分帳計算逻辑
                 const splitCalculation = computed(() => {
                     if(participants.value.length === 0) return { perPerson: 0, balances: {}, transactions: [], summary: [] };
                     
@@ -1951,15 +1967,11 @@
                     const perPerson = total / participants.value.length;
                     
                     const balances = {};
-                    // 初始化，每人應付 -perPerson
                     participants.value.forEach(p => balances[p] = -perPerson);
                     
-                    // 加回每人實際支付的金額
                     const addPayment = (payer, amount) => {
                         if(payer && participants.value.includes(payer)) {
                             balances[payer] += Number(amount);
-                        } else if (payer) {
-                           // 如果付款人不在名单内(历史数据)，暂不处理或加回名单(这里选择忽略以保持准确)
                         }
                     };
 
@@ -1968,13 +1980,11 @@
                         if(d.items) d.items.forEach(i => { if(i.isPaid && i.ticket) addPayment(i.payer, i.ticket); });
                     });
                     
-                    // 生成摘要 (用于显示)
                     const summary = participants.value.map(p => {
-                        const paid = (balances[p] + perPerson).toFixed(0); // 反推實際支付
+                        const paid = (balances[p] + perPerson).toFixed(0);
                         return { name: p, paid: Number(paid), diff: Math.round(balances[p]) };
                     });
 
-                    // 計算轉帳 (債務人 -> 債權人)
                     const creditors = [];
                     const debtors = [];
                     
