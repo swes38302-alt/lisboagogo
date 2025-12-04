@@ -982,10 +982,10 @@
 
                                         <!-- 付款人 (勾选后才显示，出现在右侧) -->
                                         <div v-if="item.isPaid" class="flex items-center gap-1 animate__animated animate__fadeInLeft">
-                                            <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">付款</span>
+                                            <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap"></span>
                                             <input v-model="item.payer" 
                                                    class="clean-input w-20 text-xs font-bold text-blue-600 placeholder-blue-200" 
-                                                   placeholder="?">
+                                                   placeholder="付款人">
                                         </div>
                                     </div>
 
@@ -2102,3 +2102,4 @@
     </script>
 </body>
 </html>
+
