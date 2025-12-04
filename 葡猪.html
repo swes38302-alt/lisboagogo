@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡萄牙之旅 V12.0 | 完整系統</title>
+    <title>葡萄牙之旅 V12.2 | 完整系統</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -276,23 +276,6 @@
         }
         
         .btn-gmap:hover { background: #fee2e2; }
-        
-        .paid-checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            color: #64748b;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 8px;
-            border-left: 1px solid #e2e8f0;
-            padding-left: 8px;
-        }
-        
-        .paid-checkbox-label input:checked + span {
-            color: var(--theme-primary);
-        }
 
         /* Helper Styles */
         .group-divider {
@@ -701,6 +684,53 @@
             background: #E0E7FF;
             color: #4338CA;
         }
+
+        /* ★ 去除input默认样式 */
+        .clean-input {
+            background: transparent;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            margin: 0;
+        }
+        
+        .clean-input:focus {
+            ring: 0;
+            outline: none;
+        }
+
+        /* ★ 優化：旅程列表拖拽樣式 */
+        .trip-drag-handle {
+            cursor: grab;
+            color: #CBD5E1;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            touch-action: none;
+        }
+
+        .trip-drag-handle:hover {
+            color: var(--theme-primary);
+            background: #F1F5F9;
+        }
+
+        .trip-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .trip-list-sortable .sortable-ghost {
+            opacity: 0.4;
+            background: #F0F9FF;
+            border: 2px dashed var(--theme-primary);
+        }
+
+        .trip-list-sortable .sortable-drag {
+            opacity: 1;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transform: scale(1.03);
+            border-color: var(--theme-primary);
+        }
     </style>
 </head>
 
@@ -792,12 +822,12 @@
             </div>
         </div>
 
-        <!-- 旅程列表模態框 -->
+        <!-- ★ 旅程列表模態框（新增拖拽排序） -->
         <div v-if="showTripList" class="modal-overlay" @click.self="showTripList = false">
             <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 animate__animated animate__fadeInUp max-h-[85vh] overflow-y-auto hide-scroll">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
-                        <i class="ph-duotone ph-house text-theme-main"></i> 我的旅程 ({{ Object.keys(allTrips).length }})
+                        <i class="ph-duotone ph-house text-theme-main"></i> 我的旅程 ({{ tripOrderList.length }})
                     </h2>
                     <button @click="showTripList = false"><i class="ph-bold ph-x text-slate-400 text-xl"></i></button>
                 </div>
@@ -806,27 +836,40 @@
                     <i class="ph-fill ph-star"></i> 🇵🇹 匯入 1/28 葡萄牙 12 天完整行程
                 </button>
 
-                <div class="space-y-3">
-                    <div v-for="(trip, id) in allTrips" :key="id" @click="switchTrip(id)" class="trip-card group relative" :class="currentTripId === id ? 'active ring-2 ring-theme-main bg-blue-50' : 'hover:bg-slate-50'">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <div class="font-bold text-base text-slate-800 mb-0.5">{{ trip.settings?.name || '未命名旅程' }}</div>
+                <div id="trip-list-container" class="space-y-3 trip-list-sortable">
+                    <div v-for="id in tripOrderList" :key="id" 
+                         :data-trip-id="id"
+                         @click="switchTrip(id)" 
+                         class="trip-card group relative" 
+                         :class="currentTripId === id ? 'active ring-2 ring-theme-main bg-blue-50' : 'hover:bg-slate-50'">
+                        <div class="flex items-start gap-3">
+                            <div class="trip-drag-handle pt-1" title="拖拽調整順序">
+                                <i class="ph-bold ph-dots-six-vertical text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0" @click.stop="switchTrip(id)">
+                                <div class="font-bold text-base text-slate-800 mb-0.5 truncate">
+                                    {{ allTrips[id]?.settings?.name || '未命名旅程' }}
+                                </div>
                                 <div class="text-[10px] text-slate-400 uppercase font-medium flex items-center gap-1">
                                     <i class="ph-fill ph-calendar-blank"></i> 
-                                    {{ trip.days ? trip.days[0].fullDate : 'Plan' }}
-                                    <span v-if="trip.days">• {{ trip.days.length }} 天</span>
+                                    {{ allTrips[id]?.days?.[0]?.fullDate || 'Plan' }}
+                                    <span v-if="allTrips[id]?.days">• {{ allTrips[id].days.length }} 天</span>
                                 </div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <div v-if="currentTripId === id" class="bg-theme-main text-white text-[10px] px-2 py-0.5 rounded-full font-bold">CURRENT</div>
-                                <button @click.stop="deleteTrip(id)" class="text-slate-300 hover:text-red-500 p-1.5 transition rounded-full hover:bg-red-50" title="刪除旅程"><i class="ph-bold ph-trash text-lg"></i></button>
+                                <button @click.stop="deleteTrip(id)" class="text-slate-300 hover:text-red-500 p-1.5 transition rounded-full hover:bg-red-50" title="刪除旅程">
+                                    <i class="ph-bold ph-trash text-lg"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="mt-4 pt-4 border-t border-dashed border-slate-200">
-                    <button @click="createNewTrip" class="btn-dashed-add"><i class="ph-bold ph-plus-circle"></i> 建立新旅程 (空白)</button>
+                    <button @click="createNewTrip" class="btn-dashed-add">
+                        <i class="ph-bold ph-plus-circle"></i> 建立新旅程 (空白)
+                    </button>
                 </div>
             </div>
         </div>
@@ -873,7 +916,7 @@
                 </template>
             </div>
 
-            <!-- 行程視圖 -->
+            <!-- ★ 行程視圖 -->
             <div v-show="viewMode === 'plan'" class="p-4 pb-20">
                 <div v-if="days.length > 0" class="flex overflow-x-auto hide-scroll space-x-2 mb-4">
                     <div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center border-2 cursor-pointer transition" :class="currentDayIdx === index ? 'bg-theme-main text-white border-transparent' : 'bg-white border-slate-100 text-slate-400'">
@@ -919,27 +962,42 @@
                                 </div>
                                 <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
                                 
-                                <div class="border-t border-slate-50 pt-2 space-y-1">
-                                    <div class="flex gap-2">
-                                        <div class="flex-1 flex items-center gap-1">
-                                            <i class="ph-bold ph-ticket text-slate-300 text-xs"></i>
-                                            <input v-model="item.ticket" class="input-invisible text-xs text-slate-500 placeholder-slate-200" placeholder="費用">
-                                            <label class="paid-checkbox-label" title="已支付，加入分帳">
-                                                <input type="checkbox" v-model="item.isPaid" class="accent-theme-primary w-3 h-3">
-                                                <span>Paid</span>
-                                            </label>
+                                <!-- ★ 嚴格依照要求的 2 行佈局卡片 -->
+                                <div class="mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
+                                    
+                                    <!-- 第一行： 费用 + 勾选框 (+ 付款人) -->
+                                    <div class="flex items-center gap-2">
+                                        <!-- 费用部分 -->
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span>
+                                            <input v-model="item.ticket" 
+                                                   class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" 
+                                                   placeholder="---">
                                         </div>
-                                        <div class="flex-1 flex items-center gap-1">
-                                            <i class="ph-bold ph-clock text-slate-300 text-xs"></i>
-                                            <input v-model="item.openTime" class="input-invisible text-xs text-slate-500 placeholder-slate-200" placeholder="時間">
+
+                                        <!-- 勾选框 (无红框，改用灰色/主题色) -->
+                                        <div @click="item.isPaid = !item.isPaid" class="cursor-pointer flex items-center text-lg transition active:scale-95 shrink-0" title="已付款?">
+                                            <i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i>
+                                        </div>
+
+                                        <!-- 付款人 (勾选后才显示，出现在右侧) -->
+                                        <div v-if="item.isPaid" class="flex items-center gap-1 animate__animated animate__fadeInLeft">
+                                            <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">付款</span>
+                                            <input v-model="item.payer" 
+                                                   class="clean-input w-20 text-xs font-bold text-blue-600 placeholder-blue-200" 
+                                                   placeholder="?">
                                         </div>
                                     </div>
-                                    
-                                    <div v-if="item.isPaid" class="flex items-center gap-1 pl-4">
-                                        <i class="ph-bold ph-user text-slate-300 text-xs"></i>
-                                        <input v-model="item.payer" class="input-invisible text-xs text-slate-500 placeholder-slate-200" placeholder="付款人 (選填)">
+
+                                    <!-- 第二行： 时间 (永远在下面) -->
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span>
+                                        <input v-model="item.openTime" 
+                                               class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" 
+                                               placeholder=" ">
                                     </div>
                                 </div>
+                                <!-- End of Layout -->
                             </div>
 
                             <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="transport-connector-bridge">
@@ -1202,7 +1260,8 @@
                       showTripList = ref(false);
                 
                 const allTrips = ref({}),
-                      currentTripId = ref(null);
+                      currentTripId = ref(null),
+                      tripOrder = ref([]);  // ★ 新增：旅程排序
                 
                 const settings = reactive({
                     name: '新旅程',
@@ -1250,7 +1309,18 @@
                     activeItem: null
                 });
                 
-                let map, markersLayer, routeLine, userMarker, sortableInstance;
+                // ★ 新增：計算排序後的旅程列表
+                const tripOrderList = computed(() => {
+                    if (tripOrder.value.length === 0) {
+                        return Object.keys(allTrips.value);
+                    }
+                    // 過濾掉已刪除的旅程，並加入新旅程
+                    const validOrder = tripOrder.value.filter(id => allTrips.value[id]);
+                    const missingTrips = Object.keys(allTrips.value).filter(id => !validOrder.includes(id));
+                    return [...validOrder, ...missingTrips];
+                });
+                
+                let map, markersLayer, routeLine, userMarker, sortableInstance, tripSortableInstance;
                 
                 const openGlobalMenu = (event, item) => {
                     const rect = event.currentTarget.getBoundingClientRect();
@@ -1354,6 +1424,15 @@
                 
                 const syncData = () => {
                     if(!db) return;
+                    
+                    // ★ 監聽旅程排序
+                    db.ref('tripOrder').on('value', s => {
+                        const order = s.val();
+                        if (order && Array.isArray(order)) {
+                            tripOrder.value = order;
+                        }
+                    });
+                    
                     db.ref('trips').on('value', s => {
                         const v=s.val();
                         isConnected.value=true;
@@ -1375,7 +1454,13 @@
                         todos: []
                     };
                     currentTripId.value=id;
-                    if(db) db.ref('trips/'+id).set(d);
+                    if(db) {
+                        db.ref('trips/'+id).set(d);
+                        // ★ 新旅程加入排序列表頂部
+                        const newOrder = [id, ...tripOrder.value];
+                        tripOrder.value = newOrder;
+                        db.ref('tripOrder').set(newOrder);
+                    }
                 };
                 
                 // ★ 匯入完整葡萄牙行程
@@ -1445,7 +1530,7 @@
                                     { id:1, time:'08:00', type:'transport', activity:'Rossio火車站出發', location:'Rossio Train Station', note: '買435公交日票€15', isPaid:true, ticket:'15', payer:'' },
                                     { id:2, time:'09:30', type:'spot', activity:'佩納宮', location:'Pena Palace, Sintra', note: '提前訂09:30場', isPaid:true, ticket:'20', payer:'', openTime:'09:30-19:00', connected:true, showTransport:true, transportNote:'435公車' },
                                     { id:3, time:'12:00', type:'spot', activity:'雷加萊拉宮', location:'Quinta da Regaleira', note: '含地獄之井探索', isPaid:true, ticket:'12', payer:'', openTime:'09:30-18:30', connected:true, showTransport:true, transportNote:'435公車' },
-                                    { id:4, time:'14:30', type:'restaurant', activity:'辛特拉鎮午餐', location:'Sintra', isPaid:false },
+                                    { id:4, time:'14:00', type:'restaurant', activity:'辛特拉鎮午餐', location:'Sintra', isPaid:false },
                                     { id:5, time:'16:30', type:'transport', activity:'返回里斯本', isPaid:false }
                                 ]
                             },
@@ -1542,7 +1627,13 @@
                     };
                     allTrips.value[id] = portugalTrip;
                     switchTrip(id);
-                    if(db) db.ref('trips/'+id).set(portugalTrip);
+                    if(db) {
+                        db.ref('trips/'+id).set(portugalTrip);
+                        // ★ 新旅程加入排序列表頂部
+                        const newOrder = [id, ...tripOrder.value];
+                        tripOrder.value = newOrder;
+                        db.ref('tripOrder').set(newOrder);
+                    }
                     showTripList.value = false;
                 };
                 
@@ -1556,7 +1647,13 @@
                     };
                     allTrips.value[id]=d;
                     switchTrip(id);
-                    if(db) db.ref('trips/'+id).set(d);
+                    if(db) {
+                        db.ref('trips/'+id).set(d);
+                        // ★ 新旅程加入排序列表頂部
+                        const newOrder = [id, ...tripOrder.value];
+                        tripOrder.value = newOrder;
+                        db.ref('tripOrder').set(newOrder);
+                    }
                 };
                 
                 const loadCurrentTripData = () => {
@@ -1599,6 +1696,11 @@
                     if (!confirm('確定要刪除這個旅程嗎？此動作無法復原。')) return;
                     if (db) db.ref('trips/' + id).remove();
                     delete allTrips.value[id];
+                    
+                    // ★ 從排序列表中移除
+                    tripOrder.value = tripOrder.value.filter(tid => tid !== id);
+                    if (db) db.ref('tripOrder').set(tripOrder.value);
+                    
                     if (currentTripId.value === id) {
                         const ids = Object.keys(allTrips.value);
                         if (ids.length > 0) switchTrip(ids[0]);
@@ -1622,6 +1724,42 @@
                         db.ref(`trips/${currentTripId.value}/flights`).set(o);
                     }
                 }, {deep:true});
+                
+                // ★ 新增：初始化旅程列表拖拽排序
+                const initTripSortable = () => {
+                    nextTick(() => {
+                        const el = document.getElementById('trip-list-container');
+                        if (tripSortableInstance) {
+                            tripSortableInstance.destroy();
+                            tripSortableInstance = null;
+                        }
+                        if (el) {
+                            tripSortableInstance = new Sortable(el, {
+                                handle: '.trip-drag-handle',
+                                animation: 200,
+                                ghostClass: 'sortable-ghost',
+                                dragClass: 'sortable-drag',
+                                onEnd: (evt) => {
+                                    if (evt.oldIndex === evt.newIndex) return;
+                                    
+                                    const newOrder = [...tripOrderList.value];
+                                    const movedItem = newOrder.splice(evt.oldIndex, 1)[0];
+                                    newOrder.splice(evt.newIndex, 0, movedItem);
+                                    
+                                    tripOrder.value = newOrder;
+                                    if (db) db.ref('tripOrder').set(newOrder);
+                                }
+                            });
+                        }
+                    });
+                };
+                
+                // ★ 監聽旅程列表顯示時初始化排序
+                watch(showTripList, (val) => {
+                    if (val) {
+                        initTripSortable();
+                    }
+                });
                 
                 const initSortable = () => {
                     nextTick(() => {
@@ -1954,7 +2092,8 @@
                     autoResize, listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation,
                     globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     participants, newParticipant, addParticipant, splitCalculation,
-                    todos, newTodo, addTodo, deleteTodo, getTodosByCategory, todoProgress
+                    todos, newTodo, addTodo, deleteTodo, getTodosByCategory, todoProgress,
+                    tripOrderList, tripOrder  // ★ 新增
                 };
             }
         });
