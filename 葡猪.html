@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡萄牙之旅 V12.7 | 手機優化版</title>
+    <title>葡萄牙之旅 V12.8 | 布局修复版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -745,6 +745,22 @@
             transform: scale(1.03);
             border-color: var(--theme-primary);
         }
+
+        /* ★★★ 新增：修复超出问题的关键样式 ★★★ */
+        .flex-input-safe {
+            min-width: 0 !important;
+            flex: 1 1 0%;
+        }
+
+        .flex-btn-safe {
+            flex-shrink: 0;
+        }
+
+        /* 确保所有容器不会超出 */
+        .safe-container {
+            max-width: 100%;
+            overflow: hidden;
+        }
     </style>
 </head>
 
@@ -769,22 +785,22 @@
 
         <header class="bg-theme-main text-white shrink-0 z-20 shadow-md relative transition-all duration-500">
             <div class="px-4 py-3 flex justify-between items-center">
-                <div class="flex items-center gap-3 flex-1">
-                    <button @click="showTripList = true" class="relative hover:opacity-80 transition active:scale-95" title="切換旅程">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <button @click="showTripList = true" class="relative hover:opacity-80 transition active:scale-95 flex-shrink-0" title="切換旅程">
                         <div class="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm border border-white/20">
                             <i class="ph-bold ph-house text-2xl"></i>
                         </div>
                         <div v-if="isConnected" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></div>
                     </button>
                     
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="font-bold text-lg leading-tight truncate max-w-[120px]">{{ settings.name }}</span>
-                        <button @click="showSettings = true" class="text-white/70 hover:text-white transition p-1 hover:bg-white/10 rounded-full" title="旅程設定">
+                    <div class="flex items-center gap-2 mt-1 min-w-0 flex-1">
+                        <span class="font-bold text-lg leading-tight truncate">{{ settings.name }}</span>
+                        <button @click="showSettings = true" class="text-white/70 hover:text-white transition p-1 hover:bg-white/10 rounded-full flex-shrink-0" title="旅程設定">
                             <i class="ph-bold ph-gear-six text-lg"></i>
                         </button>
                     </div>
                 </div>
-                <div class="flex flex-col items-end text-right">
+                <div class="flex flex-col items-end text-right flex-shrink-0 ml-2">
                     <div class="flex items-center gap-1.5">
                         <i :class="getWeatherIcon(weather.icon)" class="text-xl"></i>
                         <span class="weather-font text-2xl font-bold leading-none">{{ weather.temp }}°</span>
@@ -804,9 +820,9 @@
             </div>
         </header>
 
-        <!-- ★ 旅程設定模態框 -->
+        <!-- ★ 旅程設定模態框（修复按钮超出问题） -->
         <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
-            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 animate__animated animate__fadeInUp">
+            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 animate__animated animate__fadeInUp safe-container">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
                         <i class="ph-duotone ph-gear-six text-theme-main"></i> 旅程設定
@@ -821,22 +837,40 @@
                                placeholder="例如: 葡萄牙之旅">
                     </div>
                     
+                    <!-- ★★★ 修复：前往地點的按钮超出问题 ★★★ -->
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase">前往地點</label>
-                        <div class="flex gap-2">
-                            <input v-model="settings.location" @change="applyGlobalTheme" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-theme-main outline-none transition" placeholder="例如: Lisbon">
-                            <button @click="applyGlobalTheme" class="bg-white border border-slate-200 px-3 rounded-lg text-theme-main hover:bg-slate-50"><i class="ph-bold ph-magic-wand"></i></button>
+                        <div class="flex gap-2 items-stretch">
+                            <input v-model="settings.location" 
+                                   @change="applyGlobalTheme" 
+                                   class="flex-input-safe bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-theme-main outline-none transition" 
+                                   placeholder="例如: Lisbon">
+                            <button @click="applyGlobalTheme" 
+                                    class="flex-btn-safe bg-white border border-slate-200 w-10 h-10 rounded-lg text-theme-main hover:bg-slate-50 flex items-center justify-center">
+                                <i class="ph-bold ph-magic-wand"></i>
+                            </button>
                         </div>
                     </div>
-                     <div class="flex gap-3">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase">貨幣</label><input v-model="settings.currency" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center"></div>
-                        <div class="flex-[1.5]"><label class="text-[10px] font-bold text-slate-400 uppercase">汇率</label><input v-model="settings.rate" type="number" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center"></div>
+                    
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">貨幣</label>
+                            <input v-model="settings.currency" 
+                                   class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center">
+                        </div>
+                        <div class="flex-[1.5]">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">汇率</label>
+                            <input v-model="settings.rate" 
+                                   type="number" 
+                                   step="0.01"
+                                   class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ★ 旅程列表模態框（新增拖拽排序） -->
+        <!-- ★ 旅程列表模態框 -->
         <div v-if="showTripList" class="modal-overlay" @click.self="showTripList = false">
             <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 animate__animated animate__fadeInUp max-h-[85vh] overflow-y-auto hide-scroll">
                 <div class="flex justify-between items-center mb-4">
@@ -857,7 +891,7 @@
                          class="trip-card group relative" 
                          :class="currentTripId === id ? 'active ring-2 ring-theme-main bg-blue-50' : 'hover:bg-slate-50'">
                         <div class="flex items-start gap-3">
-                            <div class="trip-drag-handle pt-1" title="拖拽調整順序">
+                            <div class="trip-drag-handle pt-1 flex-shrink-0" title="拖拽調整順序">
                                 <i class="ph-bold ph-dots-six-vertical text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0" @click.stop="switchTrip(id)">
@@ -870,7 +904,7 @@
                                     <span v-if="allTrips[id]?.days">• {{ allTrips[id].days.length }} 天</span>
                                 </div>
                             </div>
-                            <div class="flex flex-col items-end gap-1">
+                            <div class="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div v-if="currentTripId === id" class="bg-theme-main text-white text-[10px] px-2 py-0.5 rounded-full font-bold">CURRENT</div>
                                 <button @click.stop="deleteTrip(id)" class="text-slate-300 hover:text-red-500 p-1.5 transition rounded-full hover:bg-red-50" title="刪除旅程">
                                     <i class="ph-bold ph-trash text-lg"></i>
@@ -976,25 +1010,18 @@
                                 </div>
                                 <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
                                 
-                                <!-- ★ 行程卡片內的费用与付款人 (统一使用 Select) -->
                                 <div class="mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
-                                    
                                     <div class="flex items-center gap-2">
-                                        <!-- 费用部分 -->
                                         <div class="flex items-center gap-2 shrink-0">
                                             <span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span>
                                             <input v-model="item.ticket" 
                                                    class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" 
                                                    placeholder="---">
                                         </div>
-
-                                        <!-- 勾选框 -->
                                         <div @click="item.isPaid = !item.isPaid" class="cursor-pointer flex items-center text-lg transition active:scale-95 shrink-0" title="已付款?">
                                             <i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i>
                                         </div>
-
-                                        <!-- 付款人 (下拉选单) -->
-                                        <div v-if="item.isPaid" class="flex items-center gap-1 animate__animated animate__fadeInLeft max-w-[120px]">
+                                        <div v-if="item.isPaid" class="flex items-center gap-1 animate__animated animate__fadeInLeft flex-input-safe">
                                             <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">付款</span>
                                             <select v-model="item.payer" class="clean-select clean-input w-full text-xs font-bold text-blue-600">
                                                 <option value="" disabled selected>誰?</option>
@@ -1003,8 +1030,6 @@
                                             </select>
                                         </div>
                                     </div>
-
-                                    <!-- 时间部分 -->
                                     <div class="flex items-center gap-2">
                                         <span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span>
                                         <input v-model="item.openTime" 
@@ -1012,7 +1037,6 @@
                                                placeholder="--:--">
                                     </div>
                                 </div>
-                                <!-- End of Layout -->
                             </div>
 
                             <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="transport-connector-bridge">
@@ -1045,7 +1069,7 @@
                 <div class="absolute bottom-6 left-4 right-4 z-[5000] flex justify-center gap-3"><button @click="locateUser" class="bg-[#1E293B] text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-[#0F172A] active:scale-95 border border-slate-600"><i class="ph-bold ph-navigation-arrow"></i> 我的位置</button></div>
             </div>
             
-            <!-- ★ 待辦清單視圖 (優化手機布局) -->
+            <!-- ★ 待辦清單視圖 -->
             <div v-show="viewMode === 'todo'" class="p-4 pb-20">
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl mb-4 border border-blue-100">
                     <h2 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2">
@@ -1053,7 +1077,6 @@
                         新增待辦事項
                     </h2>
                     
-                    <!-- ★ 優化：改為垂直堆疊布局 -->
                     <div class="space-y-2">
                         <input v-model="newTodo.text" 
                                @keyup.enter="addTodo"
@@ -1079,7 +1102,6 @@
                     </div>
                 </div>
 
-                <!-- 分類顯示 -->
                 <div v-for="cat in ['before', 'during', 'after']" :key="cat" class="mb-6">
                     <h3 class="font-bold text-slate-600 mb-2 text-sm flex items-center gap-2">
                         <i class="ph-bold" :class="{'before':'ph-calendar-check','during':'ph-airplane-in-flight','after':'ph-clipboard-text'}[cat]"></i>
@@ -1094,7 +1116,7 @@
                                 <input type="checkbox" 
                                        v-model="todo.completed" 
                                        class="todo-checkbox mt-0.5">
-                                <div class="flex-1">
+                                <div class="flex-1 min-w-0">
                                     <div class="todo-text font-medium text-sm text-slate-700">
                                         {{ todo.text }}
                                     </div>
@@ -1104,7 +1126,7 @@
                                     </div>
                                 </div>
                                 <button @click="deleteTodo(todo.id)" 
-                                        class="text-slate-300 hover:text-red-400 p-1">
+                                        class="text-slate-300 hover:text-red-400 p-1 flex-shrink-0">
                                     <i class="ph-bold ph-trash"></i>
                                 </button>
                             </div>
@@ -1117,7 +1139,6 @@
                     </div>
                 </div>
 
-                <!-- 進度統計 -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-bold text-slate-600">完成進度</span>
@@ -1133,26 +1154,18 @@
                 </div>
             </div>
             
-            <!-- ★ 分帳視圖 (優化手機布局) -->
+            <!-- ★★★ 分帳視圖（修复超出问题） ★★★ -->
             <div v-show="viewMode === 'money'" class="p-4 pb-20">
-                <!-- 總支出卡片 -->
                 <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
                     <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總支出 Total</div>
-                    
-                    <!-- Main Currency -->
                     <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense }}</div>
-                    
-                    <!-- ★ TWD Conversion -->
                     <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">
                         ≈ NT$ {{ Math.round(totalExpense * settings.rate).toLocaleString() }}
                     </div>
-
-                    <!-- Per Person Section -->
                     <div v-if="participants.length > 0" class="border-t border-slate-700 pt-3 mt-2">
                         <div class="text-[10px] text-slate-400 mb-1">每人必須分擔</div>
                         <div class="flex items-center justify-center gap-2">
                             <span class="text-lg font-bold font-mono">{{ settings.currency }} {{ splitCalculation.perPerson }}</span>
-                            <!-- ★ TWD Conversion for Per Person -->
                             <span class="text-xs text-cyan-400 font-mono font-bold">
                                 (NT$ {{ Math.round(splitCalculation.perPerson * settings.rate).toLocaleString() }})
                             </span>
@@ -1160,18 +1173,18 @@
                     </div>
                 </div>
 
-                <!-- 參與者管理 -->
+                <!-- ★★★ 修复：旅伴管理的输入框超出问题 ★★★ -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
                         <i class="ph-duotone ph-users text-theme-main"></i> 旅伴管理
                     </h3>
-                    <div class="flex gap-2 mb-3">
+                    <div class="flex gap-2 mb-3 items-stretch">
                         <input v-model="newParticipant" 
                                @keyup.enter="addParticipant"
                                placeholder="新增旅伴 (如: 小明)" 
-                               class="flex-1 bg-slate-50 border-none rounded text-sm p-2">
+                               class="flex-input-safe bg-slate-50 border-none rounded-lg text-sm p-2">
                         <button @click="addParticipant" 
-                                class="bg-theme-main text-white px-4 py-2 rounded text-sm font-bold">
+                                class="flex-btn-safe bg-theme-main text-white w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center">
                             <i class="ph-bold ph-plus"></i>
                         </button>
                     </div>
@@ -1185,7 +1198,6 @@
                     </div>
                 </div>
 
-                <!-- ★ 個人收支概況 -->
                 <div v-if="participants.length > 0" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
                         <i class="ph-duotone ph-chart-pie-slice text-theme-main"></i> 个人收支概况
@@ -1203,7 +1215,6 @@
                     </div>
                 </div>
 
-                <!-- 清算列表 (誰給誰錢) -->
                 <div v-if="splitCalculation.transactions.length > 0" class="mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
                         <i class="ph-duotone ph-hand-coins text-theme-main"></i> 結算建議
@@ -1225,43 +1236,39 @@
                     </div>
                 </div>
 
-                <!-- ★ 新增手动费用 (優化垂直布局) -->
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <div class="space-y-2">
                         <input v-model="newExpense.item" 
                                placeholder="项目 (例如: Uber)" 
-                               class="w-full bg-slate-50 border-none rounded text-sm p-2">
+                               class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
                         
                         <div class="flex gap-2">
                             <select v-model="newExpense.payer" 
-                                    class="flex-1 bg-slate-50 border-none rounded text-sm p-2 text-slate-600">
+                                    class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600">
                                 <option value="" disabled selected>选择付款人</option>
                                 <option v-for="p in participants" :value="p">{{ p }}</option>
                             </select>
                             <input v-model.number="newExpense.amount" 
                                    type="number" 
                                    placeholder="金额" 
-                                   class="w-24 bg-slate-50 border-none rounded text-sm p-2">
+                                   class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2">
                         </div>
                         
                         <button @click="addExpense" 
-                                class="w-full bg-theme-main text-white py-2 rounded text-sm font-bold flex items-center justify-center gap-1">
+                                class="w-full bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1">
                             <i class="ph-bold ph-plus"></i> 新增費用
                         </button>
                     </div>
                 </div>
 
-                <!-- 费用列表 (含编辑功能) -->
                 <div class="space-y-2 pb-10">
-                    <!-- 手动新增的费用 -->
                     <div v-for="(exp, idx) in expenses" :key="idx" class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group">
-                        <!-- 正常显示模式 -->
                         <div v-if="editingExpenseIdx !== idx" class="flex justify-between items-center">
-                            <div class="flex flex-col">
+                            <div class="flex flex-col min-w-0 flex-1">
                                 <span class="text-sm font-bold text-slate-700">{{ exp.item }}</span>
                                 <span v-if="exp.payer" class="text-[10px] text-slate-400">Paid by {{ exp.payer }}</span>
                             </div>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 flex-shrink-0 ml-2">
                                 <span class="font-mono text-theme-main font-bold">{{settings.currency}} {{ exp.amount }}</span>
                                 <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button @click="enableEditExpense(idx)" class="text-slate-300 hover:text-blue-400"><i class="ph-bold ph-pencil-simple"></i></button>
@@ -1270,38 +1277,36 @@
                             </div>
                         </div>
 
-                        <!-- ★ 编辑模式 (優化垂直布局) -->
                         <div v-else class="space-y-2">
                             <input v-model="exp.item" 
-                                   class="w-full bg-slate-100 border-none rounded text-sm p-2">
+                                   class="w-full bg-slate-100 border-none rounded-lg text-sm p-2">
                             <div class="flex gap-2">
                                 <select v-model="exp.payer" 
-                                        class="flex-1 bg-slate-100 border-none rounded text-sm p-2">
+                                        class="flex-1 bg-slate-100 border-none rounded-lg text-sm p-2">
                                     <option v-for="p in participants" :value="p">{{ p }}</option>
                                 </select>
                                 <input v-model.number="exp.amount" 
                                        type="number" 
-                                       class="w-24 bg-slate-100 border-none rounded text-sm p-2 text-right">
+                                       class="w-24 bg-slate-100 border-none rounded-lg text-sm p-2 text-right">
                             </div>
                             <button @click="editingExpenseIdx = -1" 
-                                    class="w-full bg-green-500 text-white rounded p-2 flex justify-center items-center gap-1">
+                                    class="w-full bg-green-500 text-white rounded-lg p-2 flex justify-center items-center gap-1">
                                 <i class="ph-bold ph-check"></i> 完成
                             </button>
                         </div>
                     </div>
 
-                    <!-- 来自行程的费用 (只读) -->
                     <template v-for="day in days">
                         <template v-for="item in day.items">
                             <div v-if="item.isPaid && item.ticket" class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm opacity-80">
-                                <div class="flex flex-col">
+                                <div class="flex flex-col min-w-0 flex-1">
                                     <span class="text-sm font-bold text-slate-700">{{ item.activity || '行程費用' }}</span>
                                     <div class="flex items-center gap-2">
                                         <span class="text-[10px] text-white bg-theme-main px-1.5 py-0.5 rounded font-bold">行程 D{{ days.indexOf(day)+1 }}</span>
                                         <span v-if="item.payer" class="text-[10px] text-slate-400">Paid by {{ item.payer }}</span>
                                     </div>
                                 </div>
-                                <span class="font-mono text-theme-main font-bold">{{settings.currency}} {{ item.ticket }}</span>
+                                <span class="font-mono text-theme-main font-bold flex-shrink-0 ml-2">{{settings.currency}} {{ item.ticket }}</span>
                             </div>
                         </template>
                     </template>
