@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title> 你是什麽豬豬Travel Planner| 全球通用旅程規劃器</title>
+    <title> 🐷你是什麽豬豬 Travel Planner | 全球通用旅程規劃器</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -192,9 +192,16 @@
         
         .toggle-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px; transition: all 0.2s; }
         .toggle-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
-        .toggle-btn.excluded.active { background: #ef4444; color: white; border-color: #ef4444; }
-        .expense-item-excluded { opacity: 0.6; background: #F8FAFC !important; border-style: dashed !important;}
-        .expense-item-excluded .amount { text-decoration: line-through; text-decoration-color: #ef4444; }
+        .toggle-btn.settled.active { background: #10b981; color: white; border-color: #10b981; }
+        
+        .expense-item-settled { 
+            opacity: 0.75; 
+            background: #F0FDF4 !important; 
+            border-color: #86EFAC !important;
+        }
+        .expense-item-settled .amount { 
+            color: #10b981 !important;
+        }
 
         .expense-list-separator { font-size: 10px; font-weight: bold; color: #94a3b8; text-align: center; margin: 12px 0 8px 0; display: flex; align-items: center; gap: 8px; }
         .expense-list-separator::before, .expense-list-separator::after { content: ''; height: 1px; background: #e2e8f0; flex: 1; }
@@ -425,136 +432,148 @@
                     </div>
                 </div>
             </div>
-            
             <!-- Money View -->
-            <div v-show="viewMode === 'money'" class="p-4 pb-20">
-                <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總支出 Total</div>
-                    <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense.toFixed(1) }}</div>
-                    <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">≈ NT$ {{ Math.round(totalExpense * settings.rate).toLocaleString() }}</div>
-                    <div v-if="participants.length > 0" class="border-t border-slate-700 pt-3 mt-2">
-                        <div class="text-[10px] text-slate-400 mb-1">每人必須分擔 (預估)</div>
-                        <div class="flex items-center justify-center gap-2">
-                            <span class="text-lg font-bold font-mono">{{ settings.currency }} {{ splitCalculation.perPerson }}</span>
-                            <span class="text-xs text-cyan-400 font-mono font-bold">(NT$ {{ Math.round(splitCalculation.perPerson * settings.rate).toLocaleString() }})</span>
-                        </div>
-                    </div>
-                </div>
+<div v-show="viewMode === 'money'" class="p-4 pb-20">
+    <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總支出 Total</div>
+        <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense.toFixed(1) }}</div>
+        <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">≈ NT$ {{ Math.round(totalExpense * settings.rate).toLocaleString() }}</div>
+        <div v-if="participants.length > 0" class="border-t border-slate-700 pt-3 mt-2">
+            <div class="text-[10px] text-slate-400 mb-1">平均每人花費</div>
+            <div class="flex items-center justify-center gap-2">
+                <span class="text-lg font-bold font-mono">{{ settings.currency }} {{ (totalExpense / participants.length).toFixed(1) }}</span>
+                <span class="text-xs text-cyan-400 font-mono font-bold">(NT$ {{ Math.round((totalExpense / participants.length) * settings.rate).toLocaleString() }})</span>
+            </div>
+        </div>
+    </div>
 
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
-                    <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-users text-theme-main"></i> 旅伴管理</h3>
-                    <div class="flex gap-2 mb-3 items-stretch">
-                        <input v-model="newParticipant" @keyup.enter="addParticipant" placeholder="新增旅伴 (如: 小明)" class="flex-input-safe bg-slate-50 border-none rounded-lg text-sm p-2">
-                        <button @click="addParticipant" class="flex-btn-safe bg-theme-main text-white w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center"><i class="ph-bold ph-plus"></i></button>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <div v-for="(p, idx) in participants" :key="idx" class="participant-tag group" @click="startEditingParticipant(idx, p)">
-                            <span v-if="editingParticipantIdx !== idx">{{ p }}</span>
-                            <input v-if="editingParticipantIdx === idx" :ref="'pInput'+idx" v-model="editingParticipantName" @blur="finishEditingParticipant(idx)" @keyup.enter="finishEditingParticipant(idx)" class="w-16 bg-transparent text-white border-none outline-none text-xs font-bold p-0 m-0">
-                            <button v-if="editingParticipantIdx !== idx" @click.stop="participants.splice(idx, 1)" class="hover:text-red-200 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                        </div>
-                    </div>
-                </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
+        <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-users text-theme-main"></i> 旅伴管理</h3>
+        <div class="flex gap-2 mb-3 items-stretch">
+            <input v-model="newParticipant" @keyup.enter="addParticipant" placeholder="新增旅伴 (如: 小明)" class="flex-input-safe bg-slate-50 border-none rounded-lg text-sm p-2">
+            <button @click="addParticipant" class="flex-btn-safe bg-theme-main text-white w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center"><i class="ph-bold ph-plus"></i></button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <div v-for="(p, idx) in participants" :key="idx" class="participant-tag group" @click="startEditingParticipant(idx, p)">
+                <span v-if="editingParticipantIdx !== idx">{{ p }}</span>
+                <input v-if="editingParticipantIdx === idx" :ref="'pInput'+idx" v-model="editingParticipantName" @blur="finishEditingParticipant(idx)" @keyup.enter="finishEditingParticipant(idx)" class="w-16 bg-transparent text-white border-none outline-none text-xs font-bold p-0 m-0">
+                <button v-if="editingParticipantIdx !== idx" @click.stop="participants.splice(idx, 1)" class="hover:text-red-200 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
+            </div>
+        </div>
+    </div>
 
-                <div v-if="participants.length > 0" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
-                    <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-chart-pie-slice text-theme-main"></i> 個人收支概況</h3>
-                    <div class="space-y-2">
-                        <div v-for="d in splitCalculation.summary" :key="d.name" class="flex justify-between items-center text-xs border-b border-slate-50 pb-1 last:border-0">
-                            <div class="font-bold text-slate-600">{{ d.name }}</div>
-                            <div class="flex gap-3">
-                                <span class="text-slate-400">已付 {{ settings.currency }}{{ d.paid }}</span>
-                                <span :class="d.diff >= 0 ? 'text-green-500' : 'text-red-500'" class="font-bold w-20 text-right">{{ d.diff >= 0 ? '應收' : '應付' }} {{ Math.abs(d.diff) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="splitCalculation.transactions.length > 0" class="mb-4">
-                    <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-hand-coins text-theme-main"></i> 結算建議</h3>
-                    <div v-for="(t, idx) in splitCalculation.transactions" :key="idx" class="settlement-card">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2"><span class="font-bold text-slate-700">{{ t.from }}</span><div class="flex flex-col items-center px-2"><span class="text-[9px] text-slate-400">支付給</span><i class="ph-bold ph-arrow-right text-theme-main"></i></div><span class="font-bold text-slate-700">{{ t.to }}</span></div>
-                            <div class="text-right">
-                                <span class="font-mono font-bold text-theme-main text-lg block">{{ settings.currency }} {{ t.amount }}</span>
-                                <span class="font-mono text-xs text-slate-400 font-bold">(≈ NT$ {{ t.twdAmount }})</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center mb-1">
-                            <div class="text-xs font-bold text-slate-400">新增支出</div>
-                            <div class="flex gap-2">
-                                <button @click="newExpense.isExcluded = !newExpense.isExcluded" class="toggle-btn excluded" :class="{ 'active': newExpense.isExcluded }">
-                                    <i :class="newExpense.isExcluded ? 'ph-fill ph-prohibit' : 'ph-bold ph-users'"></i> {{ newExpense.isExcluded ? '不分帳' : '一般' }}
-                                </button>
-                                <button @click="newExpense.isNTD = !newExpense.isNTD" class="toggle-btn" :class="{ 'active': newExpense.isNTD }">
-                                    {{ newExpense.isNTD ? 'NT$' : settings.currency }}
-                                </button>
-                            </div>
-                        </div>
-                        <input v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
-                        <div class="flex gap-2">
-                            <select v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
-                            <input v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2">
-                        </div>
-                        <button @click="addExpense" class="w-full bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-plus"></i> 新增費用</button>
-                    </div>
-                </div>
-
-                <div class="space-y-2 pb-10">
-                    <div v-for="(exp, idx) in expenses" :key="idx" class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" :class="{'expense-item-excluded': exp.isExcluded}">
-                        <div v-if="editingExpenseIdx !== idx" class="flex justify-between items-center">
-                            <div class="flex flex-col min-w-0 flex-1">
-                                <span class="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    {{ exp.item }}
-                                    <i v-if="exp.isExcluded" class="ph-bold ph-prohibit text-red-400 text-xs" title="不參與分帳"></i>
-                                </span>
-                                <span v-if="exp.payer" class="text-[10px] text-slate-400">Paid by {{ exp.payer }}</span>
-                            </div>
-                            <div class="flex items-center gap-3 flex-shrink-0 ml-2">
-                                <div class="text-right">
-                                    <span class="font-mono font-bold block amount" :class="exp.isExcluded ? 'text-slate-400' : 'text-theme-main'">
-                                        {{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ exp.originalAmount || exp.amount }}
-                                    </span>
-                                    <span v-if="exp.originalCurrency === 'TWD'" class="text-[9px] text-slate-300 block">≈ {{ settings.currency }} {{ Number(exp.amount).toFixed(1) }}</span>
-                                </div>
-                                <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button @click="expenses.splice(idx, 1)" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="expense-list-separator">👇 來自行程的費用 (長按可標記為已結清)</div>
-                    
-                    <template v-for="day in days">
-                        <template v-for="item in day.items">
-                            <div v-if="item.isPaid && (Number(item.ticket)>0 || item.ticket)" 
-                                 class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm itinerary-expense-card"
-                                 :class="{'settled': item.isSettled}"
-                                 @touchstart="startLongPress(item)" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
-                                <div class="flex flex-col min-w-0 flex-1">
-                                    <span class="text-sm font-bold text-slate-700">{{ item.activity || '行程費用' }}</span>
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="text-[10px] text-white px-1.5 py-0.5 rounded font-bold bg-red-300">D{{ days.indexOf(day)+1 }}</span>
-                                        <span v-if="item.payer" class="text-[10px] text-slate-400">Paid by {{ item.payer }}</span>
-                                        <span v-if="item.isSettled" class="text-[10px] text-green-600 font-bold bg-green-50 px-1 rounded border border-green-200">已結清</span>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="font-mono font-bold flex-shrink-0 ml-2 text-red-300" :class="{'line-through opacity-50': item.isSettled}">
-                                        {{settings.currency}} {{ item.ticket }}
-                                    </span>
-                                    <span v-if="!item.isSettled" class="press-hint">長按標記結清</span>
-                                </div>
-                            </div>
-                        </template>
-                    </template>
+    <div v-if="participants.length > 0" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
+        <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-chart-pie-slice text-theme-main"></i> 個人收支概況</h3>
+        <div class="space-y-2">
+            <div v-for="d in splitCalculation.summary" :key="d.name" class="flex justify-between items-center text-xs border-b border-slate-50 pb-1 last:border-0">
+                <div class="font-bold text-slate-600">{{ d.name }}</div>
+                <div class="flex gap-3">
+                    <span class="text-slate-400">已付 {{ settings.currency }}{{ d.paid }}</span>
+                    <span :class="d.diff >= 0 ? 'text-green-500' : 'text-red-500'" class="font-bold w-20 text-right">{{ d.diff >= 0 ? '應收' : '應付' }} {{ Math.abs(d.diff) }}</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div v-if="splitCalculation.transactions.length > 0" class="mb-4">
+        <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-hand-coins text-theme-main"></i> 結算建議 (剩餘未平分)</h3>
+        <div v-for="(t, idx) in splitCalculation.transactions" :key="idx" class="settlement-card">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="font-bold text-slate-700">{{ t.from }}</span><div class="flex flex-col items-center px-2"><span class="text-[9px] text-slate-400">支付給</span><i class="ph-bold ph-arrow-right text-theme-main"></i></div><span class="font-bold text-slate-700">{{ t.to }}</span></div>
+                <div class="text-right">
+                    <span class="font-mono font-bold text-theme-main text-lg block">{{ settings.currency }} {{ t.amount }}</span>
+                    <span class="font-mono text-xs text-slate-400 font-bold">(≈ NT$ {{ t.twdAmount }})</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+        <div class="space-y-2">
+            <div class="flex justify-between items-center mb-1">
+                <div class="text-xs font-bold text-slate-400">新增支出</div>
+                <div class="flex gap-2">
+                    <button @click="newExpense.isSettled = !newExpense.isSettled" class="toggle-btn settled" :class="{ 'active': newExpense.isSettled }">
+                        <i :class="newExpense.isSettled ? 'ph-fill ph-check-circle' : 'ph-bold ph-users'"></i> 
+                        {{ newExpense.isSettled ? '已結清' : '一般' }}
+                    </button>
+                    <button @click="newExpense.isNTD = !newExpense.isNTD" class="toggle-btn" :class="{ 'active': newExpense.isNTD }">
+                        {{ newExpense.isNTD ? 'NT$' : settings.currency }}
+                    </button>
+                </div>
+            </div>
+            <input v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
+            <div class="flex gap-2">
+                <select v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
+                <input v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2">
+            </div>
+            <button @click="addExpense" class="w-full bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-plus"></i> 新增費用</button>
+        </div>
+    </div>
+
+    <div class="space-y-2 pb-10">
+        <!-- 🔥 修改后的手动费用卡片 -->
+        <div v-for="(exp, idx) in expenses" :key="idx" 
+             class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" 
+             :class="{'expense-item-settled': exp.isSettled}"
+             @touchstart="startLongPress(exp)" 
+             @touchend="clearLongPress" 
+             @mousedown="startLongPress(exp)" 
+             @mouseup="clearLongPress" 
+             @mouseleave="clearLongPress">
+            <div class="flex justify-between items-center">
+                <div class="flex flex-col min-w-0 flex-1">
+                    <span class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        {{ exp.item }}
+                        <i v-if="exp.isSettled" class="ph-fill ph-check-circle text-green-500 text-xs" title="已結清"></i>
+                    </span>
+                    <span v-if="exp.payer" class="text-[10px] text-slate-400">Paid by {{ exp.payer }}</span>
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0 ml-2">
+                    <div class="text-right">
+                        <span class="font-mono font-bold block amount" :class="exp.isSettled ? 'text-green-600' : 'text-theme-main'">
+                            {{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ exp.originalAmount || exp.amount }}
+                        </span>
+                        <span v-if="exp.originalCurrency === 'TWD'" class="text-[9px] text-slate-300 block">≈ {{ settings.currency }} {{ Number(exp.amount).toFixed(1) }}</span>
+                        <span v-if="!exp.isSettled" class="press-hint">長按標記結清</span>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button @click="expenses.splice(idx, 1)" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="expense-list-separator">👇 來自行程的費用 (長按可標記為已結清)</div>
+        
+        <template v-for="day in days">
+            <template v-for="item in day.items">
+                <div v-if="item.isPaid && (Number(item.ticket)>0 || item.ticket)" 
+                     class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm itinerary-expense-card"
+                     :class="{'settled': item.isSettled}"
+                     @touchstart="startLongPress(item)" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span class="text-sm font-bold text-slate-700">{{ item.activity || '行程費用' }}</span>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] text-white px-1.5 py-0.5 rounded font-bold bg-red-300">D{{ days.indexOf(day)+1 }}</span>
+                            <span v-if="item.payer" class="text-[10px] text-slate-400">Paid by {{ item.payer }}</span>
+                            <span v-if="item.isSettled" class="text-[10px] text-green-600 font-bold bg-green-50 px-1 rounded border border-green-200">已結清</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="font-mono font-bold flex-shrink-0 ml-2 text-red-300" :class="{'line-through opacity-50': item.isSettled}">
+                            {{settings.currency}} {{ item.ticket }}
+                        </span>
+                        <span v-if="!item.isSettled" class="press-hint">長按標記結清</span>
+                    </div>
+                </div>
+            </template>
+        </template>
+    </div>
+</div>
+
+
+           </div>
         </main>
     </div>
 
@@ -574,7 +593,7 @@
                 const settings=reactive({name:'新旅程',location:'',currency:'€',rate:1});
                 const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
-                const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isExcluded: false}), editingExpenseIdx=ref(-1);
+                const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false}), editingExpenseIdx=ref(-1);
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
                 const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
                 const weather=reactive({temp:'--',icon:'sun'});
@@ -816,7 +835,7 @@
                             originalAmount: newExpense.amount,
                             originalCurrency: newExpense.isNTD ? 'TWD' : settings.currency,
                             payer: newExpense.payer,
-                            isExcluded: newExpense.isExcluded
+                            isSettled: newExpense.isSettled
                         });
                         newExpense.item=''; newExpense.amount=null; newExpense.payer='';
                     }
@@ -836,36 +855,70 @@
                 };
                 
                 const totalExpense=computed(()=>{
-                    let t=expenses.value.filter(e=>!e.isExcluded).reduce((a,b)=>a+(Number(b.amount)||0),0);
+                    let t=expenses.value.reduce((a,b)=>a+(Number(b.amount)||0),0);
                     days.value.forEach(d=>d.items.forEach(i=>{if(i.isPaid&&i.ticket) t+=(Number(i.ticket)||0)}));
                     return t;
                 });
                 
                 const splitCalculation=computed(()=>{
                     if(!participants.value.length) return { perPerson:0, balances:{}, transactions:[], summary:[] };
-                    const validExpenses = expenses.value.filter(e => !e.isExcluded);
+                    
+                    const validExpenses = expenses.value.filter(e => !e.isSettled);
                     const expenseTotal = validExpenses.reduce((a,b)=>a+(Number(b.amount)||0),0);
+                    
                     let dayTotal = 0;
-                    days.value.forEach(d=>d.items.forEach(i=>{if(i.isPaid&&i.ticket&&!i.isSettled) dayTotal+=(Number(i.ticket)||0)}));
+                    days.value.forEach(d=>d.items.forEach(i=>{
+                        if(i.isPaid && i.ticket && !i.isSettled) 
+                            dayTotal+=(Number(i.ticket)||0)
+                    }));
+                    
                     const total = expenseTotal + dayTotal;
                     const perPerson = total / participants.value.length;
-                    const balances = {}; participants.value.forEach(p=>balances[p] = -perPerson);
-                    validExpenses.forEach(e=>{ if(e.payer && participants.value.includes(e.payer)) balances[e.payer]+=Number(e.amount); });
+                    
+                    const balances = {}; 
+                    participants.value.forEach(p=>balances[p] = -perPerson);
+                    
+                    validExpenses.forEach(e=>{ 
+                        if(e.payer && participants.value.includes(e.payer)) 
+                            balances[e.payer]+=Number(e.amount); 
+                    });
+                    
                     days.value.forEach(d=>d.items.forEach(i=>{ 
-                        if(i.isPaid&&i.ticket&&i.payer&&participants.value.includes(i.payer)&&!i.isSettled) 
+                        if(i.isPaid && i.ticket && i.payer && participants.value.includes(i.payer) && !i.isSettled) 
                             balances[i.payer]+=Number(i.ticket); 
                     }));
-                    const summary = participants.value.map(p=>({name:p, paid:Number((balances[p]+perPerson).toFixed(0)), diff:Math.round(balances[p])}));
+                    
+                    const summary = participants.value.map(p=>({
+                        name:p, 
+                        paid:Number((balances[p]+perPerson).toFixed(0)), 
+                        diff:Math.round(balances[p])
+                    }));
+                    
                     let creditors=[], debtors=[];
-                    Object.entries(balances).forEach(([n,a])=>{ if(a>0.01) creditors.push({name:n,amount:a}); else if(a<-0.01) debtors.push({name:n,amount:-a}); });
-                    creditors.sort((a,b)=>b.amount-a.amount); debtors.sort((a,b)=>b.amount-a.amount);
-                    const transactions=[]; let i=0,j=0;
+                    Object.entries(balances).forEach(([n,a])=>{ 
+                        if(a>0.01) creditors.push({name:n,amount:a}); 
+                        else if(a<-0.01) debtors.push({name:n,amount:-a}); 
+                    });
+                    
+                    creditors.sort((a,b)=>b.amount-a.amount); 
+                    debtors.sort((a,b)=>b.amount-a.amount);
+                    
+                    const transactions=[]; 
+                    let i=0,j=0;
                     while(i<creditors.length && j<debtors.length){
                         const amt = Math.min(creditors[i].amount, debtors[j].amount);
-                        transactions.push({from:debtors[j].name, to:creditors[i].name, amount:amt.toFixed(1), twdAmount: Math.round(amt * settings.rate).toLocaleString() });
-                        creditors[i].amount-=amt; debtors[j].amount-=amt;
-                        if(creditors[i].amount<0.01)i++; if(debtors[j].amount<0.01)j++;
+                        transactions.push({
+                            from:debtors[j].name, 
+                            to:creditors[i].name, 
+                            amount:amt.toFixed(1), 
+                            twdAmount: Math.round(amt * settings.rate).toLocaleString() 
+                        });
+                        creditors[i].amount-=amt; 
+                        debtors[j].amount-=amt;
+                        if(creditors[i].amount<0.01)i++; 
+                        if(debtors[j].amount<0.01)j++;
                     }
+                    
                     return { perPerson:perPerson.toFixed(1), balances, transactions, summary };
                 });
                 
@@ -973,65 +1026,65 @@
                     currentDayIdx.value = index;
                     nextTick(() => drawRoute());
                 };
+                
                 const locateUser = () => {
-    if (!navigator.geolocation) {
-        alert('您的瀏覽器不支援定位功能');
-        return;
-    }
-    
-    loading.value = true;
-    loadingText.value = '正在定位中...';
-    
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const { latitude, longitude } = position.coords;
-            
-            if (userMarker) map.removeLayer(userMarker);
-            
-            userMarker = L.marker([latitude, longitude], {
-                icon: L.divIcon({
-                    html: '<div class="w-10 h-10 bg-blue-500 border-4 border-white rounded-full shadow-lg flex items-center justify-center"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>',
-                    className: '',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20]
-                })
-            }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup();
-            
-            map.flyTo([latitude, longitude], 16, {
-                duration: 1.5
-            });
-            
-            loading.value = false;
-        },
-        (error) => {
-            loading.value = false;
-            let errorMsg = '';
-            
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMsg = '❌ 定位權限被拒絕\n\n請在瀏覽器設定中允許位置存取';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMsg = '❌ 無法取得位置資訊\n\n請確認已開啟 GPS';
-                    break;
-                case error.TIMEOUT:
-                    errorMsg = '❌ 定位請求逾時\n\n請稍後再試';
-                    break;
-                default:
-                    errorMsg = '❌ 定位失敗\n\n' + error.message;
-            }
-            
-            alert(errorMsg);
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        }
-    );
-};
-
-
+                    if (!navigator.geolocation) {
+                        alert('您的瀏覽器不支援定位功能');
+                        return;
+                    }
+                    
+                    loading.value = true;
+                    loadingText.value = '正在定位中...';
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const { latitude, longitude } = position.coords;
+                            
+                            if (userMarker) map.removeLayer(userMarker);
+                            
+                            userMarker = L.marker([latitude, longitude], {
+                                icon: L.divIcon({
+                                    html: '<div class="w-10 h-10 bg-blue-500 border-4 border-white rounded-full shadow-lg flex items-center justify-center"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>',
+                                    className: '',
+                                    iconSize: [40, 40],
+                                    iconAnchor: [20, 20]
+                                })
+                            }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup();
+                            
+                            map.flyTo([latitude, longitude], 16, {
+                                duration: 1.5
+                            });
+                            
+                            loading.value = false;
+                        },
+                        (error) => {
+                            loading.value = false;
+                            let errorMsg = '';
+                            
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMsg = '❌ 定位權限被拒絕\n\n請在瀏覽器設定中允許位置存取';
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMsg = '❌ 無法取得位置資訊\n\n請確認已開啟 GPS';
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMsg = '❌ 定位請求逾時\n\n請稍後再試';
+                                    break;
+                                default:
+                                    errorMsg = '❌ 定位失敗\n\n' + error.message;
+                            }
+                            
+                            alert(errorMsg);
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                };
+                
                 const getWeatherIcon=i=>i=='sun'?'ph-fill ph-sun text-accent':(i=='rain'?'ph-fill ph-cloud-rain text-blue-300':'ph-fill ph-cloud text-white/90');
 
                 onMounted(()=>{ syncData(); applyGlobalTheme(); });
