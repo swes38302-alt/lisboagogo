@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>葡萄牙之旅 V13.6 | 地圖 Icon 完整版</title>
+    <title>葡萄牙之旅 V13.7 | 修复刷新丢失</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -572,7 +572,7 @@
         const app = createApp({
             setup() {
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
-                const allTrips=ref({}), currentTripId=ref(null), tripOrder=ref([]);
+                const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
                 const settings=reactive({name:'新旅程',location:'',currency:'€',rate:1});
                 const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
@@ -672,11 +672,71 @@
                     });
                 };
                 
-                const syncData=()=>{ if(db){ db.ref('tripOrder').on('value',s=>{if(s.val()) tripOrder.value=s.val()}); db.ref('trips').on('value',s=>{isConnected.value=true; allTrips.value=s.val()||{}; if(!currentTripId.value) currentTripId.value=Object.keys(allTrips.value)[0]||createNewTrip(); else loadCurrentTripData(); }); } else createNewTrip(); };
-                const createNewTrip=()=>{ const id='t_'+Date.now(); const d={settings:{name:'New Trip',location:'',currency:'€',rate:1},days:[{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}],participants:[],todos:[]}; allTrips.value[id]=d; currentTripId.value=id; if(db){db.ref('trips/'+id).set(d); db.ref('tripOrder').set([id,...tripOrder.value]); } return id; };
+                const syncData=()=>{ 
+                    if(db){ 
+                        db.ref('tripOrder').on('value',s=>{if(s.val()) tripOrder.value=s.val()}); 
+                        db.ref('trips').on('value',s=>{
+                            isConnected.value=true; 
+                            allTrips.value=s.val()||{}; 
+                            const savedId = localStorage.getItem('currentTripId');
+                            if(savedId && allTrips.value[savedId]) {
+                                currentTripId.value = savedId;
+                                loadCurrentTripData();
+                            } else if(!currentTripId.value || !allTrips.value[currentTripId.value]) {
+                                const firstId = Object.keys(allTrips.value)[0];
+                                if(firstId) {
+                                    currentTripId.value = firstId;
+                                    localStorage.setItem('currentTripId', firstId);
+                                    loadCurrentTripData();
+                                } else {
+                                    createNewTrip();
+                                }
+                            } else {
+                                loadCurrentTripData();
+                            }
+                        }); 
+                    } else createNewTrip(); 
+                };
+                
+                const createNewTrip=()=>{ 
+                    const id='t_'+Date.now(); 
+                    const d={
+                        settings:{name:'New Trip',location:'',currency:'€',rate:1},
+                        days:[{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}],
+                        participants:[],
+                        todos:[]
+                    }; 
+                    allTrips.value[id]=d; 
+                    currentTripId.value=id; 
+                    localStorage.setItem('currentTripId', id);
+                    if(db){
+                        db.ref('trips/'+id).set(d); 
+                        const newOrder = [id, ...tripOrder.value];
+                        tripOrder.value = newOrder;
+                        db.ref('tripOrder').set(newOrder); 
+                    } 
+                    loadCurrentTripData();
+                    return id; 
+                };
+                
                 const importPortugalTrip=()=>{
-                     const id='pt_'+Date.now(); allTrips.value[id]={settings:{name:'葡萄牙之旅',location:'Lisbon',currency:'€',rate:34.5},days:[{fullDate:'2026-01-28',items:[{id:1,time:'15:00',type:'spot',activity:'Baixa'}]}],participants:['Al','Ben'],todos:[]};
-                     currentTripId.value=id; if(db) db.ref('trips/'+id).set(allTrips.value[id]); showTripList.value=false;
+                    const id='pt_'+Date.now(); 
+                    allTrips.value[id]={
+                        settings:{name:'葡萄牙之旅',location:'Lisbon',currency:'€',rate:34.5},
+                        days:[{fullDate:'2026-01-28',items:[{id:1,time:'15:00',type:'spot',activity:'Baixa'}]}],
+                        participants:['Al','Ben'],
+                        todos:[]
+                    };
+                    currentTripId.value=id; 
+                    localStorage.setItem('currentTripId', id);
+                    if(db) {
+                        db.ref('trips/'+id).set(allTrips.value[id]); 
+                        const newOrder = [id, ...tripOrder.value];
+                        tripOrder.value = newOrder;
+                        db.ref('tripOrder').set(newOrder);
+                    }
+                    loadCurrentTripData();
+                    showTripList.value=false;
                 };
                 
                 const loadCurrentTripData=()=>{
@@ -690,8 +750,30 @@
                     applyGlobalTheme(); initSortable();
                 };
                 
-                const switchTrip=id=>{ currentTripId.value=id; currentDayIdx.value=0; loadCurrentTripData(); showTripList.value=false; };
-                const deleteTrip=id=>{ if(confirm('Delete?')) { if(db) db.ref('trips/'+id).remove(); delete allTrips.value[id]; tripOrder.value=tripOrder.value.filter(x=>x!==id); if(db) db.ref('tripOrder').set(tripOrder.value); if(currentTripId.value===id) switchTrip(Object.keys(allTrips.value)[0]); } };
+                const switchTrip=id=>{ 
+                    currentTripId.value=id; 
+                    localStorage.setItem('currentTripId', id);
+                    currentDayIdx.value=0; 
+                    loadCurrentTripData(); 
+                    showTripList.value=false; 
+                };
+                
+                const deleteTrip=id=>{ 
+                    if(confirm('Delete?')) { 
+                        if(db) db.ref('trips/'+id).remove(); 
+                        delete allTrips.value[id]; 
+                        tripOrder.value=tripOrder.value.filter(x=>x!==id); 
+                        if(db) db.ref('tripOrder').set(tripOrder.value); 
+                        if(currentTripId.value===id) {
+                            const newId = Object.keys(allTrips.value)[0];
+                            if(newId) {
+                                switchTrip(newId);
+                            } else {
+                                createNewTrip();
+                            }
+                        }
+                    } 
+                };
 
                 watch(viewMode, (newVal) => {
                     if (newVal === 'map') {
