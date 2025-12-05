@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>  皮蛋卤蛋旅行社 V13.6 | 完整版</title>
+    <title>葡萄牙之旅 V13.6 | 地圖 Icon 完整版</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -693,7 +693,6 @@
                 const switchTrip=id=>{ currentTripId.value=id; currentDayIdx.value=0; loadCurrentTripData(); showTripList.value=false; };
                 const deleteTrip=id=>{ if(confirm('Delete?')) { if(db) db.ref('trips/'+id).remove(); delete allTrips.value[id]; tripOrder.value=tripOrder.value.filter(x=>x!==id); if(db) db.ref('tripOrder').set(tripOrder.value); if(currentTripId.value===id) switchTrip(Object.keys(allTrips.value)[0]); } };
 
-                // 🔥 MAP FIX: Watch viewMode to initialize/redraw map
                 watch(viewMode, (newVal) => {
                     if (newVal === 'map') {
                         nextTick(() => {
@@ -710,7 +709,6 @@
                     }
                 });
 
-                // 🔥 MAP FIX: Update map when day changes (only in map mode)
                 watch(currentDayIdx, () => {
                     initSortable();
                     if (viewMode.value === 'map') {
@@ -779,7 +777,7 @@
                 
                 const totalExpense=computed(()=>{
                     let t=expenses.value.filter(e=>!e.isExcluded).reduce((a,b)=>a+(Number(b.amount)||0),0);
-                    days.value.forEach(d=>d.items.forEach(i=>{if(i.isPaid&&i.ticket&&!i.isSettled) t+=(Number(i.ticket)||0)}));
+                    days.value.forEach(d=>d.items.forEach(i=>{if(i.isPaid&&i.ticket) t+=(Number(i.ticket)||0)}));
                     return t;
                 });
                 
@@ -822,14 +820,12 @@
                     const df=d-a; return `${Math.floor(df/60)}h ${df%60}m`;
                 };
                 
-                // 🔥 MAP ICON FIX: 根據類型顯示不同的 Phosphor Icon
                 const getAdvancedIcon = (t, idx) => {
                     const type = TYPES_LIST.find(x => x.val === t);
                     const bgClass = type?.bg || 'bg-slate-400';
                     const colorMatch = bgClass.match(/\[([^\]]+)\]/);
                     const bgColor = colorMatch ? colorMatch[1] : '#64748b';
                     
-                    // 根據類型選擇對應的 Phosphor Icon
                     const iconMap = {
                         'spot': 'ph-map-pin',
                         'restaurant': 'ph-fork-knife',
@@ -849,7 +845,6 @@
                     });
                 };
                 
-                // 🔥 MAP DRAW with Caching
                 const drawRoute = async () => {
                     if (!map) {
                         map = L.map('map').setView([38.72, -9.14], 14);
@@ -875,7 +870,6 @@
                         let lat, lon;
                         const item = l[i];
                         
-                        // Use cache if available
                         if (item.lat && item.lon && item.cachedLoc === item.location) {
                             lat = item.lat;
                             lon = item.lon;
@@ -915,7 +909,6 @@
                     loading.value = false;
                 };
                 
-                // 🔥 MAP DAY SWITCH Function
                 const switchMapDay = (index) => {
                     currentDayIdx.value = index;
                     nextTick(() => drawRoute());
