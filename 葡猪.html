@@ -4,7 +4,7 @@
     <link rel="apple-touch-icon" href="/lisboagogo/apple-touch-icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title> 🐷你是什麽豬豬 Travel Planner | 全球通用旅程規劃器</title>
+    <title>你是什麽大豬豬 | 全球通用旅程規劃器</title>
     
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -325,7 +325,7 @@
                                 <div class="flex-1 px-4 flex flex-col items-center justify-center"><div class="w-full h-px bg-slate-200 relative top-1"></div><i class="ph-fill ph-airplane text-theme-light text-lg bg-white px-2 relative z-10"></i></div>
                                 <div class="text-right"><div class="flex items-center justify-end gap-1"><span class="flight-time">{{ flight.arrTime }}</span><span v-if="flight.nextDay" class="text-[10px] text-red-400 font-black">+1</span></div><span class="flight-code">{{ flight.arr }}</span><div class="flex items-center justify-end gap-1 mt-1"><span class="flight-label">ARRIVAL</span><i class="ph-fill ph-airplane-landing text-slate-300 text-xs"></i></div></div>
                             </div>
-                            <div class="flight-meta"><div class="flex-1 border-r border-slate-200 pr-2"><span class="flight-label block text-center mb-1">TERMINAL</span><input v-model="flight.terminal" placeholder="--" class="flight-input-meta"></div><div class="flex-1"><span class="flight-label block text-center mb-1">TERMINAL</span><input v-model="flight.gate" placeholder="--" class="flight-input-meta"></div></div>
+                            <div class="flight-meta"><div class="flex-1 border-r border-slate-200 pr-2"><span class="flight-label block text-center mb-1">TERMINAL</span><input v-model="flight.terminal" placeholder="--" class="flight-input-meta"></div><div class="flex-1"><span class="flight-label block text-center mb-1">GATE</span><input v-model="flight.gate" placeholder="--" class="flight-input-meta"></div></div>
                         </div>
                         <button @click="removeFlight(flight.id)" class="absolute top-3 right-3 text-slate-300 hover:text-red-400 transition"><i class="ph-bold ph-trash"></i></button>
                     </div>
@@ -1105,4 +1105,3 @@
     </script>
 </body>
 </html>
-
