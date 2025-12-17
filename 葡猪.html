@@ -185,7 +185,19 @@
         .trip-card.active { border-color: var(--theme-primary); background-color: #F0FAFC; }
         .btn-dashed-add { border: 2px dashed var(--theme-light); color: var(--theme-primary); border-radius: 16px; padding: 12px; width: 100%; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 12px; transition: all 0.2s; }
         .input-invisible { background: transparent; border: none; padding: 0; width: 100%; outline: none; }
-        .auto-textarea { resize: none; overflow: hidden; background: transparent; border: none; width: 100%; padding: 0; min-height: 20px; line-height: 1.4; }
+        .auto-textarea { 
+            resize: none; 
+            overflow: hidden; 
+            background: transparent; 
+            border: none; 
+            width: 100%; 
+            padding: 0; 
+            min-height: 20px; 
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
         .auto-textarea:focus { outline: none; border: none; ring: 0; }
         .weather-font { font-family: 'Oswald', sans-serif; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
