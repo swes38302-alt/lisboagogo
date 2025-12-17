@@ -193,7 +193,7 @@
             width: 100%; 
             padding: 0; 
             min-height: 20px; 
-            line-height: 1.4;
+            line-height: 1.5;
             white-space: pre-wrap;
             word-wrap: break-word;
             word-break: break-word;
@@ -889,7 +889,24 @@
                 const getTypeName=v=>TYPES_LIST.find(t=>t.val===v)?.label||'景點';
                 const getTypeEmoji=v=>TYPES_LIST.find(t=>t.val===v)?.emoji||'📍';
                 const getTypeColor=v=>TYPES_LIST.find(t=>t.val===v)?.bg||'bg-slate-400';
-                const autoResize=e=>{const el=e.target;el.style.height='auto';el.style.height=el.scrollHeight+'px';};
+                
+                // 🔥 修正：自动调整单个 textarea 的高度
+                const autoResize=e=>{
+                    const el=e.target;
+                    el.style.height='auto';
+                    el.style.height=el.scrollHeight+'px';
+                };
+                
+                // 🔥 新增：批量调整所有 textarea 的高度
+                const resizeAllTextareas = () => {
+                    nextTick(() => {
+                        const textareas = document.querySelectorAll('.auto-textarea');
+                        textareas.forEach(textarea => {
+                            textarea.style.height = 'auto';
+                            textarea.style.height = textarea.scrollHeight + 'px';
+                        });
+                    });
+                };
                 
                 const checkLocation=async(i)=>{ if(!i.location?.trim()){i.error=false;return;} try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(i.location)}&format=json&limit=1`);const d=await r.json();i.error=d.length===0;}catch{i.error=true;} };
                 
@@ -934,7 +951,11 @@
                                     currentDay.value.items.splice(e.newIndex,0,item);
                                     if(currentDay.value.items.length>0) currentDay.value.items[currentDay.value.items.length-1].connected=false;
                                     listKey.value++;
-                                    nextTick(()=>{ initSortable(); if(viewMode.value==='map') drawRoute(); });
+                                    nextTick(()=>{ 
+                                        initSortable(); 
+                                        resizeAllTextareas(); // 🔥 排序后调整
+                                        if(viewMode.value==='map') drawRoute(); 
+                                    });
                                 }
                             });
                         }
@@ -1016,7 +1037,9 @@
                     participants.value=t.participants||[];
                     expenses.value=t.expenses||[];
                     todos.value=t.todos||[];
-                    applyGlobalTheme(); initSortable();
+                    applyGlobalTheme(); 
+                    initSortable();
+                    resizeAllTextareas(); // 🔥 数据加载后调整
                 };
                 
                 const switchTrip=id=>{ 
@@ -1058,10 +1081,14 @@
                             }, 100);
                         });
                     }
+                    if (newVal === 'plan') {
+                        resizeAllTextareas(); // 🔥 切换到行程视图时调整
+                    }
                 });
 
                 watch(currentDayIdx, () => {
                     initSortable();
+                    resizeAllTextareas(); // 🔥 切换日期后调整
                     if (viewMode.value === 'map') {
                         nextTick(() => drawRoute());
                     }
@@ -1082,7 +1109,13 @@
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
                 const addDay=()=>{ const d=new Date(days.value[days.value.length-1].fullDate); d.setDate(d.getDate()+1); days.value.push({fullDate:d.toISOString().split('T')[0],title:'',items:[]}); sortDays(); };
-                const addItem=()=>{ currentDay.value.items.push({id:Date.now(),time:'10:00',type:'spot',activity:'',location:'',connected:false}); nextTick(()=>{initSortable();autoResize({target:document.querySelector('.auto-textarea')})}); };
+                const addItem=()=>{ 
+                    currentDay.value.items.push({id:Date.now(),time:'10:00',type:'spot',activity:'',location:'',connected:false}); 
+                    nextTick(()=>{
+                        initSortable();
+                        resizeAllTextareas(); // 🔥 添加行程后调整
+                    }); 
+                };
                 const deleteItem=i=>currentDay.value.items.splice(i,1);
                 const confirmAndDeleteDay=()=>{ if(confirm('Delete Day?')) { days.value.splice(currentDayIdx.value,1); currentDayIdx.value=Math.max(0, currentDayIdx.value-1); } };
                 
@@ -1443,7 +1476,7 @@
                     days, currentDayIdx, currentDay, addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, expenses, newExpense, addExpense, totalExpense, editingExpenseIdx,
                     weather, allTrips, currentTripId, switchTrip, createNewTrip, applyGlobalTheme, getWeatherIcon,
-                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize, listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
+                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas, listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     participants, newParticipant, addParticipant, splitCalculation, startEditingParticipant, editingParticipantIdx, editingParticipantName, finishEditingParticipant,
                     todos, newTodo, addTodo, deleteTodo, getSortedTodosByCategory, tripOrderList, tripOrder,
                     startLongPress, clearLongPress, switchMapDay,
