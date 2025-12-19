@@ -1029,6 +1029,7 @@
                     return id; 
                 };
                 
+                // 🔥 修改：加载数据后自动排序
                 const loadCurrentTripData=()=>{
                     const t=allTrips.value[currentTripId.value]; if(!t)return;
                     Object.assign(settings, t.settings);
@@ -1037,6 +1038,8 @@
                     participants.value=t.participants||[];
                     expenses.value=t.expenses||[];
                     todos.value=t.todos||[];
+                    
+                    sortDays(); // 🔥 加载后立即排序
                     applyGlobalTheme(); 
                     initSortable();
                     resizeAllTextareas(); // 🔥 数据加载后调整
@@ -1105,10 +1108,38 @@
                      });
                 }}, {deep:true});
 
-                const sortDays=()=>days.value.sort((a,b)=>new Date(a.fullDate)-new Date(b.fullDate));
+                // 🔥 修改：排序后保持当前日期
+                const sortDays = () => {
+                    const currentDate = currentDay.value?.fullDate; // 保存当前日期
+                    days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
+                    
+                    // 🔥 排序后重新定位当前日期
+                    if (currentDate) {
+                        const newIndex = days.value.findIndex(d => d.fullDate === currentDate);
+                        if (newIndex !== -1) {
+                            currentDayIdx.value = newIndex;
+                        }
+                    }
+                };
+
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
-                const addDay=()=>{ const d=new Date(days.value[days.value.length-1].fullDate); d.setDate(d.getDate()+1); days.value.push({fullDate:d.toISOString().split('T')[0],title:'',items:[]}); sortDays(); };
+
+                // 🔥 修改：新增日期后自动切换
+                const addDay = () => { 
+                    const d = new Date(days.value[days.value.length - 1].fullDate); 
+                    d.setDate(d.getDate() + 1); 
+                    const newDate = d.toISOString().split('T')[0];
+                    days.value.push({fullDate: newDate, title: '', items: []}); 
+                    sortDays(); 
+                    
+                    // 🔥 新增后自动切换到新日期
+                    const newIndex = days.value.findIndex(d => d.fullDate === newDate);
+                    if (newIndex !== -1) {
+                        currentDayIdx.value = newIndex;
+                    }
+                };
+
                 const addItem=()=>{ 
                     currentDay.value.items.push({id:Date.now(),time:'10:00',type:'spot',activity:'',location:'',connected:false}); 
                     nextTick(()=>{
