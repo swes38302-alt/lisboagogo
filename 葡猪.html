@@ -909,7 +909,21 @@
                     });
                 };
                 
-                const checkLocation=async(i)=>{ if(!i.location?.trim()){i.error=false;return;} try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(i.location)}&format=json&limit=1`);const d=await r.json();i.error=d.length===0;}catch{i.error=true;} };
+                // ✅ 修复：确保 error 属性是响应式的
+                const checkLocation = async (item) => {
+                    if (!item.location?.trim()) {
+                        item.error = false;
+                        return;
+                    }
+                    
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`);
+                        const d = await r.json();
+                        item.error = d.length === 0;
+                    } catch {
+                        item.error = true;
+                    }
+                };
                 
                 const isConnectedToNext=i=>currentDay.value.items[i]?.connected&&i<currentDay.value.items.length-1;
                 const isConnectedToPrev=i=>i>0&&currentDay.value.items[i-1]?.connected;
@@ -1043,9 +1057,13 @@
                     Object.assign(settings, t.settings);
                     flights.value=t.flights?Object.values(t.flights):[];
                     
+                    // ✅ 确保 error 属性存在
                     days.value = (t.days || []).map(day => ({
                         ...day,
-                        items: Array.isArray(day.items) ? day.items : []
+                        items: Array.isArray(day.items) ? day.items.map(item => ({
+                            ...item,
+                            error: item.error || false
+                        })) : []
                     }));
                     
                     participants.value=t.participants||[];
@@ -1112,6 +1130,7 @@
 
                 watch(showTripList, v=>{if(v)initTripSortable()});
                 
+                // ✅ 优化：减少防抖延迟到 500ms，平衡性能和响应速度
                 watch([days,expenses,settings,participants,todos], ()=>{ 
                     if(!db || !currentTripId.value) return;
                     
@@ -1127,7 +1146,7 @@
                             participants: participants.value,
                             todos: JSON.parse(JSON.stringify(todos.value))
                         });
-                    }, 800);
+                    }, 500); // ✅ 降低到 500ms
                 }, {deep:true});
 
                 const sortDays = (targetDate = null) => {
@@ -1166,6 +1185,7 @@
                     sortDays(newDate);
                 };
 
+                // ✅ 修复：新增 item 时包含 error 属性
                 const addItem=()=>{ 
                     if (!currentDay.value || !Array.isArray(currentDay.value.items)) {
                         alert('⚠️ 無法新增行程，請重新載入頁面');
@@ -1173,12 +1193,13 @@
                     }
                     
                     currentDay.value.items.push({
-                        id:Date.now(),
-                        time:'10:00',
-                        type:'spot',
-                        activity:'',
-                        location:'',
-                        connected:false
+                        id: Date.now(),
+                        time: '10:00',
+                        type: 'spot',
+                        activity: '',
+                        location: '',
+                        connected: false,
+                        error: false // ✅ 添加 error 属性
                     }); 
                     
                     nextTick(()=>{
