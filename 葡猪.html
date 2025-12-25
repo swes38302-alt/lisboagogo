@@ -810,7 +810,20 @@
                 const todoBeforeEdit = ref(null);
                 const weather=reactive({temp:'--',icon:'sun'});
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
-                const currentDay=computed(()=>days.value[currentDayIdx.value]||{});
+                
+                // ✅ 修复 currentDay computed - 确保总是有 items 数组
+                const currentDay=computed(()=> {
+                    const day = days.value[currentDayIdx.value];
+                    if (!day) {
+                        return { fullDate: '', title: '', items: [] };
+                    }
+                    // 确保 items 存在
+                    if (!Array.isArray(day.items)) {
+                        day.items = [];
+                    }
+                    return day;
+                });
+                
                 const sortedFlights=computed(()=>flights.value);
                 const listKey=ref(0);
                 const longPressTimer = ref(null);
@@ -1021,11 +1034,18 @@
                     return id; 
                 };
                 
+                // ✅ 修复：确保加载的每个 day 都有 items 数组
                 const loadCurrentTripData=()=>{
                     const t=allTrips.value[currentTripId.value]; if(!t)return;
                     Object.assign(settings, t.settings);
                     flights.value=t.flights?Object.values(t.flights):[];
-                    days.value=t.days||[];
+                    
+                    // ✅ 确保每个 day 都有 items 数组
+                    days.value = (t.days || []).map(day => ({
+                        ...day,
+                        items: Array.isArray(day.items) ? day.items : []
+                    }));
+                    
                     participants.value=t.participants||[];
                     expenses.value=t.expenses||[];
                     todos.value=t.todos||[];
@@ -1099,7 +1119,6 @@
                      });
                 }}, {deep:true});
 
-                // ✅ 修复：添加 targetDate 参数
                 const sortDays = (targetDate = null) => {
                     const currentDate = targetDate || currentDay.value?.fullDate;
                     days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
@@ -1115,22 +1134,57 @@
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
 
-                // ✅ 修复：传递新日期给 sortDays
+                // ✅ 修复：处理空数组情况
                 const addDay = () => { 
-                    const d = new Date(days.value[days.value.length - 1].fullDate); 
+                    let lastDate;
+                    if (days.value.length > 0) {
+                        lastDate = days.value[days.value.length - 1].fullDate;
+                    } else {
+                        lastDate = new Date().toISOString().split('T')[0];
+                    }
+                    
+                    const d = new Date(lastDate); 
                     d.setDate(d.getDate() + 1); 
                     const newDate = d.toISOString().split('T')[0];
-                    days.value.push({fullDate: newDate, title: '', items: []}); 
-                    sortDays(newDate); // ✅ 传递新日期
+                    
+                    // ✅ 确保新日期有 items 数组
+                    days.value.push({
+                        fullDate: newDate, 
+                        title: '', 
+                        items: []
+                    }); 
+                    
+                    sortDays(newDate);
                 };
 
+                // ✅ 添加防御性检查
                 const addItem=()=>{ 
-                    currentDay.value.items.push({id:Date.now(),time:'10:00',type:'spot',activity:'',location:'',connected:false}); 
+                    // 确保 currentDay.value.items 存在
+                    if (!currentDay.value || !Array.isArray(currentDay.value.items)) {
+                        console.error('❌ currentDay.value.items 不存在或不是数组', {
+                            currentDayIdx: currentDayIdx.value,
+                            currentDay: currentDay.value,
+                            daysLength: days.value.length
+                        });
+                        alert('⚠️ 無法新增行程，請重新載入頁面');
+                        return;
+                    }
+                    
+                    currentDay.value.items.push({
+                        id:Date.now(),
+                        time:'10:00',
+                        type:'spot',
+                        activity:'',
+                        location:'',
+                        connected:false
+                    }); 
+                    
                     nextTick(()=>{
                         initSortable();
                         resizeAllTextareas();
                     }); 
                 };
+                
                 const deleteItem=i=>currentDay.value.items.splice(i,1);
                 const confirmAndDeleteDay=()=>{ if(confirm('Delete Day?')) { days.value.splice(currentDayIdx.value,1); currentDayIdx.value=Math.max(0, currentDayIdx.value-1); } };
                 
