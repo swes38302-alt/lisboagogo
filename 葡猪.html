@@ -46,7 +46,6 @@
         .bg-theme-main { background-color: var(--theme-primary); transition: background-color 0.5s ease; }
         .text-theme-main { color: var(--theme-primary); transition: color 0.5s ease; }
 
-        /* ================== 锁定模式样式 ================== */
         .locked-mode input,
         .locked-mode textarea,
         .locked-mode select,
@@ -112,7 +111,6 @@
             letter-spacing: normal;
         }
 
-        /* ================== 航班卡片 ================== */
         .boarding-pass-light {
             background: #ffffff;
             color: var(--theme-text);
@@ -143,7 +141,6 @@
         .flight-meta { background: #f8fafc; padding: 8px; border-radius: 12px; margin-top: 8px; display: flex; gap: 8px; }
         .flight-input-meta { background: transparent; border: none; font-size: 11px; font-weight: bold; width: 100%; color: #64748b; text-align: center; }
 
-        /* ================== Core Styles ================== */
         .transport-connector-bridge { position: absolute; bottom: -14px; left: 0; right: 0; height: 28px; z-index: 60; pointer-events: none; }
         .transport-btn-car { 
             pointer-events: auto; position: absolute; left: 24px; top: 50%; transform: translateY(-50%); 
@@ -516,7 +513,7 @@
                 
                 <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100"><div class="flex justify-between"><input type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0"><button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div><input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題"></div>
                 
-                <div id="itinerary-list" class="space-y-0 pl-2" :key="listKey">
+                <div id="itinerary-list" class="space-y-0 pl-2">
                     <div v-for="(item, idx) in currentDay.items" :key="item.id" class="itinerary-wrapper relative group" :class="[(item.connected || (isConnectedToPrev(idx))) ? 'mb-0' : 'mb-5']" :data-id="idx">
                         <div class="p-3 shadow-sm bg-white relative transition flex gap-3 border border-slate-100 rounded-xl" :class="[isConnectedToNext(idx) ? 'card-connected-bottom' : '', isConnectedToPrev(idx) ? 'card-connected-top' : '', (isConnectedToNext(idx) || isConnectedToPrev(idx)) ? 'card-dashed-border' : '']">
                             <div v-if="isConnectedToPrev(idx) && !getPrevItem(idx)?.showTransport" class="group-divider"></div>
@@ -811,13 +808,11 @@
                 const weather=reactive({temp:'--',icon:'sun'});
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
                 
-                // ✅ 修复 currentDay computed - 确保总是有 items 数组
                 const currentDay=computed(()=> {
                     const day = days.value[currentDayIdx.value];
                     if (!day) {
                         return { fullDate: '', title: '', items: [] };
                     }
-                    // 确保 items 存在
                     if (!Array.isArray(day.items)) {
                         day.items = [];
                     }
@@ -825,7 +820,6 @@
                 });
                 
                 const sortedFlights=computed(()=>flights.value);
-                const listKey=ref(0);
                 const longPressTimer = ref(null);
                 
                 const showUnlockPrompt = ref(false);
@@ -842,6 +836,7 @@
                 });
                 
                 let map, markersLayer, routeLine, userMarker, sortableInstance, tripSortableInstance;
+                let saveDebounceTimer = null;
                 
                 const autoSetRate = () => {
                     if(!settings.location) return;
@@ -945,25 +940,34 @@
                 const initSortable=()=>{
                     nextTick(()=>{
                         const el=document.getElementById('itinerary-list');
-                        if(sortableInstance){ sortableInstance.destroy(); sortableInstance=null; }
-                        if(el){
-                            sortableInstance=new Sortable(el, {
-                                handle:'.drag-handle', animation:150, ghostClass:'sortable-ghost', dragClass:'sortable-drag', filter:'.no-drag', preventOnFilter:false,
-                                delay: 250, delayOnTouchOnly: true, scroll: true, scrollSensitivity: 80, scrollSpeed: 20, 
-                                onEnd:(e)=>{
-                                    if(e.oldIndex===e.newIndex)return;
-                                    const item=currentDay.value.items.splice(e.oldIndex,1)[0];
-                                    currentDay.value.items.splice(e.newIndex,0,item);
-                                    if(currentDay.value.items.length>0) currentDay.value.items[currentDay.value.items.length-1].connected=false;
-                                    listKey.value++;
-                                    nextTick(()=>{ 
-                                        initSortable(); 
-                                        resizeAllTextareas();
-                                        if(viewMode.value==='map') drawRoute(); 
-                                    });
-                                }
-                            });
+                        
+                        if(sortableInstance){ 
+                            sortableInstance.destroy(); 
+                            sortableInstance=null; 
                         }
+                        
+                        if(!el) return;
+                        
+                        sortableInstance=new Sortable(el, {
+                            handle:'.drag-handle', 
+                            animation:150, 
+                            ghostClass:'sortable-ghost', 
+                            dragClass:'sortable-drag', 
+                            filter:'.no-drag', 
+                            preventOnFilter:false,
+                            delay: 250, 
+                            delayOnTouchOnly: true, 
+                            scroll: true, 
+                            scrollSensitivity: 80, 
+                            scrollSpeed: 20, 
+                            onEnd:(e)=>{
+                                if(e.oldIndex===e.newIndex)return;
+                                const item=currentDay.value.items.splice(e.oldIndex,1)[0];
+                                currentDay.value.items.splice(e.newIndex,0,item);
+                                if(currentDay.value.items.length>0) currentDay.value.items[currentDay.value.items.length-1].connected=false;
+                                if(viewMode.value==='map') nextTick(() => drawRoute());
+                            }
+                        });
                     });
                 };
                 
@@ -1034,13 +1038,11 @@
                     return id; 
                 };
                 
-                // ✅ 修复：确保加载的每个 day 都有 items 数组
                 const loadCurrentTripData=()=>{
                     const t=allTrips.value[currentTripId.value]; if(!t)return;
                     Object.assign(settings, t.settings);
                     flights.value=t.flights?Object.values(t.flights):[];
                     
-                    // ✅ 确保每个 day 都有 items 数组
                     days.value = (t.days || []).map(day => ({
                         ...day,
                         items: Array.isArray(day.items) ? day.items : []
@@ -1109,15 +1111,24 @@
                 });
 
                 watch(showTripList, v=>{if(v)initTripSortable()});
-                watch([days,expenses,settings,participants,todos], ()=>{ if(db&&currentTripId.value) {
-                     db.ref(`trips/${currentTripId.value}`).update({
-                         days: JSON.parse(JSON.stringify(days.value)),
-                         expenses: JSON.parse(JSON.stringify(expenses.value)),
-                         settings: settings,
-                         participants: participants.value,
-                         todos: JSON.parse(JSON.stringify(todos.value))
-                     });
-                }}, {deep:true});
+                
+                watch([days,expenses,settings,participants,todos], ()=>{ 
+                    if(!db || !currentTripId.value) return;
+                    
+                    if(saveDebounceTimer) {
+                        clearTimeout(saveDebounceTimer);
+                    }
+                    
+                    saveDebounceTimer = setTimeout(() => {
+                        db.ref(`trips/${currentTripId.value}`).update({
+                            days: JSON.parse(JSON.stringify(days.value)),
+                            expenses: JSON.parse(JSON.stringify(expenses.value)),
+                            settings: settings,
+                            participants: participants.value,
+                            todos: JSON.parse(JSON.stringify(todos.value))
+                        });
+                    }, 800);
+                }, {deep:true});
 
                 const sortDays = (targetDate = null) => {
                     const currentDate = targetDate || currentDay.value?.fullDate;
@@ -1134,7 +1145,6 @@
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
 
-                // ✅ 修复：处理空数组情况
                 const addDay = () => { 
                     let lastDate;
                     if (days.value.length > 0) {
@@ -1147,7 +1157,6 @@
                     d.setDate(d.getDate() + 1); 
                     const newDate = d.toISOString().split('T')[0];
                     
-                    // ✅ 确保新日期有 items 数组
                     days.value.push({
                         fullDate: newDate, 
                         title: '', 
@@ -1157,15 +1166,8 @@
                     sortDays(newDate);
                 };
 
-                // ✅ 添加防御性检查
                 const addItem=()=>{ 
-                    // 确保 currentDay.value.items 存在
                     if (!currentDay.value || !Array.isArray(currentDay.value.items)) {
-                        console.error('❌ currentDay.value.items 不存在或不是数组', {
-                            currentDayIdx: currentDayIdx.value,
-                            currentDay: currentDay.value,
-                            daysLength: days.value.length
-                        });
                         alert('⚠️ 無法新增行程，請重新載入頁面');
                         return;
                     }
@@ -1180,7 +1182,6 @@
                     }); 
                     
                     nextTick(()=>{
-                        initSortable();
                         resizeAllTextareas();
                     }); 
                 };
@@ -1545,7 +1546,7 @@
                     days, currentDayIdx, currentDay, addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, expenses, newExpense, addExpense, totalExpense, editingExpenseIdx,
                     weather, allTrips, currentTripId, switchTrip, createNewTrip, applyGlobalTheme, getWeatherIcon,
-                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas, listKey, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
+                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     participants, newParticipant, addParticipant, splitCalculation, startEditingParticipant, editingParticipantIdx, editingParticipantName, finishEditingParticipant,
                     todos, newTodo, addTodo, deleteTodo, getSortedTodosByCategory, tripOrderList, tripOrder,
                     startLongPress, clearLongPress, switchMapDay,
