@@ -324,7 +324,6 @@
                     <div class="flex items-center gap-2 mt-1 min-w-0 flex-1">
                         <span class="font-bold text-lg leading-tight truncate">{{ settings.name }}</span>
                         <button @click="showSettings = true" class="text-white/70 hover:text-white transition p-1 hover:bg-white/10 rounded-full flex-shrink-0" title="旅程設定"><i class="ph-bold ph-gear-six text-lg"></i></button>
-                        <!-- 🔥 锁定按钮 -->
                         <button @click="toggleLock" class="lock-toggle-btn relative text-white/70 hover:text-white transition p-1 hover:bg-white/10 rounded-full flex-shrink-0" :title="settings.isLocked ? '已鎖定（點擊解鎖）' : '點擊鎖定'">
                             <i class="ph-bold text-lg" :class="settings.isLocked ? 'ph-lock' : 'ph-lock-open'"></i>
                             <div v-if="settings.isLocked" class="lock-badge">
@@ -380,7 +379,6 @@
                         </div>
                     </div>
                     
-                    <!-- 🔥 锁定设置区块 -->
                     <div class="mt-3 pt-3 border-t border-slate-200">
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
@@ -428,7 +426,7 @@
             </div>
         </div>
 
-        <!-- 🔥 解锁密码弹窗 -->
+        <!-- 解锁密码弹窗 -->
         <div v-if="showUnlockPrompt" class="locked-overlay">
             <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 max-w-sm animate__animated animate__bounceIn">
                 <div class="text-center mb-4">
@@ -516,7 +514,7 @@
                     </div>
                 </div>
                 
-                <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100"><div class="flex justify-between"><input type="date" v-model="currentDay.fullDate" @change="sortDays" class="text-xs text-slate-400 bg-transparent border-none p-0"><button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div><input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題"></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100"><div class="flex justify-between"><input type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0"><button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div><input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題"></div>
                 
                 <div id="itinerary-list" class="space-y-0 pl-2" :key="listKey">
                     <div v-for="(item, idx) in currentDay.items" :key="item.id" class="itinerary-wrapper relative group" :class="[(item.connected || (isConnectedToPrev(idx))) ? 'mb-0' : 'mb-5']" :data-id="idx">
@@ -769,7 +767,6 @@
         
         const THEMES = {'lisbon': { main: '#006C84', light: '#6EB5C0', bg: '#FDFBF7' }, 'japan': { main: '#E11D48', light: '#FDA4AF', bg: '#FFF1F2' }, 'tokyo': { main: '#0EA5E9', light: '#7DD3FC', bg: '#F0F9FF' }, 'london': { main: '#1E3A8A', light: '#93C5FD', bg: '#F8FAFC' }, 'uk': { main: '#B91C1C', light: '#FCA5A5', bg: '#FEF2F2' }, 'korea': { main: '#8B5CF6', light: '#C4B5FD', bg: '#F5F3FF' }, 'nature': { main: '#059669', light: '#6EE7B7', bg: '#ECFDF5' }};
         
-        // 🔥 汇率映射表（优化）
         const CURRENCY_RATES = {
             'japan': { currency: '¥', rate: 0.21 },
             'tokyo': { currency: '¥', rate: 0.21 },
@@ -833,7 +830,6 @@
                 
                 let map, markersLayer, routeLine, userMarker, sortableInstance, tripSortableInstance;
                 
-                // 🔥 自动设置汇率
                 const autoSetRate = () => {
                     if(!settings.location) return;
                     const loc = settings.location.toLowerCase();
@@ -844,7 +840,6 @@
                             return;
                         }
                     }
-                    // 默认欧元
                     settings.currency = '€';
                     settings.rate = 34.5;
                 };
@@ -890,14 +885,12 @@
                 const getTypeEmoji=v=>TYPES_LIST.find(t=>t.val===v)?.emoji||'📍';
                 const getTypeColor=v=>TYPES_LIST.find(t=>t.val===v)?.bg||'bg-slate-400';
                 
-                // 🔥 修正：自动调整单个 textarea 的高度
                 const autoResize=e=>{
                     const el=e.target;
                     el.style.height='auto';
                     el.style.height=el.scrollHeight+'px';
                 };
                 
-                // 🔥 新增：批量调整所有 textarea 的高度
                 const resizeAllTextareas = () => {
                     nextTick(() => {
                         const textareas = document.querySelectorAll('.auto-textarea');
@@ -923,7 +916,6 @@
                     document.documentElement.style.setProperty('--theme-light',theme.light);
                     document.documentElement.style.setProperty('--theme-bg',theme.bg);
                     
-                    // 🔥 自动设置汇率（但不强制覆盖用户手动设置）
                     autoSetRate();
                     
                     try{
@@ -953,7 +945,7 @@
                                     listKey.value++;
                                     nextTick(()=>{ 
                                         initSortable(); 
-                                        resizeAllTextareas(); // 🔥 排序后调整
+                                        resizeAllTextareas();
                                         if(viewMode.value==='map') drawRoute(); 
                                     });
                                 }
@@ -1029,7 +1021,6 @@
                     return id; 
                 };
                 
-                // 🔥 修改：加载数据后自动排序
                 const loadCurrentTripData=()=>{
                     const t=allTrips.value[currentTripId.value]; if(!t)return;
                     Object.assign(settings, t.settings);
@@ -1039,10 +1030,10 @@
                     expenses.value=t.expenses||[];
                     todos.value=t.todos||[];
                     
-                    sortDays(); // 🔥 加载后立即排序
+                    sortDays();
                     applyGlobalTheme(); 
                     initSortable();
-                    resizeAllTextareas(); // 🔥 数据加载后调整
+                    resizeAllTextareas();
                 };
                 
                 const switchTrip=id=>{ 
@@ -1085,13 +1076,13 @@
                         });
                     }
                     if (newVal === 'plan') {
-                        resizeAllTextareas(); // 🔥 切换到行程视图时调整
+                        resizeAllTextareas();
                     }
                 });
 
                 watch(currentDayIdx, () => {
                     initSortable();
-                    resizeAllTextareas(); // 🔥 切换日期后调整
+                    resizeAllTextareas();
                     if (viewMode.value === 'map') {
                         nextTick(() => drawRoute());
                     }
@@ -1108,12 +1099,11 @@
                      });
                 }}, {deep:true});
 
-                // 🔥 修改：排序后保持当前日期
-                const sortDays = () => {
-                    const currentDate = currentDay.value?.fullDate; // 保存当前日期
+                // ✅ 修复：添加 targetDate 参数
+                const sortDays = (targetDate = null) => {
+                    const currentDate = targetDate || currentDay.value?.fullDate;
                     days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
                     
-                    // 🔥 排序后重新定位当前日期
                     if (currentDate) {
                         const newIndex = days.value.findIndex(d => d.fullDate === currentDate);
                         if (newIndex !== -1) {
@@ -1125,26 +1115,20 @@
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
 
-                // 🔥 修改：新增日期后自动切换
+                // ✅ 修复：传递新日期给 sortDays
                 const addDay = () => { 
                     const d = new Date(days.value[days.value.length - 1].fullDate); 
                     d.setDate(d.getDate() + 1); 
                     const newDate = d.toISOString().split('T')[0];
                     days.value.push({fullDate: newDate, title: '', items: []}); 
-                    sortDays(); 
-                    
-                    // 🔥 新增后自动切换到新日期
-                    const newIndex = days.value.findIndex(d => d.fullDate === newDate);
-                    if (newIndex !== -1) {
-                        currentDayIdx.value = newIndex;
-                    }
+                    sortDays(newDate); // ✅ 传递新日期
                 };
 
                 const addItem=()=>{ 
                     currentDay.value.items.push({id:Date.now(),time:'10:00',type:'spot',activity:'',location:'',connected:false}); 
                     nextTick(()=>{
                         initSortable();
-                        resizeAllTextareas(); // 🔥 添加行程后调整
+                        resizeAllTextareas();
                     }); 
                 };
                 const deleteItem=i=>currentDay.value.items.splice(i,1);
