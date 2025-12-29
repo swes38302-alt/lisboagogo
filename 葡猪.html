@@ -899,7 +899,7 @@
                     return points;
                 }
 
-                // ✅ 靈動曲線 + 箭頭 DrawRoute 函數
+                // ✅ 靈動曲線 (無箭頭) DrawRoute 函數
                 const drawRoute = async () => {
                     if (!map) {
                         map = L.map('map').setView([38.72, -9.14], 14);
@@ -932,7 +932,6 @@
                     });
                     
                     loading.value = true;
-                   
                     
                     const results = await Promise.all(geocodePromises);
                     const validPoints = results.filter(r => r && r.lat);
@@ -946,7 +945,7 @@
                         bounds.push([pt.lat, pt.lon]);
                     });
 
-                    // 2. Draw Curves and Arrows between points
+                    // 2. Draw Curves between points (NO ARROWS)
                     for (let i = 0; i < validPoints.length - 1; i++) {
                         const start = validPoints[i];
                         const end = validPoints[i+1];
@@ -958,12 +957,10 @@
                         L.polyline(curvePoints, {
                             color: '#DC2626', // Red-600
                             weight: 3,
-                            dashArray: '10, 10',
+                            dashArray: '12, 12', // Slightly wider dashes
                             opacity: 0.8,
                             lineCap: 'round'
                         }).addTo(markersLayer);
-                        
-                        // Arrows REMOVED based on user request
                     }
                     
                     if (bounds.length) map.fitBounds(bounds, { padding: [80, 80] });
