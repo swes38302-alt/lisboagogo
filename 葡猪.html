@@ -6,21 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>你是什麽豬 | 全球通用旅程規劃器</title>
     
-    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
@@ -164,6 +157,25 @@
         .map-day-btn.active { background: var(--theme-primary); color: white; border-color: var(--theme-primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .map-day-number { font-size: 14px; font-weight: 800; line-height: 1; }
         .btn-gmap { background: white; border: 1px solid #E2E8F0; color: #EA4335; width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-left: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        .btn-map-pin { 
+            background: #8B5CF6; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            display: flex; 
+            align-items: center; 
+            gap: 4px; 
+            white-space: nowrap; 
+            transition: all 0.2s; 
+            border: none; 
+            box-shadow: 0 1px 3px rgba(139, 92, 246, 0.3); 
+            cursor: pointer;
+        }
+        .btn-map-pin:hover { background: #7C3AED; box-shadow: 0 2px 5px rgba(139, 92, 246, 0.4); }
+        
         .group-divider { position: absolute; bottom: 0; left: 16px; right: 16px; height: 1px; border-bottom: 2px dashed #CBD5E1; opacity: 0.5; }
         .transport-strip-full { width: 100%; background-color: #f8fafc; border-top: 1px dashed #E2E8F0; border-bottom: 1px dashed #E2E8F0; padding: 4px 8px; display: flex; align-items: center; justify-content: center; color: var(--theme-primary); font-size: 11px; font-weight: bold; gap: 8px; z-index: 40; position: relative; pointer-events: auto; }
         .pin-wrapper { position: relative; width: 36px; height: 36px; }
@@ -199,6 +211,29 @@
         .weather-font { font-family: 'Oswald', sans-serif; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         #map { height: 100%; width: 100%; z-index: 0; position: relative; }
+        
+        .map-pinning-mode {
+            cursor: crosshair !important;
+        }
+        .map-pinning-mode * {
+            cursor: crosshair !important;
+        }
+        .pinning-indicator {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(139, 92, 246, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: pulse 1.5s infinite;
+        }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(-0); } }
         .card-connected-top { border-top: none; padding-top: 10px; border-top-left-radius: 0; border-top-right-radius: 0; }
         .card-connected-bottom { border-bottom: none; padding-bottom: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
@@ -294,13 +329,28 @@
         .itinerary-expense-card.settled { opacity: 0.5; background: #F8FAFC; border-color: #cbd5e1 !important; border-style: dashed !important; }
         .itinerary-expense-card.settled:after { content: '\f10c'; font-family: "Phosphor-Bold"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #10b981; opacity: 0.3; pointer-events: none; }
         .press-hint { font-size: 9px; color: #cbd5e1; margin-top: 2px; display: block; text-align: right; }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3);
+            border: 1px solid #E2E8F0;
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 0;
+            width: auto !important;
+            min-width: 260px;
+        }
+        .custom-popup .leaflet-popup-tip {
+            background: white;
+            border: 1px solid #E2E8F0;
+        }
     </style>
 </head>
 
 <body class="text-slate-700 h-dynamic-screen flex flex-col overflow-hidden fixed inset-0">
     <div id="app" v-cloak class="flex flex-col h-full max-w-md mx-auto w-full bg-white shadow-2xl sm:border-x sm:border-slate-200 relative">
 
-        <!-- 省略 Header, Modals... (与之前完全相同) -->
         <div v-if="globalMenu.visible" class="fixed inset-0 z-[9998]" @click="closeGlobalMenu"></div>
         <div v-if="globalMenu.visible" class="global-type-popup" :style="{ top: globalMenu.y + 'px', left: globalMenu.x + 'px' }">
             <div v-for="type in TYPES_LIST" :key="type.val" @click="confirmTypeSelection(type.val)" class="type-option">
@@ -341,7 +391,6 @@
             </div>
         </header>
 
-        <!-- (Modals are same, omitted for brevity) -->
         <!-- Settings Modal -->
         <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
             <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 animate__animated animate__fadeInUp safe-container">
@@ -349,7 +398,6 @@
                     <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i class="ph-duotone ph-gear-six text-theme-main"></i> 旅程設定</h2>
                     <button @click="showSettings = false"><i class="ph-bold ph-x text-slate-400 text-xl"></i></button>
                 </div>
-                <!-- ... settings content ... -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                     <div><label class="text-[10px] font-bold text-slate-400 uppercase">旅程名稱</label><input v-model="settings.name" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-theme-main outline-none transition" placeholder="例如: 日本東京之旅"></div>
                     <div>
@@ -359,7 +407,6 @@
                             <button @click="applyGlobalTheme" class="flex-btn-safe bg-white border border-slate-200 w-10 h-10 rounded-lg text-theme-main hover:bg-slate-50 flex items-center justify-center"><i class="ph-bold ph-magic-wand"></i></button>
                         </div>
                     </div>
-                    <!-- ... currency settings ... -->
                    <div class="flex gap-3">
                         <div class="flex-1">
                             <label class="text-[10px] font-bold text-slate-400 uppercase">貨幣</label>
@@ -386,7 +433,6 @@
                         </div>
                         <div v-if="settings.isLocked" class="space-y-2 animate__animated animate__fadeIn">
                             <input v-model="settings.password" type="password" placeholder="設定解鎖密碼（選填）" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                            <!-- ... -->
                         </div>
                     </div>
                 </div>
@@ -444,7 +490,7 @@
             <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-[1000]"><i class="ph-duotone ph-spinner-gap animate-spin text-4xl text-theme-main mb-2"></i><p class="text-xs text-slate-400">{{ loadingText }}</p></div>
             
             <!-- Flight View -->
-             <div v-show="viewMode === 'flight'" class="p-4 space-y-0 pb-20">
+            <div v-show="viewMode === 'flight'" class="p-4 space-y-0 pb-20">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 relative overflow-hidden">
                     <div class="absolute -right-6 -top-6 text-theme-main opacity-10"><i class="ph-fill ph-airplane-tilt text-9xl"></i></div>
                     <h2 class="font-bold text-slate-700 mb-3 text-sm relative z-10">新增航班</h2>
@@ -462,7 +508,6 @@
                 </div>
                 <template v-for="(flight, index) in sortedFlights" :key="flight.id">
                     <div class="boarding-pass-light relative" :class="[(flight.connected && index < sortedFlights.length - 1) ? 'connected-bottom' : '', (index > 0 && sortedFlights[index-1].connected) ? 'connected-top' : '']">
-                        <!-- ... flight card content ... -->
                          <div class="flight-header">
                             <div class="flex items-center gap-2 text-theme-main">
                                 <i class="ph-fill ph-airplane-tilt text-xl"></i>
@@ -526,10 +571,50 @@
                                     <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-lg text-slate-300 hover:text-theme-main" title="長按拖曳排序"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
                                 </div>
                                 <div class="relative">
-                                    <div class="flex items-center gap-2" :class="item.error ? 'text-red-500' : 'text-slate-600'">
-                                        <i :class="item.error ? 'ph-warning-circle text-red-500' : 'ph-map-pin-fill text-teal-500'" class="ph-fill text-sm mt-0.5 shrink-0 animate__animated" :class="{'animate__headShake': item.error}"></i>
-                                        <input v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
-                                        <a v-if="item.location" :href="'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(item.location)" target="_blank" class="btn-gmap" title="打開 Google Map"><i class="ph-bold ph-navigation-arrow"></i></a>
+                                    <div class="flex items-center gap-1 flex-wrap" :class="item.error ? 'text-red-500' : 'text-slate-600'">
+                                        <i :class="item.error ? 'ph-warning-circle text-red-500' : (item.searching ? 'ph-spinner-gap animate-spin text-blue-500' : 'ph-map-pin-fill text-teal-500')" class="ph-fill text-sm shrink-0"></i>
+                                        
+                                        <input 
+                                            v-model="item.location" 
+                                            @change="manualCheckLocation(item)"
+                                            class="input-invisible text-xs font-medium placeholder-slate-300 flex-1 min-w-[100px]" 
+                                            :class="{'text-red-500 font-bold': item.error, 'text-blue-600': item.searching}" 
+                                            placeholder="地點名稱">
+                                        
+                                        <button 
+                                            v-if="item.location && !item.searching" 
+                                            @click="manualCheckLocation(item)" 
+                                            class="text-slate-400 hover:text-theme-main transition p-1 rounded shrink-0"
+                                            title="檢查地點">
+                                            <i class="ph-bold ph-magnifying-glass text-sm"></i>
+                                        </button>
+                                        
+                                        <button 
+                                            v-if="item.error && item.location" 
+                                            @click="startPinningMode(item)" 
+                                            class="btn-map-pin shrink-0">
+                                            <i class="ph-bold ph-push-pin text-sm"></i>
+                                            <span>標註</span>
+                                        </button>
+                                        
+                                        <a 
+                                            v-if="item.location" 
+                                            :href="'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(item.location)" 
+                                            target="_blank" 
+                                            class="btn-gmap shrink-0"
+                                            title="Google Maps 搜尋">
+                                            <i class="ph-bold ph-navigation-arrow"></i>
+                                        </a>
+                                    </div>
+                                    
+                                    <!-- 只显示搜索中和错误状态，删除绿色确认提示 -->
+                                    <div v-if="item.searching" class="text-xs text-blue-500 mt-1 flex items-center gap-1">
+                                        <i class="ph-bold ph-spinner-gap animate-spin"></i>
+                                        <span>正在搜尋地點...</span>
+                                    </div>
+                                    <div v-else-if="item.error && item.location" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <i class="ph-bold ph-warning"></i>
+                                        <span>找不到此地點 - 點擊「標註」在地圖上手動設定</span>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
@@ -563,16 +648,27 @@
             
             <!-- Map View -->
             <div v-show="viewMode === 'map'" class="h-full flex flex-col relative w-full">
+                <div v-if="isPinningMode" class="pinning-indicator">
+                    📍 點擊地圖設定「{{ pinningItem?.activity || '未命名' }}」的位置
+                </div>
+                
                 <div v-if="days.length > 0" class="map-day-selector hide-scroll">
                     <div v-for="(day, index) in days" :key="index" @click="switchMapDay(index)" class="map-day-btn" :class="currentDayIdx === index ? 'active' : ''">
                         <span>D{{ index + 1 }}</span><span class="map-day-number">{{ new Date(day.fullDate).getDate() }}</span>
                     </div>
                 </div>
-                <div id="map" class="flex-1"></div>
-                <div class="absolute bottom-6 left-4 right-4 z-[5000] flex justify-center gap-3"><button @click="locateUser" class="bg-[#1E293B] text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-[#0F172A] active:scale-95 border border-slate-600"><i class="ph-bold ph-navigation-arrow"></i> 我的位置</button></div>
+                <div id="map" class="flex-1" :class="{'map-pinning-mode': isPinningMode}"></div>
+                <div class="absolute bottom-6 left-4 right-4 z-[5000] flex justify-center gap-3">
+                    <button v-if="isPinningMode" @click="cancelPinningMode" class="bg-red-500 text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-red-600 active:scale-95 border border-red-600">
+                        <i class="ph-bold ph-x"></i> 取消標註
+                    </button>
+                    <button v-else @click="locateUser" class="bg-[#1E293B] text-white px-5 py-2.5 rounded-full shadow-xl font-bold text-sm flex items-center gap-2 transition hover:bg-[#0F172A] active:scale-95 border border-slate-600">
+                        <i class="ph-bold ph-navigation-arrow"></i> 我的位置
+                    </button>
+                </div>
             </div>
             
-            <!-- Todo View (省略...) -->
+            <!-- Todo View -->
             <div v-show="viewMode === 'todo'" class="p-4 pb-20">
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl mb-4 border border-blue-100">
                     <h2 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2"><i class="ph-duotone ph-check-square text-theme-main text-lg"></i> 新增待辦事項</h2>
@@ -593,7 +689,6 @@
                              @mousedown="startTodoLongPress(todo)" 
                              @mouseup="clearTodoLongPress" 
                              @mouseleave="clearTodoLongPress">
-                             <!-- ... todo item ... -->
                             <div v-if="editingTodoId !== todo.id" class="flex items-start gap-3">
                                 <input type="checkbox" v-model="todo.completed" class="todo-checkbox mt-0.5 flex-shrink-0">
                                 <div class="flex-1 min-w-0">
@@ -616,9 +711,8 @@
                 </div>
             </div>
             
-            <!-- Money View (省略...) -->
+            <!-- Money View -->
             <div v-show="viewMode === 'money'" class="p-4 pb-20">
-                <!-- ... money content ... -->
                 <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
                     <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總支出 Total</div>
                     <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense.toFixed(1) }}</div>
@@ -696,7 +790,6 @@
                     </div>
                 </div>
 
-                <!-- ... expense list ... -->
                 <div class="space-y-2 pb-10">
                      <div v-for="(exp, idx) in expenses" :key="idx" 
                          class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" 
@@ -758,17 +851,22 @@
     <script>
         const { createApp, ref, computed, reactive, watch, nextTick, onMounted } = Vue;
         
-        // ... (CONSTANTS are same)
         const THEMES = {'lisbon': { main: '#006C84', light: '#6EB5C0', bg: '#FDFBF7' }, 'japan': { main: '#E11D48', light: '#FDA4AF', bg: '#FFF1F2' }, 'tokyo': { main: '#0EA5E9', light: '#7DD3FC', bg: '#F0F9FF' }, 'london': { main: '#1E3A8A', light: '#93C5FD', bg: '#F8FAFC' }, 'uk': { main: '#B91C1C', light: '#FCA5A5', bg: '#FEF2F2' }, 'korea': { main: '#8B5CF6', light: '#C4B5FD', bg: '#F5F3FF' }, 'nature': { main: '#059669', light: '#6EE7B7', bg: '#ECFDF5' }};
         const CURRENCY_RATES = { 'japan': { currency: '¥', rate: 0.21 }, 'tokyo': { currency: '¥', rate: 0.21 }, 'uk': { currency: '£', rate: 40.5 }, 'london': { currency: '£', rate: 40.5 }, 'korea': { currency: '₩', rate: 0.024 }, 'seoul': { currency: '₩', rate: 0.024 }, 'usa': { currency: '$', rate: 31.5 }, 'america': { currency: '$', rate: 31.5 }, 'europe': { currency: '€', rate: 34.5 }, 'lisbon': { currency: '€', rate: 34.5 }, 'portugal': { currency: '€', rate: 34.5 } };
         const TYPES_LIST = [{ val: 'spot', label: '景點', emoji: '📍', bg: 'bg-[#006C84]' }, { val: 'restaurant', label: '美食', emoji: '🍔', bg: 'bg-[#E11D48]' }, { val: 'cafe', label: '咖啡', emoji: '☕', bg: 'bg-[#D97706]' }, { val: 'shop', label: '購物', emoji: '🛍️', bg: 'bg-[#7C3AED]' }, { val: 'transport', label: '交通', emoji: '🚇', bg: 'bg-[#334155]' }, { val: 'hotel', label: '住宿', emoji: '🏨', bg: 'bg-[#475569]' }];
         
         const firebaseConfig = {apiKey: "AIzaSyC_mIkGuJCMKAcoRf78bipUJzzodTk_zVs",authDomain: "lisboaaa-2c65b.firebaseapp.com",databaseURL: "https://lisboaaa-2c65b-default-rtdb.firebaseio.com",projectId: "lisboaaa-2c65b",appId: "1:391483387676:web:d527043aee656dfc5854d9"};
-        let db; try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch(e){}
+        let db; 
+        try { 
+            firebase.initializeApp(firebaseConfig); 
+            db = firebase.database(); 
+            console.log('✅ Firebase initialized'); 
+        } catch(e){ 
+            console.log('⚠️ Firebase init failed:', e); 
+        }
         
         const app = createApp({
             setup() {
-                 // ... (Reactive variables are same)
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
                 const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
                 const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '' });
@@ -776,15 +874,15 @@
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
                 const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false});
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
-                const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
+                const todos=ref([]), newTodo=reactive({text:'', category: 'before', deadline:''});
                 const editingTodoId = ref(null), todoLongPressTimer = ref(null), todoBeforeEdit = ref(null);
                 const weather=reactive({temp:'--',icon:'sun'});
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
                 const showUnlockPrompt = ref(false), unlockPassword = ref(''), isUnlocked = ref(false);
-                const urlParams = new URLSearchParams(window.location.search);
-                const isReadOnlyMode = urlParams.get('readonly') === 'true';
+                
+                const isPinningMode = ref(false);
+                const pinningItem = ref(null);
 
-                // ... (Computeds same)
                 const currentDay=computed(()=> { const day = days.value[currentDayIdx.value]; if (!day) return { fullDate: '', title: '', items: [] }; if (!Array.isArray(day.items)) day.items = []; return day; });
                 const sortedFlights=computed(()=>flights.value);
                 const tripOrderList=computed(()=>{ if(tripOrder.value.length===0) return Object.keys(allTrips.value); const v=tripOrder.value.filter(id=>allTrips.value[id]); return [...v, ...Object.keys(allTrips.value).filter(id=>!v.includes(id))]; });
@@ -795,7 +893,6 @@
                 let saveDebounceTimer = null;
                 const longPressTimer = ref(null);
 
-                // ... (Functions same)
                 const autoSetRate = () => { if(!settings.location) return; const loc = settings.location.toLowerCase(); for(const [key, value] of Object.entries(CURRENCY_RATES)) { if(loc.includes(key)) { settings.currency = value.currency; settings.rate = value.rate; return; } } };
                 const toggleLock = () => { if (settings.isLocked && !isUnlocked.value) { if (settings.password) { showUnlockPrompt.value = true; } else { isUnlocked.value = true; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } } else { settings.isLocked = !settings.isLocked; isUnlocked.value = false; } };
                 const attemptUnlock = () => { if (unlockPassword.value === settings.password) { isUnlocked.value = true; showUnlockPrompt.value = false; unlockPassword.value = ''; if (navigator.vibrate) navigator.vibrate([50, 100, 50]); setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } else { if (navigator.vibrate) navigator.vibrate([200, 50, 200]); alert('❌ 密碼錯誤！'); unlockPassword.value = ''; } };
@@ -805,36 +902,270 @@
                 const getTypeName=v=>TYPES_LIST.find(t=>t.val===v)?.label||'景點';
                 const getTypeEmoji=v=>TYPES_LIST.find(t=>t.val===v)?.emoji||'📍';
                 const getTypeColor=v=>TYPES_LIST.find(t=>t.val===v)?.bg||'bg-slate-400';
+                const getTypeColorHex = (type) => {
+                    const colorMap = { 'spot': '#006C84', 'restaurant': '#E11D48', 'cafe': '#D97706', 'shop': '#7C3AED', 'transport': '#334155', 'hotel': '#475569' };
+                    return colorMap[type] || '#64748b';
+                };
+                
                 const autoResize=e=>{ const el=e.target; el.style.height='auto'; el.style.height=el.scrollHeight+'px'; };
                 const resizeAllTextareas = () => { nextTick(() => { const textareas = document.querySelectorAll('.auto-textarea'); textareas.forEach(textarea => { textarea.style.height = 'auto'; textarea.style.height = textarea.scrollHeight + 'px'; }); }); };
-                const checkLocation = async (item) => { if (!item.location?.trim()) { item.error = false; return; } try { const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`); const d = await r.json(); item.error = d.length === 0; } catch { item.error = true; } };
+                
+                // 🆕 清理函数 - 保存前过滤临时状态
+                const cleanDaysData = (daysArray) => {
+                    return daysArray.map(day => ({
+                        ...day,
+                        items: day.items.map(item => {
+                            const { searching, error, ...cleanItem } = item;
+                            return cleanItem;
+                        })
+                    }));
+                };
+                
+                const manualCheckLocation = async (item) => {
+                    if (!item.location?.trim()) {
+                        item.error = false;
+                        item.searching = false;
+                        item.lat = null;
+                        item.lon = null;
+                        item.cachedLoc = null;
+                        return;
+                    }
+                    
+                    if (item.lat && item.lon && item.cachedLoc === item.location) {
+                        console.log('✅ [' + item.activity + '] 使用缓存坐标:', item.location, {lat: item.lat, lon: item.lon});
+                        item.error = false;
+                        item.searching = false;
+                        return;
+                    }
+                    
+                    item.searching = true;
+                    item.error = false;
+                    
+                    console.log('🔍 [' + item.activity + '] 开始搜索:', item.location);
+                    
+                    try {
+                        let searchQuery = item.location;
+                        
+                        if (settings.location) {
+                            searchQuery = `${item.location}, ${settings.location}`;
+                            console.log('🔍 [' + item.activity + '] 带上下文搜索:', searchQuery);
+                        }
+                        
+                        let response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`, {
+                            headers: { 'User-Agent': 'TravelPlanner/1.0' }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        
+                        let data = await response.json();
+                        console.log('📍 [' + item.activity + '] 搜索结果（带上下文）:', data);
+                        
+                        if (data.length === 0 && settings.location) {
+                            console.log('🔍 [' + item.activity + '] 重试原始查询:', item.location);
+                            response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`, {
+                                headers: { 'User-Agent': 'TravelPlanner/1.0' }
+                            });
+                            data = await response.json();
+                            console.log('📍 [' + item.activity + '] 搜索结果（原始）:', data);
+                        }
+                        
+                        if (data && data.length > 0) {
+                            item.lat = parseFloat(data[0].lat);
+                            item.lon = parseFloat(data[0].lon);
+                            item.cachedLoc = item.location;
+                            item.error = false;
+                            console.log('✅ [' + item.activity + '] 找到地点:', {lat: item.lat, lon: item.lon, name: item.location});
+                            
+                            if (viewMode.value === 'map') {
+                                console.log('🗺️ 触发地图重绘');
+                                nextTick(() => drawRoute());
+                            }
+                        } else {
+                            item.error = true;
+                            item.lat = null;
+                            item.lon = null;
+                            console.warn('❌ [' + item.activity + '] 找不到地点:', item.location);
+                        }
+                    } catch (error) {
+                        console.error('❌ [' + item.activity + '] 搜索出错:', error);
+                        item.error = true;
+                        item.lat = null;
+                        item.lon = null;
+                    } finally {
+                        item.searching = false;
+                        console.log('🏁 [' + item.activity + '] 搜索结束，状态:', {
+                            searching: item.searching, 
+                            error: item.error, 
+                            hasCoords: !!(item.lat && item.lon)
+                        });
+                    }
+                };
+                
+                const startPinningMode = (item) => {
+                    console.log('📍 启动标注模式:', item.activity);
+                    isPinningMode.value = true;
+                    pinningItem.value = item;
+                    viewMode.value = 'map';
+                    
+                    nextTick(() => {
+                        if (!map) {
+                            console.log('🗺️ 初始化地图');
+                            map = L.map('map').setView([38.72, -9.14], 14);
+                            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
+                            markersLayer = L.layerGroup().addTo(map);
+                        }
+                        
+                        map.invalidateSize();
+                        
+                        map.once('click', (e) => {
+                            if (pinningItem.value) {
+                                console.log('📌 手动标注坐标:', {lat: e.latlng.lat, lng: e.latlng.lng});
+                                pinningItem.value.lat = e.latlng.lat;
+                                pinningItem.value.lon = e.latlng.lng;
+                                pinningItem.value.cachedLoc = pinningItem.value.location;
+                                pinningItem.value.error = false;
+                                
+                                if (navigator.vibrate) navigator.vibrate(50);
+                                alert(`✅ 已成功標註「${pinningItem.value.activity || '未命名'}」的位置！`);
+                                
+                                cancelPinningMode();
+                                drawRoute();
+                            }
+                        });
+                    });
+                };
+                
+                const cancelPinningMode = () => {
+                    console.log('❌ 取消标注模式');
+                    isPinningMode.value = false;
+                    pinningItem.value = null;
+                    if (map) map.off('click');
+                };
+                
                 const isConnectedToNext=i=>currentDay.value.items[i]?.connected&&i<currentDay.value.items.length-1;
                 const isConnectedToPrev=i=>i>0&&currentDay.value.items[i-1]?.connected;
                 const getPrevItem=i=>i>0?currentDay.value.items[i-1]:null;
                 
                 const applyGlobalTheme=async()=>{
-                    // ... (same logic)
-                    if(!settings.location)return; const loc=settings.location.toLowerCase(); let theme=THEMES['lisbon']; for(const k in THEMES) if(loc.includes(k)){ theme=THEMES[k]; break; } document.documentElement.style.setProperty('--theme-primary',theme.main); document.documentElement.style.setProperty('--theme-light',theme.light); document.documentElement.style.setProperty('--theme-bg',theme.bg); autoSetRate(); try{ const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(settings.location)}&format=json&limit=1`); const d=await r.json(); if(d.length){ const w=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${d[0].lat}&longitude=${d[0].lon}&current=temperature_2m,weather_code`); const wd=await w.json(); if(wd.current){ weather.temp=Math.round(wd.current.temperature_2m); weather.icon=wd.current.weather_code<=3?'sun':'cloud'; } } }catch(e){}
+                    if(!settings.location)return; const loc=settings.location.toLowerCase(); let theme=THEMES['lisbon']; for(const k in THEMES) if(loc.includes(k)){ theme=THEMES[k]; break; } document.documentElement.style.setProperty('--theme-primary',theme.main); document.documentElement.style.setProperty('--theme-light',theme.light); document.documentElement.style.setProperty('--theme-bg',theme.bg); autoSetRate(); try{ const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(settings.location)}&format=json&limit=1`); const d=await r.json(); if(d.length){ const w=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${d[0].lat}&longitude=${d[0].lon}&current=temperature_2m,weather_code`); const wd=await w.json(); if(wd.current){ weather.temp=Math.round(wd.current.temperature_2m); weather.icon=wd.current.weather_code<=3?'sun':'cloud'; } } }catch(e){ console.log('Weather fetch failed:', e); }
                 };
                 
-                // ... (Sortables, SyncData, CRUD functions same)
                 const initSortable=()=>{ nextTick(()=>{ const el=document.getElementById('itinerary-list'); if(sortableInstance){ sortableInstance.destroy(); sortableInstance=null; } if(!el) return; sortableInstance=new Sortable(el, { handle:'.drag-handle', animation:150, ghostClass:'sortable-ghost', dragClass:'sortable-drag', filter:'.no-drag', preventOnFilter:false, delay: 250, delayOnTouchOnly: true, scroll: true, scrollSensitivity: 80, scrollSpeed: 20, onEnd:(e)=>{ if(e.oldIndex===e.newIndex)return; const item=currentDay.value.items.splice(e.oldIndex,1)[0]; currentDay.value.items.splice(e.newIndex,0,item); if(currentDay.value.items.length>0) currentDay.value.items[currentDay.value.items.length-1].connected=false; if(viewMode.value==='map') nextTick(() => drawRoute()); } }); }); };
                 const initTripSortable=()=>{ nextTick(()=>{ const el=document.getElementById('trip-list-container'); if(tripSortableInstance){ tripSortableInstance.destroy(); tripSortableInstance=null; } if(el){ tripSortableInstance=new Sortable(el, { handle:'.trip-drag-handle', animation:200, ghostClass:'sortable-ghost', dragClass:'sortable-drag', delay: 250, delayOnTouchOnly: true, scroll: true, onEnd:(e)=>{ if(e.oldIndex===e.newIndex)return; const n=[...tripOrderList.value], m=n.splice(e.oldIndex,1)[0]; n.splice(e.newIndex,0,m); tripOrder.value=n; if(db) db.ref('tripOrder').set(n); } }); } }); };
                 const syncData=()=>{ if(db){ db.ref('tripOrder').on('value',s=>{if(s.val()) tripOrder.value=s.val()}); db.ref('trips').on('value',s=>{ isConnected.value=true; allTrips.value=s.val()||{}; const savedId = localStorage.getItem('currentTripId'); if(savedId && allTrips.value[savedId]) { currentTripId.value = savedId; loadCurrentTripData(); } else if(!currentTripId.value || !allTrips.value[currentTripId.value]) { const firstId = Object.keys(allTrips.value)[0]; if(firstId) { currentTripId.value = firstId; localStorage.setItem('currentTripId', firstId); loadCurrentTripData(); } else { createNewTrip(); } } else { loadCurrentTripData(); } }); } else createNewTrip(); };
                 const createNewTrip=()=>{ const id='t_'+Date.now(); const d={ settings:{name:'My Travel',location:'',currency:'€',rate:34.5,isLocked:false,password:''}, days:[{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}], participants:[], todos:[] }; allTrips.value[id]=d; currentTripId.value=id; localStorage.setItem('currentTripId', id); if(db){ db.ref('trips/'+id).set(d); const newOrder = [id, ...tripOrder.value]; tripOrder.value = newOrder; db.ref('tripOrder').set(newOrder); } loadCurrentTripData(); return id; };
-                const loadCurrentTripData=()=>{ const t=allTrips.value[currentTripId.value]; if(!t)return; Object.assign(settings, t.settings); flights.value=t.flights?Object.values(t.flights):[]; days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] })); participants.value=t.participants||[]; expenses.value=t.expenses||[]; todos.value=t.todos||[]; sortDays(); applyGlobalTheme(); initSortable(); resizeAllTextareas(); };
+                
+                // 🆕 智能合并加载
+                const loadCurrentTripData = () => { 
+                    const t = allTrips.value[currentTripId.value]; 
+                    if (!t) return;
+                    
+                    // 保存当前本地的临时状态
+                    const localStates = new Map();
+                    if (days.value && days.value.length > 0) {
+                        days.value.forEach((day, dayIdx) => {
+                            if (day.items) {
+                                day.items.forEach((item, itemIdx) => {
+                                    const key = `${dayIdx}-${itemIdx}`;
+                                    localStates.set(key, {
+                                        searching: item.searching,
+                                        error: item.error
+                                    });
+                                });
+                            }
+                        });
+                    }
+                    
+                    Object.assign(settings, t.settings); 
+                    flights.value = t.flights ? Object.values(t.flights) : []; 
+                    
+                    // 智能合并：保留本地临时状态，接受远程真实数据
+                    days.value = (t.days || []).map((day, dayIdx) => ({ 
+                        ...day, 
+                        items: Array.isArray(day.items) ? day.items.map((item, itemIdx) => {
+                            const key = `${dayIdx}-${itemIdx}`;
+                            const localState = localStates.get(key);
+                            
+                            return { 
+                                ...item, 
+                                // 如果有本地状态就保留，否则初始化为 false
+                                searching: localState?.searching || false,
+                                error: localState?.error || false,
+                                // 真实数据从远程获取
+                                lat: item.lat || null,
+                                lon: item.lon || null,
+                                cachedLoc: item.cachedLoc || null
+                            };
+                        }) : [] 
+                    })); 
+                    
+                    participants.value = t.participants || []; 
+                    expenses.value = t.expenses || []; 
+                    todos.value = t.todos || []; 
+                    sortDays(); 
+                    applyGlobalTheme(); 
+                    initSortable(); 
+                    resizeAllTextareas(); 
+                    
+                    console.log('📦 已加载旅程数据（智能合并）:', {
+                        name: settings.name,
+                        days: days.value.length,
+                        totalItems: days.value.reduce((sum, d) => sum + (d.items?.length || 0), 0),
+                        preservedStates: localStates.size
+                    });
+                };
+                
                 const switchTrip=id=>{ currentTripId.value=id; localStorage.setItem('currentTripId', id); currentDayIdx.value=0; loadCurrentTripData(); showTripList.value=false; };
                 const deleteTrip=id=>{ if(confirm('Delete?')) { if(db) db.ref('trips/'+id).remove(); delete allTrips.value[id]; tripOrder.value=tripOrder.value.filter(x=>x!==id); if(db) db.ref('tripOrder').set(tripOrder.value); if(currentTripId.value===id) { const newId = Object.keys(allTrips.value)[0]; if(newId) { switchTrip(newId); } else { createNewTrip(); } } } };
 
-                watch(viewMode, (newVal) => { if (newVal === 'map') { nextTick(() => { setTimeout(() => { if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); markersLayer = L.layerGroup().addTo(map); } map.invalidateSize(); drawRoute(); }, 100); }); } if (newVal === 'plan') resizeAllTextareas(); });
+                watch(viewMode, (newVal) => { 
+                    console.log('🔄 切换视图:', newVal);
+                    if (newVal !== 'map' && isPinningMode.value) {
+                        cancelPinningMode();
+                    }
+                    
+                    if (newVal === 'map') { 
+                        nextTick(() => { 
+                            setTimeout(() => { 
+                                if (!map) { 
+                                    console.log('🗺️ 初始化地图');
+                                    map = L.map('map').setView([38.72, -9.14], 14); 
+                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); 
+                                    markersLayer = L.layerGroup().addTo(map); 
+                                } 
+                                map.invalidateSize(); 
+                                drawRoute(); 
+                            }, 100); 
+                        }); 
+                    } 
+                    if (newVal === 'plan') resizeAllTextareas(); 
+                });
                 watch(currentDayIdx, () => { initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute()); });
                 watch(showTripList, v=>{if(v)initTripSortable()});
-                watch([days,expenses,settings,participants,todos], ()=>{ if(!db || !currentTripId.value) return; if(saveDebounceTimer) clearTimeout(saveDebounceTimer); saveDebounceTimer = setTimeout(() => { db.ref(`trips/${currentTripId.value}`).update({ days: JSON.parse(JSON.stringify(days.value)), expenses: JSON.parse(JSON.stringify(expenses.value)), settings: settings, participants: participants.value, todos: JSON.parse(JSON.stringify(todos.value)) }); }, 500); }, {deep:true});
+                
+                // 🆕 修改保存逻辑 - 使用清理函数
+                watch([days,expenses,settings,participants,todos], ()=>{ 
+                    if(!db || !currentTripId.value) return; 
+                    if(saveDebounceTimer) clearTimeout(saveDebounceTimer); 
+                    saveDebounceTimer = setTimeout(() => { 
+                        console.log('💾 保存数据（过滤临时状态）');
+                        db.ref(`trips/${currentTripId.value}`).update({ 
+                            days: cleanDaysData(days.value),  // 🆕 使用清理函数
+                            expenses: JSON.parse(JSON.stringify(expenses.value)), 
+                            settings: settings, 
+                            participants: participants.value, 
+                            todos: JSON.parse(JSON.stringify(todos.value)) 
+                        }); 
+                    }, 500); 
+                }, {deep:true});
+                
                 const sortDays = (targetDate = null) => { const currentDate = targetDate || currentDay.value?.fullDate; days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); if (currentDate) { const newIndex = days.value.findIndex(d => d.fullDate === currentDate); if (newIndex !== -1) currentDayIdx.value = newIndex; } };
                 const addFlight=()=>{ flights.value.push({id:Date.now(),...newFlight,connected:false}); };
                 const removeFlight=id=>flights.value=flights.value.filter(x=>x.id!==id);
                 const addDay = () => { let lastDate; if (days.value.length > 0) lastDate = days.value[days.value.length - 1].fullDate; else lastDate = new Date().toISOString().split('T')[0]; const d = new Date(lastDate); d.setDate(d.getDate() + 1); const newDate = d.toISOString().split('T')[0]; days.value.push({ fullDate: newDate, title: '', items: [] }); sortDays(newDate); };
-                const addItem=()=>{ if (!currentDay.value || !Array.isArray(currentDay.value.items)) { alert('⚠️ 無法新增行程'); return; } currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false }); nextTick(()=>{ resizeAllTextareas(); }); };
+                const addItem=()=>{ if (!currentDay.value || !Array.isArray(currentDay.value.items)) { alert('⚠️ 無法新增行程'); return; } currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false, searching: false, lat: null, lon: null, cachedLoc: null }); nextTick(()=>{ resizeAllTextareas(); }); };
                 const deleteItem=i=>currentDay.value.items.splice(i,1);
                 const confirmAndDeleteDay=()=>{ if(confirm('Delete Day?')) { days.value.splice(currentDayIdx.value,1); currentDayIdx.value=Math.max(0, currentDayIdx.value-1); } };
                 const addParticipant=()=>{ if(newParticipant.value.trim()){ participants.value.push(newParticipant.value.trim()); newParticipant.value=''; } };
@@ -868,29 +1199,17 @@
                     });
                 };
                 
-                // Helper: Calculate Quadratic Bezier Points
                 function getCurvePoints(lat1, lon1, lat2, lon2, idx) {
                     const midLat = (lat1 + lat2) / 2;
                     const midLon = (lon1 + lon2) / 2;
-                    
-                    // Curvature: Alternate curve direction based on index to avoid monotonous look
-                    // Distance factor to scale curvature
                     const dist = Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lon2 - lon1, 2));
-                    const curvePower = 0.15; // 15% curvature
-                    
-                    // Perpendicular offset logic
-                    // Vector V = (dx, dy), Perpendicular = (-dy, dx) or (dy, -dx)
+                    const curvePower = 0.15;
                     const dx = lat2 - lat1;
                     const dy = lon2 - lon1;
-                    
-                    // Simple "random-looking" alternation logic
                     const side = idx % 2 === 0 ? 1 : -1;
-                    
                     const cx = midLat - dy * curvePower * side;
                     const cy = midLon + dx * curvePower * side;
-                    
                     const points = [];
-                    // Generate 20 points for smooth curve
                     for (let t = 0; t <= 1; t += 0.05) {
                         const lat = Math.pow(1-t, 2) * lat1 + 2 * (1-t) * t * cx + Math.pow(t, 2) * lat2;
                         const lon = Math.pow(1-t, 2) * lon1 + 2 * (1-t) * t * cy + Math.pow(t, 2) * lon2;
@@ -899,9 +1218,11 @@
                     return points;
                 }
 
-                // ✅ 靈動曲線 (無箭頭) DrawRoute 函數
                 const drawRoute = async () => {
+                    console.log('🎨 开始绘制地图路线');
+                    
                     if (!map) {
+                        console.log('🗺️ 地图未初始化，创建新地图');
                         map = L.map('map').setView([38.72, -9.14], 14);
                         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
                         markersLayer = L.layerGroup().addTo(map);
@@ -910,81 +1231,171 @@
                     markersLayer.clearLayers();
                     
                     const it = currentDay.value.items || [];
-                    const l = it.filter(x => x.location?.trim());
-                    if (!l.length) return;
+                    console.log('📋 当前天行程总数:', it.length);
                     
-                    // Fetch geocodes first
-                    const geocodePromises = l.map(async (item) => {
-                        if (item.lat && item.lon && item.cachedLoc === item.location) {
-                            return { lat: item.lat, lon: item.lon, item };
-                        }
-                        try {
-                            const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`);
-                            const d = await r.json();
-                            if (d.length) {
-                                const lat = parseFloat(d[0].lat);
-                                const lon = parseFloat(d[0].lon);
-                                item.lat = lat; item.lon = lon; item.cachedLoc = item.location;
-                                return { lat, lon, item };
-                            }
-                        } catch (e) {}
-                        return null;
-                    });
+                    const validPoints = it.filter(item => {
+                        const hasCoords = item.lat && item.lon;
+                        console.log('  - ' + (item.activity || '未命名') + ':', {
+                            hasLocation: !!item.location,
+                            hasCoords: hasCoords,
+                            lat: item.lat,
+                            lon: item.lon
+                        });
+                        return hasCoords;
+                    }).map(item => ({
+                        lat: item.lat,
+                        lon: item.lon,
+                        item
+                    }));
                     
-                    loading.value = true;
+                    console.log('📌 有效标记数:', validPoints.length);
                     
-                    const results = await Promise.all(geocodePromises);
-                    const validPoints = results.filter(r => r && r.lat);
+                    if (validPoints.length === 0) {
+                        console.warn('⚠️ 没有可显示的标记');
+                        return;
+                    }
+                    
                     const bounds = [];
                     
-                    // 1. Add Markers first
                     validPoints.forEach((pt, index) => {
-                        L.marker([pt.lat, pt.lon], { icon: getAdvancedIcon(pt.item.type, it.indexOf(pt.item)) })
-                            .addTo(markersLayer)
-                            .bindPopup(pt.item.activity || pt.item.location);
+                        const item = pt.item;
+                        const itemIndex = it.indexOf(item);
+                        
+                        console.log('📍 添加标记 #' + (index + 1) + ':', item.activity, {lat: pt.lat, lon: pt.lon});
+                        
+                        const popupContent = `
+                            <div class="p-3 min-w-[260px]" style="font-family: 'Noto Sans TC', sans-serif;">
+                                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center" 
+                                         style="background-color: ${getTypeColorHex(item.type)}">
+                                        <span class="text-lg">${getTypeEmoji(item.type)}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-bold text-slate-800 text-sm leading-tight">
+                                            ${item.activity || '未命名行程'}
+                                        </div>
+                                        <div class="text-xs text-slate-400 flex items-center gap-1">
+                                            <i class="ph-fill ph-clock text-[10px]"></i>
+                                            ${item.time || '--:--'}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-2 flex items-start gap-2">
+                                    <i class="ph-fill ph-map-pin text-teal-500 text-sm mt-0.5"></i>
+                                    <div class="flex-1 text-xs text-slate-600 leading-relaxed">
+                                        ${item.location || '未設定地點'}
+                                    </div>
+                                </div>
+                                
+                                ${item.ticket ? `
+                                    <div class="mb-2 flex items-center gap-2 bg-slate-50 p-2 rounded">
+                                        <i class="ph-bold ph-coins text-amber-500"></i>
+                                        <span class="text-xs font-bold text-slate-700">
+                                            ${settings.currency} ${item.ticket}
+                                        </span>
+                                        ${item.isPaid ? `
+                                            <div class="flex items-center gap-1 text-xs">
+                                                <i class="ph-fill ph-check-circle text-green-500"></i>
+                                                <span class="text-green-600 font-medium">
+                                                    ${item.payer || '已付款'}
+                                                </span>
+                                            </div>
+                                        ` : `<span class="text-xs text-red-500">未付款</span>`}
+                                    </div>
+                                ` : ''}
+                                
+                                ${item.openTime ? `
+                                    <div class="mb-2 flex items-center gap-2 text-xs text-slate-600">
+                                        <i class="ph-bold ph-clock text-blue-500"></i>
+                                        <span>營業: ${item.openTime}</span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${item.note ? `
+                                    <div class="mb-3 p-2 bg-orange-50 rounded border-l-2 border-orange-300">
+                                        <div class="flex items-start gap-2">
+                                            <i class="ph-fill ph-info text-orange-500 text-sm mt-0.5"></i>
+                                            <div class="text-xs text-orange-700 leading-relaxed">
+                                                ${item.note}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="flex gap-2 pt-2 border-t border-slate-100">
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}" 
+                                       target="_blank"
+                                       class="flex-1 text-center bg-red-500 text-white text-xs font-bold py-2 rounded hover:bg-red-600 transition"
+                                       style="text-decoration: none;">
+                                        <i class="ph-bold ph-google-logo mr-1"></i>
+                                        Google 導航
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        
+                        L.marker([pt.lat, pt.lon], { 
+                            icon: getAdvancedIcon(item.type, itemIndex) 
+                        })
+                        .addTo(markersLayer)
+                        .bindPopup(popupContent, {
+                            maxWidth: 300,
+                            className: 'custom-popup'
+                        });
+                        
                         bounds.push([pt.lat, pt.lon]);
                     });
 
-                    // 2. Draw Curves between points (NO ARROWS)
                     for (let i = 0; i < validPoints.length - 1; i++) {
                         const start = validPoints[i];
                         const end = validPoints[i+1];
-                        
-                        // Generate Curve
                         const curvePoints = getCurvePoints(start.lat, start.lon, end.lat, end.lon, i);
-                        
-                        // Draw Dashed Red Line
                         L.polyline(curvePoints, {
-                            color: '#DC2626', // Red-600
+                            color: '#DC2626',
                             weight: 3,
-                            dashArray: '12, 12', // Slightly wider dashes
+                            dashArray: '12, 12',
                             opacity: 0.8,
                             lineCap: 'round'
                         }).addTo(markersLayer);
                     }
                     
-                    if (bounds.length) map.fitBounds(bounds, { padding: [80, 80] });
-                    loading.value = false;
+                    if (bounds.length) {
+                        console.log('🎯 调整地图视野，包含', bounds.length, '个标记');
+                        map.fitBounds(bounds, { padding: [80, 80] });
+                    }
+                    
+                    console.log('✅ 地图绘制完成');
                 };
                 
-                const switchMapDay = (index) => { currentDayIdx.value = index; nextTick(() => drawRoute()); };
+                const switchMapDay = (index) => { 
+                    console.log('📅 切换到 Day', index + 1);
+                    currentDayIdx.value = index; 
+                    nextTick(() => drawRoute()); 
+                };
+                
                 const locateUser = () => { if (!navigator.geolocation) { alert('您的瀏覽器不支援定位功能'); return; } loading.value = true; loadingText.value = '正在定位中...'; navigator.geolocation.getCurrentPosition( (position) => { const { latitude, longitude } = position.coords; if (userMarker) map.removeLayer(userMarker); userMarker = L.marker([latitude, longitude], { icon: L.divIcon({ html: '<div class="w-10 h-10 bg-blue-500 border-4 border-white rounded-full shadow-lg flex items-center justify-center"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>', className: '', iconSize: [40, 40], iconAnchor: [20, 20] }) }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup(); map.flyTo([latitude, longitude], 16, { duration: 1.5 }); loading.value = false; }, (error) => { loading.value = false; alert('❌ 定位失敗'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } ); };
                 const getWeatherIcon=i=>i=='sun'?'ph-fill ph-sun text-accent':(i=='rain'?'ph-fill ph-cloud-rain text-blue-300':'ph-fill ph-cloud text-white/90');
 
-                if (isReadOnlyMode && !settings.isLocked) settings.isLocked = true;
-                onMounted(()=>{ syncData(); applyGlobalTheme(); });
+                onMounted(() => {
+                    console.log('🚀 应用启动');
+                    syncData();
+                    applyGlobalTheme();
+                });
                 
                 return {
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, settings, flights, newFlight, addFlight, removeFlight, sortedFlights, calculateLayover,
                     days, currentDayIdx, currentDay, addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, expenses, newExpense, addExpense, totalExpense,
                     weather, allTrips, currentTripId, switchTrip, createNewTrip, applyGlobalTheme, getWeatherIcon,
-                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, checkLocation, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
+                    TYPES_LIST, getTypeName, getTypeEmoji, getTypeColor, getTypeColorHex, autoResize, resizeAllTextareas, isConnectedToNext, isConnectedToPrev, getPrevItem, deleteTrip, globalMenu, openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     participants, newParticipant, addParticipant, splitCalculation, startEditingParticipant, editingParticipantIdx, editingParticipantName, finishEditingParticipant,
                     todos, newTodo, addTodo, deleteTodo, getSortedTodosByCategory, tripOrderList, tripOrder,
                     startLongPress, clearLongPress, switchMapDay,
                     editingTodoId, startTodoLongPress, clearTodoLongPress, finishEditingTodo, cancelEditingTodo,
-                    showUnlockPrompt, unlockPassword, isUnlocked, toggleLock, attemptUnlock, autoSetRate
+                    showUnlockPrompt, unlockPassword, isUnlocked, toggleLock, attemptUnlock, autoSetRate,
+                    isPinningMode, pinningItem, startPinningMode, cancelPinningMode,
+                    manualCheckLocation
                 };
             }
         });
