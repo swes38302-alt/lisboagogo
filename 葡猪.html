@@ -66,21 +66,140 @@
         }
         .password-input::placeholder { color: rgba(255, 255, 255, 0.5); letter-spacing: normal; }
 
+        /* ========== 航班卡片樣式 ========== */
         .boarding-pass-light {
             background: #ffffff; color: var(--theme-text); border-radius: 20px;
             position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             border: 1px solid rgba(0,0,0,0.03); transition: all 0.3s;
             margin-bottom: 16px; overflow: hidden; z-index: 10;
         }
-        .boarding-pass-light.connected-top { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0; border-top: 1px dashed #e2e8f0; }
-        .boarding-pass-light.connected-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; border-bottom: none; box-shadow: none; z-index: 20; }
         
-        .flight-connector-strip { background-color: #F8FAFC; color: #94a3b8; font-size: 11px; font-weight: bold; text-align: center; padding: 4px 0; border-left: 2px dashed #e2e8f0; border-right: 2px dashed #e2e8f0; margin: 0 12px; cursor: pointer; }
-        .flight-header { background: var(--theme-bg); padding: 10px 16px; border-bottom: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        /* 已連結的航班 - 柔和主題色背景 */
+        .boarding-pass-light.flight-connected {
+            background: linear-gradient(135deg, rgba(110, 181, 192, 0.08) 0%, rgba(0, 108, 132, 0.05) 100%);
+            border-color: var(--theme-light);
+            border-width: 1.5px;
+        }
+        
+        .boarding-pass-light.connected-top { 
+            border-top-left-radius: 0; 
+            border-top-right-radius: 0; 
+            margin-top: 0; 
+            border-top: none;
+        }
+        .boarding-pass-light.connected-bottom { 
+            border-bottom-left-radius: 0; 
+            border-bottom-right-radius: 0; 
+            margin-bottom: 0; 
+            border-bottom: none;
+            box-shadow: none; 
+            z-index: 20; 
+        }
+        
+        /* 航班連結條 - 優化樣式 */
+        .flight-connector-strip { 
+            background: linear-gradient(90deg, rgba(110, 181, 192, 0.15) 0%, rgba(0, 108, 132, 0.2) 50%, rgba(110, 181, 192, 0.15) 100%);
+            color: var(--theme-primary); 
+            font-size: 12px; 
+            font-weight: bold; 
+            text-align: center; 
+            padding: 10px 16px; 
+            border-left: 1.5px solid var(--theme-light); 
+            border-right: 1.5px solid var(--theme-light); 
+            margin: 0 0; 
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            z-index: 15;
+        }
+        .flight-connector-strip::before,
+        .flight-connector-strip::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--theme-light), transparent);
+            max-width: 60px;
+        }
+        .flight-connector-strip:hover {
+            background: linear-gradient(90deg, rgba(110, 181, 192, 0.25) 0%, rgba(0, 108, 132, 0.3) 50%, rgba(110, 181, 192, 0.25) 100%);
+        }
+        .flight-connector-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            border: 2px solid var(--theme-light);
+            color: var(--theme-primary);
+            font-size: 12px;
+        }
+        
+        /* 未連結時的連結按鈕 */
+        .flight-link-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 30;
+            margin: -8px 0;
+            height: 24px;
+        }
+        .flight-link-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: white;
+            border: 2px dashed #CBD5E1;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .flight-link-btn:hover {
+            border-color: var(--theme-primary);
+            color: var(--theme-primary);
+            background: rgba(110, 181, 192, 0.1);
+            border-style: solid;
+        }
+        
+        .flight-header { 
+            background: var(--theme-bg); 
+            padding: 10px 16px; 
+            border-bottom: 1px dashed #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .flight-connected .flight-header {
+            background: linear-gradient(90deg, rgba(110, 181, 192, 0.1) 0%, transparent 100%);
+        }
         .flight-body { padding: 16px; }
         .flight-code { font-family: 'Oswald', sans-serif; font-size: 32px; font-weight: 700; color: var(--theme-primary); line-height: 1; text-transform: uppercase; }
         .flight-label { font-size: 10px; color: #94a3b8; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
         .flight-time { font-size: 20px; font-weight: 800; color: #334155; display: block; }
+        .flight-date-display { 
+            font-size: 11px; 
+            color: #64748b; 
+            font-weight: 600; 
+            background: #f1f5f9; 
+            padding: 2px 8px; 
+            border-radius: 6px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 4px;
+        }
+        .flight-connected .flight-date-display {
+            background: rgba(0, 108, 132, 0.1);
+            color: var(--theme-primary);
+        }
         .flight-meta { background: #f8fafc; padding: 8px; border-radius: 12px; margin-top: 8px; display: flex; gap: 8px; }
         .flight-input-meta { background: transparent; border: none; font-size: 11px; font-weight: bold; width: 100%; color: #64748b; text-align: center; }
 
@@ -563,6 +682,10 @@
                         <div class="self-center text-slate-300"><i class="ph-bold ph-airplane-tilt"></i></div>
                         <input v-model="newFlight.arr" @input="e => newFlight.arr = e.target.value.toUpperCase()" placeholder="ARR" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
                     </div>
+                    <!-- 新增日期輸入 -->
+                    <div class="mb-2 relative z-10">
+                        <input v-model="newFlight.depDate" type="date" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600">
+                    </div>
                     <div class="flex gap-2 items-center mb-3 relative z-10">
                         <div class="flex-[2]"><input v-model="newFlight.depTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
                         <div class="flex-[2]"><input v-model="newFlight.arrTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
@@ -570,28 +693,87 @@
                     </div>
                     <button @click="addFlight" class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 relative z-10">新增</button>
                 </div>
+                
+                <!-- 航班列表 -->
                 <template v-for="(flight, index) in sortedFlights" :key="flight.id">
-                    <div class="boarding-pass-light relative" :class="[(flight.connected && index < sortedFlights.length - 1) ? 'connected-bottom' : '', (index > 0 && sortedFlights[index-1].connected) ? 'connected-top' : '']">
+                    <div class="boarding-pass-light relative" 
+                         :class="[
+                            (flight.connected && index < sortedFlights.length - 1) ? 'connected-bottom flight-connected' : '', 
+                            (index > 0 && sortedFlights[index-1].connected) ? 'connected-top flight-connected' : '',
+                            (flight.connected || (index > 0 && sortedFlights[index-1].connected)) ? 'flight-connected' : ''
+                         ]">
                         <div class="flight-header">
-                            <div class="flex items-center gap-2 text-theme-main"><i class="ph-fill ph-airplane-tilt text-xl"></i><input v-model="flight.flightNumber" @input="e => flight.flightNumber = e.target.value.toUpperCase()" class="bg-transparent border-none font-bold text-sm w-24 placeholder-slate-300 text-theme-main uppercase" placeholder="FLIGHT NO"></div>
-                            <div class="text-xs font-bold text-slate-400 tracking-wide">BOARDING PASS</div>
+                            <div class="flex items-center gap-2 text-theme-main">
+                                <i class="ph-fill ph-airplane-tilt text-xl"></i>
+                                <input v-model="flight.flightNumber" @input="e => flight.flightNumber = e.target.value.toUpperCase()" class="bg-transparent border-none font-bold text-sm w-24 placeholder-slate-300 text-theme-main uppercase" placeholder="FLIGHT NO">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <!-- 日期顯示 -->
+                                <div v-if="flight.depDate" class="flight-date-display">
+                                    <i class="ph-bold ph-calendar-blank text-xs"></i>
+                                    {{ formatFlightDate(flight.depDate) }}
+                                </div>
+                                <div class="text-xs font-bold text-slate-400 tracking-wide">BOARDING PASS</div>
+                            </div>
                         </div>
                         <div class="flight-body">
+                            <!-- 日期輸入（隱藏在header下方，方便編輯） -->
+                            <div class="mb-3 -mt-1">
+                                <input v-model="flight.depDate" type="date" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500">
+                            </div>
                             <div class="flex justify-between items-center mb-4">
-                                <div class="text-left"><span class="flight-time">{{ flight.depTime }}</span><span class="flight-code">{{ flight.dep }}</span><div class="flex items-center gap-1 mt-1"><i class="ph-fill ph-airplane-takeoff text-slate-300 text-xs"></i><span class="flight-label">DEPARTURE</span></div></div>
-                                <div class="flex-1 px-4 flex flex-col items-center justify-center"><div class="w-full h-px bg-slate-200 relative top-1"></div><i class="ph-fill ph-airplane text-theme-light text-lg bg-white px-2 relative z-10"></i></div>
-                                <div class="text-right"><div class="flex items-center justify-end gap-1"><span class="flight-time">{{ flight.arrTime }}</span><span v-if="flight.nextDay" class="text-[10px] text-red-400 font-black">+1</span></div><span class="flight-code">{{ flight.arr }}</span><div class="flex items-center justify-end gap-1 mt-1"><span class="flight-label">ARRIVAL</span><i class="ph-fill ph-airplane-landing text-slate-300 text-xs"></i></div></div>
+                                <div class="text-left">
+                                    <span class="flight-time">{{ flight.depTime }}</span>
+                                    <span class="flight-code">{{ flight.dep }}</span>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <i class="ph-fill ph-airplane-takeoff text-slate-300 text-xs"></i>
+                                        <span class="flight-label">DEPARTURE</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 px-4 flex flex-col items-center justify-center">
+                                    <div class="w-full h-px bg-slate-200 relative top-1"></div>
+                                    <i class="ph-fill ph-airplane text-theme-light text-lg bg-white px-2 relative z-10"></i>
+                                </div>
+                                <div class="text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <span class="flight-time">{{ flight.arrTime }}</span>
+                                        <span v-if="flight.nextDay" class="text-[10px] text-red-400 font-black">+1</span>
+                                    </div>
+                                    <span class="flight-code">{{ flight.arr }}</span>
+                                    <div class="flex items-center justify-end gap-1 mt-1">
+                                        <span class="flight-label">ARRIVAL</span>
+                                        <i class="ph-fill ph-airplane-landing text-slate-300 text-xs"></i>
+                                    </div>
+                                </div>
                             </div>
                             <div class="flight-meta">
-                                <div class="flex-1 border-r border-slate-200 pr-2"><span class="flight-label block text-center mb-1">出發航廈</span><input v-model="flight.terminal" placeholder="T1" class="flight-input-meta"></div>
-                                <div class="flex-1"><span class="flight-label block text-center mb-1">抵達航廈</span><input v-model="flight.arrivalTerminal" placeholder="T2" class="flight-input-meta"></div>
+                                <div class="flex-1 border-r border-slate-200 pr-2">
+                                    <span class="flight-label block text-center mb-1">出發航廈</span>
+                                    <input v-model="flight.terminal" placeholder="T1" class="flight-input-meta">
+                                </div>
+                                <div class="flex-1">
+                                    <span class="flight-label block text-center mb-1">抵達航廈</span>
+                                    <input v-model="flight.arrivalTerminal" placeholder="T2" class="flight-input-meta">
+                                </div>
                             </div>
                         </div>
                         <button @click="removeFlight(flight.id)" class="absolute top-3 right-3 text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
                     </div>
+                    
+                    <!-- 航班之間的連結區域 -->
                     <div v-if="index < sortedFlights.length - 1">
-                        <div v-if="!flight.connected" class="flex justify-center -my-3 relative z-20"><button @click="flight.connected = true" class="link-btn hover:text-theme-main text-slate-400 shadow-sm"><i class="ph-bold ph-link text-lg"></i></button></div>
-                        <div v-else @click="flight.connected = false" class="flight-connector-strip">• 轉機等待 {{ calculateLayover(index) }} •</div>
+                        <!-- 未連結狀態 - 顯示連結按鈕 -->
+                        <div v-if="!flight.connected" class="flight-link-btn-wrapper">
+                            <button @click="flight.connected = true" class="flight-link-btn" title="點擊串聯為轉機航班">
+                                <i class="ph-bold ph-link"></i>
+                            </button>
+                        </div>
+                        <!-- 已連結狀態 - 顯示轉機資訊條 -->
+                        <div v-else @click="flight.connected = false" class="flight-connector-strip" title="點擊取消轉機串聯">
+                            <span class="flight-connector-icon"><i class="ph-bold ph-airplane-in-flight"></i></span>
+                            <span>轉機等待 {{ calculateLayover(index) }}</span>
+                            <span class="flight-connector-icon"><i class="ph-bold ph-link-break"></i></span>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -812,7 +994,7 @@
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
                 const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
                 const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '' });
-                const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false});
+                const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false,depDate:new Date().toISOString().split('T')[0]});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
                 const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false});
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
@@ -900,6 +1082,17 @@
                 const autoResize = e => { const el = e.target; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
                 const resizeAllTextareas = () => { nextTick(() => { document.querySelectorAll('.auto-textarea').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }); };
                 
+                // === 日期格式化函數 ===
+                const formatFlightDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                    const weekday = weekdays[date.getDay()];
+                    return `${month}/${day} (${weekday})`;
+                };
+                
                 const checkLocation = async (item) => { 
                     if (!item.location?.trim()) { item.error = false; return; } 
                     if (item.isManualPin && item.lat && item.lon) { item.error = false; return; }
@@ -917,18 +1110,14 @@
 
                 // === 🔧 修正后的 Google Map URL 生成函数 ===
                 const getGoogleMapUrl = (item) => {
-                    // 优先使用地点名称或行程名称进行搜索
                     const searchTerm = item.location?.trim() || item.activity?.trim();
                     
                     if (searchTerm) {
-                        // 有文字地址，使用地址搜索（无论是否为手动标记）
                         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchTerm)}`;
                     } else if (item.lat && item.lon) {
-                        // 只有在没有文字地址时才使用经纬度
                         return `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
                     }
                     
-                    // 默认返回空
                     return '#';
                 };
 
@@ -958,18 +1147,15 @@
                     manualPinTargetItem.value = null;
                 };
 
-                // 解析 Google Maps 連結或座標字串
                 const parseGoogleMapsInput = (input) => {
                     if (!input) return null;
                     const text = input.trim();
                     
-                    // 1. 簡單座標格式: 38.7223, -9.1393
                     const simpleMatch = text.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
                     if (simpleMatch) {
                         return { lat: parseFloat(simpleMatch[1]), lon: parseFloat(simpleMatch[2]) };
                     }
                     
-                    // 2. 度分秒格式: 38°43'20.3"N 9°08'21.5"W
                     const dmsMatch = text.match(/(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/i);
                     if (dmsMatch) {
                         let lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600;
@@ -979,19 +1165,16 @@
                         return { lat, lon };
                     }
                     
-                    // 3. Google Maps URL 中的 @lat,lon
                     const urlMatch = text.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
                     if (urlMatch) {
                         return { lat: parseFloat(urlMatch[1]), lon: parseFloat(urlMatch[2]) };
                     }
                     
-                    // 4. Google Maps URL 中的 q=lat,lon
                     const qMatch = text.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
                     if (qMatch) {
                         return { lat: parseFloat(qMatch[1]), lon: parseFloat(qMatch[2]) };
                     }
                     
-                    // 5. place/xxx/@lat,lon 格式
                     const placeMatch = text.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
                     if (placeMatch) {
                         return { lat: parseFloat(placeMatch[1]), lon: parseFloat(placeMatch[2]) };
@@ -1025,7 +1208,6 @@
                         return;
                     }
 
-                    // 如果是從行程項目觸發的
                     if (manualPinTargetItem.value) {
                         manualPinTargetItem.value.lat = lat;
                         manualPinTargetItem.value.lon = lon;
@@ -1035,7 +1217,6 @@
                             manualPinTargetItem.value.location = manualPinData.name;
                         }
                     } else {
-                        // 新增一個行程項目
                         currentDay.value.items.push({
                             id: Date.now(),
                             time: '12:00',
@@ -1053,7 +1234,6 @@
                     showManualPinModal.value = false;
                     manualPinTargetItem.value = null;
                     
-                    // 如果在地圖頁面，刷新地圖
                     if (viewMode.value === 'map') {
                         nextTick(() => drawRoute());
                     }
@@ -1232,7 +1412,7 @@
                 });
                 watch(currentDayIdx, () => { initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute()); });
                 watch(showTripList, v => { if(v) initTripSortable(); });
-                watch([days, expenses, settings, participants, todos], () => { 
+                watch([days, expenses, settings, participants, todos, flights], () => { 
                     if(!db || !currentTripId.value) return; 
                     if(saveDebounceTimer) clearTimeout(saveDebounceTimer); 
                     saveDebounceTimer = setTimeout(() => { 
@@ -1241,7 +1421,8 @@
                             expenses: JSON.parse(JSON.stringify(expenses.value)), 
                             settings: settings, 
                             participants: participants.value, 
-                            todos: JSON.parse(JSON.stringify(todos.value)) 
+                            todos: JSON.parse(JSON.stringify(todos.value)),
+                            flights: JSON.parse(JSON.stringify(flights.value))
                         }); 
                     }, 500); 
                 }, {deep:true});
@@ -1370,7 +1551,6 @@
                     const emoji = type?.emoji || '📍';
                     const typeName = type?.label || '景點';
                     
-                    // 生成渐变颜色（稍微调暗一点作为第二个颜色）
                     const darkenColor = (color) => {
                         const hex = color.replace('#', '');
                         const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 30);
@@ -1398,7 +1578,6 @@
                         noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${item.note}</span></div>`;
                     }
                     
-                    // 使用修正后的 getGoogleMapUrl 函数
                     const gmapUrl = getGoogleMapUrl(item);
                     
                     return `
@@ -1451,7 +1630,6 @@
                         const item = validItems[i];
                         let lat, lon;
                         
-                        // 優先使用手動標記的座標
                         if (item.isManualPin && item.lat && item.lon) {
                             lat = item.lat;
                             lon = item.lon;
@@ -1480,14 +1658,12 @@
                         }
                     }
                     
-                    // 添加標記
                     const bounds = [];
                     points.forEach((pt, i) => {
                         const marker = L.marker([pt.lat, pt.lon], { 
                             icon: getAdvancedIcon(pt.item, pt.idx) 
                         }).addTo(markersLayer);
                         
-                        // 綁定增強版 Popup
                         marker.bindPopup(createPopupContent(pt.item, currentDayIdx.value), {
                             maxWidth: 300,
                             className: 'custom-popup'
@@ -1496,7 +1672,6 @@
                         bounds.push([pt.lat, pt.lon]);
                     });
 
-                    // 繪製曲線連接
                     for (let i = 0; i < points.length - 1; i++) {
                         const start = points[i];
                         const end = points[i + 1];
@@ -1518,7 +1693,6 @@
                     loading.value = false;
                 };
 
-                // 計算曲線點
                 const getCurvePoints = (lat1, lon1, lat2, lon2, idx) => {
                     const midLat = (lat1 + lat2) / 2;
                     const midLon = (lon1 + lon2) / 2;
@@ -1587,7 +1761,7 @@
                     TYPES_LIST,
                     
                     // 方法
-                    addFlight, removeFlight, calculateLayover,
+                    addFlight, removeFlight, calculateLayover, formatFlightDate,
                     addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, switchMapDay,
                     addExpense, startLongPress, clearLongPress,
