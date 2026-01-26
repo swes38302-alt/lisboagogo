@@ -220,10 +220,59 @@
         .pin-main { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         .pin-badge { position: absolute; bottom: -4px; right: -4px; width: 18px; height: 18px; background-color: #1E293B; color: white; border-radius: 50%; border: 1.5px solid white; font-family: 'Oswald', sans-serif; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 10; }
         
-        .drag-handle { cursor: grab; padding: 4px; border-radius: 4px; color: #cbd5e1; touch-action: none; }
-        .drag-handle:active { cursor: grabbing; color: var(--theme-primary); background-color: #f1f5f9; }
-        .sortable-ghost { opacity: 0.3; background-color: #f0f9ff; border: 2px dashed var(--theme-light); }
-        .sortable-drag { opacity: 1; background-color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(1.02); z-index: 99; }
+        /* ========== 拖曳優化樣式 ========== */
+        .drag-handle { 
+            cursor: grab; 
+            padding: 8px; 
+            border-radius: 8px; 
+            color: #cbd5e1; 
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            min-width: 32px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .drag-handle:hover { 
+            color: var(--theme-primary); 
+            background-color: #f1f5f9; 
+        }
+        .drag-handle:active { 
+            cursor: grabbing; 
+            color: var(--theme-primary); 
+            background-color: #e0f2fe;
+            transform: scale(1.1);
+        }
+        .sortable-ghost { 
+            opacity: 0.4; 
+            background-color: #f0f9ff !important; 
+            border: 2px dashed var(--theme-light) !important;
+            border-radius: 12px;
+        }
+        .sortable-drag { 
+            opacity: 1; 
+            background-color: white !important; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important; 
+            transform: scale(1.02) rotate(1deg); 
+            z-index: 9999 !important;
+            border-radius: 12px;
+        }
+        .sortable-chosen {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        /* 拖曳時禁用頁面滾動 */
+        body.is-dragging {
+            overflow: hidden !important;
+            touch-action: none !important;
+        }
+        body.is-dragging * {
+            cursor: grabbing !important;
+        }
         
         .type-selector-btn { width: 28px; height: 28px; border-radius: 50%; background-color: #F1F5F9; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; z-index: 50; border: none; outline: none; padding: 0; }
         .global-type-popup { position: fixed; z-index: 9999; background: white; padding: 6px; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25); display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; width: 130px; border: 1px solid #F1F5F9; animation: fadeIn 0.15s ease-out forwards; }
@@ -277,6 +326,8 @@
         .sticky-header { position: sticky; top: 0; z-index: 3000; background: rgba(253, 251, 247, 0.98); backdrop-filter: blur(10px); margin-left: -1rem; margin-right: -1rem; padding: 10px 16px 14px 16px; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.05); }
         .date-card { transition: all 0.2s; border: 1px solid #F1F5F9; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
         .date-card.active { background: var(--theme-primary); color: white; border-color: var(--theme-primary); box-shadow: 0 4px 8px -2px rgba(0,0,0,0.25); transform: translateY(-2px); }
+        .date-card .weekday-abbr { font-size: 8px; font-weight: 700; opacity: 0.6; letter-spacing: 0.5px; }
+        .date-card.active .weekday-abbr { opacity: 0.85; }
         
         .toggle-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px; }
         .toggle-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
@@ -782,16 +833,23 @@
             <div v-show="viewMode === 'plan'" class="p-4 pb-20">
                 <div v-if="days.length > 0" class="sticky-header mb-6">
                     <div class="flex overflow-x-auto hide-scroll space-x-2 items-center">
-                        <div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="date-card shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center cursor-pointer" :class="currentDayIdx === index ? 'active' : 'text-slate-400'">
+                        <div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="date-card shrink-0 w-12 h-16 rounded-xl flex flex-col items-center justify-center cursor-pointer" :class="currentDayIdx === index ? 'active' : 'text-slate-400'">
                             <span class="text-[10px] font-bold opacity-70">D{{ index + 1 }}</span>
                             <span class="text-base font-black leading-none mt-0.5">{{ new Date(day.fullDate).getDate() }}</span>
+                            <span class="weekday-abbr mt-0.5">{{ getWeekdayAbbr(day.fullDate) }}</span>
                         </div>
-                        <button @click="addDay" class="shrink-0 w-10 h-14 rounded-xl border-2 border-dashed text-slate-300 flex items-center justify-center hover:bg-white hover:text-theme-main"><i class="ph-bold ph-plus"></i></button>
+                        <button @click="addDay" class="shrink-0 w-10 h-16 rounded-xl border-2 border-dashed text-slate-300 flex items-center justify-center hover:bg-white hover:text-theme-main"><i class="ph-bold ph-plus"></i></button>
                     </div>
                 </div>
                 
                 <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100">
-                    <div class="flex justify-between"><input type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0"><button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <input type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0">
+                            <span class="text-xs text-slate-300 font-bold">{{ getWeekdayAbbr(currentDay.fullDate) }}</span>
+                        </div>
+                        <button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
+                    </div>
                     <input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題">
                 </div>
                 
@@ -808,7 +866,7 @@
                             <div class="flex-1 min-w-0 space-y-2">
                                 <div class="flex justify-between items-start">
                                     <input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
-                                    <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-lg text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
+                                    <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-xl text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
                                 </div>
                                 <div class="relative">
                                     <div class="flex items-center gap-2" :class="item.error ? 'text-red-500' : 'text-slate-600'">
@@ -860,7 +918,9 @@
             <div v-show="viewMode === 'map'" class="h-full flex flex-col relative w-full">
                 <div v-if="days.length > 0" class="map-day-selector hide-scroll">
                     <div v-for="(day, index) in days" :key="index" @click="switchMapDay(index)" class="map-day-btn" :class="currentDayIdx === index ? 'active' : ''">
-                        <span>D{{ index + 1 }}</span><span class="map-day-number">{{ new Date(day.fullDate).getDate() }}</span>
+                        <span>D{{ index + 1 }}</span>
+                        <span class="map-day-number">{{ new Date(day.fullDate).getDate() }}</span>
+                        <span class="text-[8px] font-bold opacity-70">{{ getWeekdayAbbr(day.fullDate) }}</span>
                     </div>
                 </div>
                 <div id="map" class="flex-1"></div>
@@ -1082,13 +1142,21 @@
                 const autoResize = e => { const el = e.target; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
                 const resizeAllTextareas = () => { nextTick(() => { document.querySelectorAll('.auto-textarea').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }); };
                 
+                // === 星期縮寫函數 ===
+                const getWeekdayAbbr = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return weekdays[date.getDay()];
+                };
+                
                 // === 日期格式化函數 ===
                 const formatFlightDate = (dateStr) => {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
                     const month = date.getMonth() + 1;
                     const day = date.getDate();
-                    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const weekday = weekdays[date.getDay()];
                     return `${month}/${day} (${weekday})`;
                 };
@@ -1270,20 +1338,47 @@
                     } catch(e) {}
                 };
                 
-                // === Sortable ===
+                // === 優化後的 Sortable 初始化 ===
                 const initSortable = () => { 
                     nextTick(() => { 
                         const el = document.getElementById('itinerary-list'); 
-                        if(sortableInstance) { sortableInstance.destroy(); sortableInstance = null; } 
+                        if(sortableInstance) { 
+                            sortableInstance.destroy(); 
+                            sortableInstance = null; 
+                        } 
                         if(!el) return; 
+                        
                         sortableInstance = new Sortable(el, { 
-                            handle:'.drag-handle', animation:150, ghostClass:'sortable-ghost', dragClass:'sortable-drag', 
-                            filter:'.no-drag', preventOnFilter:false, delay: 250, delayOnTouchOnly: true, 
-                            onEnd:(e) => { 
+                            handle: '.drag-handle', 
+                            animation: 200,
+                            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                            ghostClass: 'sortable-ghost', 
+                            dragClass: 'sortable-drag',
+                            chosenClass: 'sortable-chosen',
+                            filter: '.no-drag', 
+                            preventOnFilter: false, 
+                            delay: 0,
+                            delayOnTouchOnly: false,
+                            touchStartThreshold: 3,
+                            forceFallback: true,
+                            fallbackClass: 'sortable-drag',
+                            fallbackOnBody: true,
+                            fallbackTolerance: 3,
+                            scrollSensitivity: 80,
+                            scrollSpeed: 15,
+                            bubbleScroll: true,
+                            onStart: (evt) => {
+                                document.body.classList.add('is-dragging');
+                                if(navigator.vibrate) navigator.vibrate(30);
+                            },
+                            onEnd: (e) => { 
+                                document.body.classList.remove('is-dragging');
                                 if(e.oldIndex === e.newIndex) return; 
                                 const item = currentDay.value.items.splice(e.oldIndex, 1)[0]; 
                                 currentDay.value.items.splice(e.newIndex, 0, item); 
-                                if(currentDay.value.items.length > 0) currentDay.value.items[currentDay.value.items.length-1].connected = false; 
+                                if(currentDay.value.items.length > 0) {
+                                    currentDay.value.items[currentDay.value.items.length-1].connected = false; 
+                                }
                                 if(viewMode.value === 'map') nextTick(() => drawRoute()); 
                             } 
                         }); 
@@ -1297,7 +1392,8 @@
                         if(el) { 
                             tripSortableInstance = new Sortable(el, { 
                                 handle:'.trip-drag-handle', animation:200, ghostClass:'sortable-ghost', dragClass:'sortable-drag', 
-                                delay: 250, delayOnTouchOnly: true, 
+                                delay: 150, delayOnTouchOnly: true, 
+                                forceFallback: true,
                                 onEnd:(e) => { 
                                     if(e.oldIndex === e.newIndex) return; 
                                     const n = [...tripOrderList.value]; 
@@ -1408,7 +1504,10 @@
                             }, 100); 
                         }); 
                     } 
-                    if (newVal === 'plan') resizeAllTextareas(); 
+                    if (newVal === 'plan') {
+                        resizeAllTextareas();
+                        initSortable();
+                    }
                 });
                 watch(currentDayIdx, () => { initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute()); });
                 watch(showTripList, v => { if(v) initTripSortable(); });
@@ -1452,9 +1551,15 @@
                         id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', 
                         connected: false, error: false, isManualPin: false, lat: null, lon: null 
                     }); 
-                    nextTick(() => resizeAllTextareas()); 
+                    nextTick(() => {
+                        resizeAllTextareas();
+                        initSortable();
+                    }); 
                 };
-                const deleteItem = i => currentDay.value.items.splice(i, 1);
+                const deleteItem = i => {
+                    currentDay.value.items.splice(i, 1);
+                    nextTick(() => initSortable());
+                };
                 const confirmAndDeleteDay = () => { 
                     if(confirm('Delete Day?')) { 
                         days.value.splice(currentDayIdx.value, 1); 
@@ -1768,7 +1873,7 @@
                     applyGlobalTheme, getWeatherIcon, autoSetRate,
                     getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas,
                     isConnectedToNext, isConnectedToPrev, getPrevItem, 
-                    checkLocation, getGoogleMapUrl,
+                    checkLocation, getGoogleMapUrl, getWeekdayAbbr,
                     openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     addParticipant, startEditingParticipant, finishEditingParticipant,
                     addTodo, deleteTodo, getSortedTodosByCategory,
