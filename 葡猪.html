@@ -74,7 +74,6 @@
             margin-bottom: 16px; overflow: hidden; z-index: 10;
         }
         
-        /* 已連結的航班 - 柔和主題色背景 */
         .boarding-pass-light.flight-connected {
             background: linear-gradient(135deg, rgba(110, 181, 192, 0.08) 0%, rgba(0, 108, 132, 0.05) 100%);
             border-color: var(--theme-light);
@@ -96,7 +95,6 @@
             z-index: 20; 
         }
         
-        /* 航班連結條 - 優化樣式 */
         .flight-connector-strip { 
             background: linear-gradient(90deg, rgba(110, 181, 192, 0.15) 0%, rgba(0, 108, 132, 0.2) 50%, rgba(110, 181, 192, 0.15) 100%);
             color: var(--theme-primary); 
@@ -139,7 +137,6 @@
             font-size: 12px;
         }
         
-        /* 未連結時的連結按鈕 */
         .flight-link-btn-wrapper {
             display: flex;
             justify-content: center;
@@ -220,7 +217,6 @@
         .pin-main { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         .pin-badge { position: absolute; bottom: -4px; right: -4px; width: 18px; height: 18px; background-color: #1E293B; color: white; border-radius: 50%; border: 1.5px solid white; font-family: 'Oswald', sans-serif; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 10; }
         
-        /* ========== 拖曳優化樣式 ========== */
         .drag-handle { 
             cursor: grab; 
             padding: 8px; 
@@ -265,7 +261,6 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
         
-        /* 拖曳時禁用頁面滾動 */
         body.is-dragging {
             overflow: hidden !important;
             touch-action: none !important;
@@ -340,7 +335,6 @@
         .itinerary-expense-card.settled { opacity: 0.5; background: #F8FAFC; border-color: #cbd5e1 !important; border-style: dashed !important; }
         .press-hint { font-size: 9px; color: #cbd5e1; margin-top: 2px; display: block; text-align: right; }
 
-        /* ========== 🎨 美化后的地图 Popup 样式 ========== */
         .leaflet-popup-content-wrapper { 
             padding: 0 !important; 
             border-radius: 16px !important; 
@@ -616,7 +610,7 @@
 
         <!-- Settings Modal -->
         <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
-            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 safe-container">
+            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 safe-container max-h-[85vh] overflow-y-auto hide-scroll">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2"><i class="ph-duotone ph-gear-six text-theme-main"></i> 旅程設定</h2>
                     <button @click="showSettings = false"><i class="ph-bold ph-x text-slate-400 text-xl"></i></button>
@@ -641,6 +635,24 @@
                         </div>
                         <div v-if="settings.isLocked" class="space-y-2"><input v-model="settings.password" type="password" placeholder="設定解鎖密碼（選填）" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm"></div>
                     </div>
+                </div>
+                
+                <!-- 📦 行程導出區塊 -->
+                <div class="mt-4 bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-100">
+                    <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
+                        <i class="ph-duotone ph-file-text text-amber-500"></i> 導出行程
+                    </h3>
+                    <div class="flex gap-2">
+                        <button @click="exportAsText" class="flex-1 bg-white border border-amber-200 text-amber-700 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-50 active:scale-[0.98]">
+                            <i class="ph-bold ph-file-text"></i> 文字檔
+                        </button>
+                        <button @click="exportAsCSV" class="flex-1 bg-amber-500 text-white py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 active:scale-[0.98]">
+                            <i class="ph-bold ph-file-xls"></i> Excel CSV
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 text-center">
+                        <i class="ph-bold ph-info"></i> 導出當前旅程的所有行程資料
+                    </p>
                 </div>
             </div>
         </div>
@@ -733,7 +745,6 @@
                         <div class="self-center text-slate-300"><i class="ph-bold ph-airplane-tilt"></i></div>
                         <input v-model="newFlight.arr" @input="e => newFlight.arr = e.target.value.toUpperCase()" placeholder="ARR" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
                     </div>
-                    <!-- 新增日期輸入 -->
                     <div class="mb-2 relative z-10">
                         <input v-model="newFlight.depDate" type="date" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600">
                     </div>
@@ -745,7 +756,6 @@
                     <button @click="addFlight" class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 relative z-10">新增</button>
                 </div>
                 
-                <!-- 航班列表 -->
                 <template v-for="(flight, index) in sortedFlights" :key="flight.id">
                     <div class="boarding-pass-light relative" 
                          :class="[
@@ -759,7 +769,6 @@
                                 <input v-model="flight.flightNumber" @input="e => flight.flightNumber = e.target.value.toUpperCase()" class="bg-transparent border-none font-bold text-sm w-24 placeholder-slate-300 text-theme-main uppercase" placeholder="FLIGHT NO">
                             </div>
                             <div class="flex items-center gap-2">
-                                <!-- 日期顯示 -->
                                 <div v-if="flight.depDate" class="flight-date-display">
                                     <i class="ph-bold ph-calendar-blank text-xs"></i>
                                     {{ formatFlightDate(flight.depDate) }}
@@ -768,7 +777,6 @@
                             </div>
                         </div>
                         <div class="flight-body">
-                            <!-- 日期輸入（隱藏在header下方，方便編輯） -->
                             <div class="mb-3 -mt-1">
                                 <input v-model="flight.depDate" type="date" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500">
                             </div>
@@ -811,15 +819,12 @@
                         <button @click="removeFlight(flight.id)" class="absolute top-3 right-3 text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
                     </div>
                     
-                    <!-- 航班之間的連結區域 -->
                     <div v-if="index < sortedFlights.length - 1">
-                        <!-- 未連結狀態 - 顯示連結按鈕 -->
                         <div v-if="!flight.connected" class="flight-link-btn-wrapper">
                             <button @click="flight.connected = true" class="flight-link-btn" title="點擊串聯為轉機航班">
                                 <i class="ph-bold ph-link"></i>
                             </button>
                         </div>
-                        <!-- 已連結狀態 - 顯示轉機資訊條 -->
                         <div v-else @click="flight.connected = false" class="flight-connector-strip" title="點擊取消轉機串聯">
                             <span class="flight-connector-icon"><i class="ph-bold ph-airplane-in-flight"></i></span>
                             <span>轉機等待 {{ calculateLayover(index) }}</span>
@@ -1050,7 +1055,6 @@
         
         const app = createApp({
             setup() {
-                // === 基本狀態 ===
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
                 const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
                 const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '' });
@@ -1064,13 +1068,11 @@
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
                 const showUnlockPrompt = ref(false), unlockPassword = ref(''), isUnlocked = ref(false);
 
-                // === 手動標記狀態 ===
                 const showManualPinModal = ref(false);
                 const manualPinMode = ref('gmap');
                 const manualPinData = reactive({ gmapUrl: '', lat: '', lon: '', name: '' });
                 const manualPinTargetItem = ref(null);
 
-                // === 計算屬性 ===
                 const currentDay = computed(() => { 
                     const day = days.value[currentDayIdx.value]; 
                     if (!day) return { fullDate: '', title: '', items: [] }; 
@@ -1129,7 +1131,6 @@
                 let saveDebounceTimer = null;
                 const longPressTimer = ref(null);
 
-                // === 工具函數 ===
                 const autoSetRate = () => { if(!settings.location) return; const loc = settings.location.toLowerCase(); for(const [key, value] of Object.entries(CURRENCY_RATES)) { if(loc.includes(key)) { settings.currency = value.currency; settings.rate = value.rate; return; } } };
                 const toggleLock = () => { if (settings.isLocked && !isUnlocked.value) { if (settings.password) { showUnlockPrompt.value = true; } else { isUnlocked.value = true; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } } else { settings.isLocked = !settings.isLocked; isUnlocked.value = false; } };
                 const attemptUnlock = () => { if (unlockPassword.value === settings.password) { isUnlocked.value = true; showUnlockPrompt.value = false; unlockPassword.value = ''; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } else { alert('❌ 密碼錯誤！'); unlockPassword.value = ''; } };
@@ -1142,7 +1143,6 @@
                 const autoResize = e => { const el = e.target; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
                 const resizeAllTextareas = () => { nextTick(() => { document.querySelectorAll('.auto-textarea').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }); };
                 
-                // === 星期縮寫函數 ===
                 const getWeekdayAbbr = (dateStr) => {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
@@ -1150,7 +1150,12 @@
                     return weekdays[date.getDay()];
                 };
                 
-                // === 日期格式化函數 ===
+                const getWeekdayFull = (dateStr) => {
+                    if (!dateStr) return '';
+                    const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                    return weekdays[new Date(dateStr).getDay()];
+                };
+                
                 const formatFlightDate = (dateStr) => {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
@@ -1176,20 +1181,16 @@
                 const getPrevItem = i => i > 0 ? currentDay.value.items[i-1] : null;
                 const getWeatherIcon = i => i === 'sun' ? 'ph-fill ph-sun text-yellow-300' : (i === 'rain' ? 'ph-fill ph-cloud-rain text-blue-300' : 'ph-fill ph-cloud text-white/90');
 
-                // === 🔧 修正后的 Google Map URL 生成函数 ===
                 const getGoogleMapUrl = (item) => {
                     const searchTerm = item.location?.trim() || item.activity?.trim();
-                    
                     if (searchTerm) {
                         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchTerm)}`;
                     } else if (item.lat && item.lon) {
                         return `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
                     }
-                    
                     return '#';
                 };
 
-                // === 手動標記功能 ===
                 const openManualPinModal = () => {
                     manualPinData.gmapUrl = '';
                     manualPinData.lat = '';
@@ -1218,12 +1219,8 @@
                 const parseGoogleMapsInput = (input) => {
                     if (!input) return null;
                     const text = input.trim();
-                    
                     const simpleMatch = text.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-                    if (simpleMatch) {
-                        return { lat: parseFloat(simpleMatch[1]), lon: parseFloat(simpleMatch[2]) };
-                    }
-                    
+                    if (simpleMatch) { return { lat: parseFloat(simpleMatch[1]), lon: parseFloat(simpleMatch[2]) }; }
                     const dmsMatch = text.match(/(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/i);
                     if (dmsMatch) {
                         let lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600;
@@ -1232,89 +1229,39 @@
                         if (dmsMatch[8].toUpperCase() === 'W') lon = -lon;
                         return { lat, lon };
                     }
-                    
                     const urlMatch = text.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                    if (urlMatch) {
-                        return { lat: parseFloat(urlMatch[1]), lon: parseFloat(urlMatch[2]) };
-                    }
-                    
+                    if (urlMatch) { return { lat: parseFloat(urlMatch[1]), lon: parseFloat(urlMatch[2]) }; }
                     const qMatch = text.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                    if (qMatch) {
-                        return { lat: parseFloat(qMatch[1]), lon: parseFloat(qMatch[2]) };
-                    }
-                    
+                    if (qMatch) { return { lat: parseFloat(qMatch[1]), lon: parseFloat(qMatch[2]) }; }
                     const placeMatch = text.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                    if (placeMatch) {
-                        return { lat: parseFloat(placeMatch[1]), lon: parseFloat(placeMatch[2]) };
-                    }
-                    
+                    if (placeMatch) { return { lat: parseFloat(placeMatch[1]), lon: parseFloat(placeMatch[2]) }; }
                     return null;
                 };
 
                 const confirmManualPin = async () => {
                     let lat, lon;
-                    
                     if (manualPinMode.value === 'gmap') {
                         const parsed = parseGoogleMapsInput(manualPinData.gmapUrl);
-                        if (!parsed) {
-                            alert('❌ 無法解析連結或座標，請檢查格式');
-                            return;
-                        }
-                        lat = parsed.lat;
-                        lon = parsed.lon;
+                        if (!parsed) { alert('❌ 無法解析連結或座標，請檢查格式'); return; }
+                        lat = parsed.lat; lon = parsed.lon;
                     } else {
-                        lat = parseFloat(manualPinData.lat);
-                        lon = parseFloat(manualPinData.lon);
-                        if (isNaN(lat) || isNaN(lon)) {
-                            alert('❌ 請輸入有效的經緯度');
-                            return;
-                        }
+                        lat = parseFloat(manualPinData.lat); lon = parseFloat(manualPinData.lon);
+                        if (isNaN(lat) || isNaN(lon)) { alert('❌ 請輸入有效的經緯度'); return; }
                     }
-                    
-                    if (!manualPinData.name.trim()) {
-                        alert('❌ 請輸入地點名稱');
-                        return;
-                    }
-
+                    if (!manualPinData.name.trim()) { alert('❌ 請輸入地點名稱'); return; }
                     if (manualPinTargetItem.value) {
-                        manualPinTargetItem.value.lat = lat;
-                        manualPinTargetItem.value.lon = lon;
-                        manualPinTargetItem.value.isManualPin = true;
-                        manualPinTargetItem.value.error = false;
-                        if (!manualPinTargetItem.value.location) {
-                            manualPinTargetItem.value.location = manualPinData.name;
-                        }
+                        manualPinTargetItem.value.lat = lat; manualPinTargetItem.value.lon = lon;
+                        manualPinTargetItem.value.isManualPin = true; manualPinTargetItem.value.error = false;
+                        if (!manualPinTargetItem.value.location) { manualPinTargetItem.value.location = manualPinData.name; }
                     } else {
-                        currentDay.value.items.push({
-                            id: Date.now(),
-                            time: '12:00',
-                            type: 'spot',
-                            activity: manualPinData.name,
-                            location: manualPinData.name,
-                            lat: lat,
-                            lon: lon,
-                            isManualPin: true,
-                            connected: false,
-                            error: false
-                        });
+                        currentDay.value.items.push({ id: Date.now(), time: '12:00', type: 'spot', activity: manualPinData.name, location: manualPinData.name, lat: lat, lon: lon, isManualPin: true, connected: false, error: false });
                     }
-                    
-                    showManualPinModal.value = false;
-                    manualPinTargetItem.value = null;
-                    
-                    if (viewMode.value === 'map') {
-                        nextTick(() => drawRoute());
-                    }
+                    showManualPinModal.value = false; manualPinTargetItem.value = null;
+                    if (viewMode.value === 'map') { nextTick(() => drawRoute()); }
                 };
 
-                const clearManualPin = (item) => {
-                    item.lat = null;
-                    item.lon = null;
-                    item.isManualPin = false;
-                    checkLocation(item);
-                };
+                const clearManualPin = (item) => { item.lat = null; item.lon = null; item.isManualPin = false; checkLocation(item); };
 
-                // === 主題與天氣 ===
                 const applyGlobalTheme = async () => {
                     if(!settings.location) return; 
                     const loc = settings.location.toLowerCase(); 
@@ -1330,55 +1277,29 @@
                         if(d.length) { 
                             const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${d[0].lat}&longitude=${d[0].lon}&current=temperature_2m,weather_code`); 
                             const wd = await w.json(); 
-                            if(wd.current) { 
-                                weather.temp = Math.round(wd.current.temperature_2m); 
-                                weather.icon = wd.current.weather_code <= 3 ? 'sun' : 'cloud'; 
-                            } 
+                            if(wd.current) { weather.temp = Math.round(wd.current.temperature_2m); weather.icon = wd.current.weather_code <= 3 ? 'sun' : 'cloud'; } 
                         } 
                     } catch(e) {}
                 };
                 
-                // === 優化後的 Sortable 初始化 ===
                 const initSortable = () => { 
                     nextTick(() => { 
                         const el = document.getElementById('itinerary-list'); 
-                        if(sortableInstance) { 
-                            sortableInstance.destroy(); 
-                            sortableInstance = null; 
-                        } 
+                        if(sortableInstance) { sortableInstance.destroy(); sortableInstance = null; } 
                         if(!el) return; 
-                        
                         sortableInstance = new Sortable(el, { 
-                            handle: '.drag-handle', 
-                            animation: 200,
-                            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                            ghostClass: 'sortable-ghost', 
-                            dragClass: 'sortable-drag',
-                            chosenClass: 'sortable-chosen',
-                            filter: '.no-drag', 
-                            preventOnFilter: false, 
-                            delay: 0,
-                            delayOnTouchOnly: false,
-                            touchStartThreshold: 3,
-                            forceFallback: true,
-                            fallbackClass: 'sortable-drag',
-                            fallbackOnBody: true,
-                            fallbackTolerance: 3,
-                            scrollSensitivity: 80,
-                            scrollSpeed: 15,
-                            bubbleScroll: true,
-                            onStart: (evt) => {
-                                document.body.classList.add('is-dragging');
-                                if(navigator.vibrate) navigator.vibrate(30);
-                            },
+                            handle: '.drag-handle', animation: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                            ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', chosenClass: 'sortable-chosen',
+                            filter: '.no-drag', preventOnFilter: false, delay: 0, delayOnTouchOnly: false, touchStartThreshold: 3,
+                            forceFallback: true, fallbackClass: 'sortable-drag', fallbackOnBody: true, fallbackTolerance: 3,
+                            scrollSensitivity: 80, scrollSpeed: 15, bubbleScroll: true,
+                            onStart: () => { document.body.classList.add('is-dragging'); if(navigator.vibrate) navigator.vibrate(30); },
                             onEnd: (e) => { 
                                 document.body.classList.remove('is-dragging');
                                 if(e.oldIndex === e.newIndex) return; 
                                 const item = currentDay.value.items.splice(e.oldIndex, 1)[0]; 
                                 currentDay.value.items.splice(e.newIndex, 0, item); 
-                                if(currentDay.value.items.length > 0) {
-                                    currentDay.value.items[currentDay.value.items.length-1].connected = false; 
-                                }
+                                if(currentDay.value.items.length > 0) currentDay.value.items[currentDay.value.items.length-1].connected = false; 
                                 if(viewMode.value === 'map') nextTick(() => drawRoute()); 
                             } 
                         }); 
@@ -1392,39 +1313,28 @@
                         if(el) { 
                             tripSortableInstance = new Sortable(el, { 
                                 handle:'.trip-drag-handle', animation:200, ghostClass:'sortable-ghost', dragClass:'sortable-drag', 
-                                delay: 150, delayOnTouchOnly: true, 
-                                forceFallback: true,
+                                delay: 150, delayOnTouchOnly: true, forceFallback: true,
                                 onEnd:(e) => { 
                                     if(e.oldIndex === e.newIndex) return; 
-                                    const n = [...tripOrderList.value]; 
-                                    const m = n.splice(e.oldIndex, 1)[0]; 
-                                    n.splice(e.newIndex, 0, m); 
-                                    tripOrder.value = n; 
-                                    if(db) db.ref('tripOrder').set(n); 
+                                    const n = [...tripOrderList.value]; const m = n.splice(e.oldIndex, 1)[0]; n.splice(e.newIndex, 0, m); 
+                                    tripOrder.value = n; if(db) db.ref('tripOrder').set(n); 
                                 } 
                             }); 
                         } 
                     }); 
                 };
 
-                // === 數據同步 ===
                 const syncData = () => { 
                     if(db) { 
                         db.ref('tripOrder').on('value', s => { if(s.val()) tripOrder.value = s.val(); }); 
                         db.ref('trips').on('value', s => { 
-                            isConnected.value = true; 
-                            allTrips.value = s.val() || {}; 
+                            isConnected.value = true; allTrips.value = s.val() || {}; 
                             const savedId = localStorage.getItem('currentTripId'); 
-                            if(savedId && allTrips.value[savedId]) { 
-                                currentTripId.value = savedId; 
-                                loadCurrentTripData(); 
-                            } else if(!currentTripId.value || !allTrips.value[currentTripId.value]) { 
+                            if(savedId && allTrips.value[savedId]) { currentTripId.value = savedId; loadCurrentTripData(); } 
+                            else if(!currentTripId.value || !allTrips.value[currentTripId.value]) { 
                                 const firstId = Object.keys(allTrips.value)[0]; 
-                                if(firstId) { 
-                                    currentTripId.value = firstId; 
-                                    localStorage.setItem('currentTripId', firstId); 
-                                    loadCurrentTripData(); 
-                                } else { createNewTrip(); } 
+                                if(firstId) { currentTripId.value = firstId; localStorage.setItem('currentTripId', firstId); loadCurrentTripData(); } 
+                                else { createNewTrip(); } 
                             } else { loadCurrentTripData(); } 
                         }); 
                     } else createNewTrip(); 
@@ -1432,82 +1342,34 @@
                 
                 const createNewTrip = () => { 
                     const id = 't_' + Date.now(); 
-                    const d = { 
-                        settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:''}, 
-                        days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], 
-                        participants:[], todos:[] 
-                    }; 
-                    allTrips.value[id] = d; 
-                    currentTripId.value = id; 
-                    localStorage.setItem('currentTripId', id); 
-                    if(db) { 
-                        db.ref('trips/' + id).set(d); 
-                        const newOrder = [id, ...tripOrder.value]; 
-                        tripOrder.value = newOrder; 
-                        db.ref('tripOrder').set(newOrder); 
-                    } 
-                    loadCurrentTripData(); 
-                    return id; 
+                    const d = { settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:''}, days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], participants:[], todos:[] }; 
+                    allTrips.value[id] = d; currentTripId.value = id; localStorage.setItem('currentTripId', id); 
+                    if(db) { db.ref('trips/' + id).set(d); const newOrder = [id, ...tripOrder.value]; tripOrder.value = newOrder; db.ref('tripOrder').set(newOrder); } 
+                    loadCurrentTripData(); return id; 
                 };
                 
                 const loadCurrentTripData = () => { 
-                    const t = allTrips.value[currentTripId.value]; 
-                    if(!t) return; 
+                    const t = allTrips.value[currentTripId.value]; if(!t) return; 
                     Object.assign(settings, t.settings); 
                     flights.value = t.flights ? Object.values(t.flights) : []; 
-                    days.value = (t.days || []).map(day => ({ 
-                        ...day, 
-                        items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] 
-                    })); 
-                    participants.value = t.participants || []; 
-                    expenses.value = t.expenses || []; 
-                    todos.value = t.todos || []; 
-                    sortDays(); 
-                    applyGlobalTheme(); 
-                    initSortable(); 
-                    resizeAllTextareas(); 
+                    days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] })); 
+                    participants.value = t.participants || []; expenses.value = t.expenses || []; todos.value = t.todos || []; 
+                    sortDays(); applyGlobalTheme(); initSortable(); resizeAllTextareas(); 
                 };
                 
-                const switchTrip = id => { 
-                    currentTripId.value = id; 
-                    localStorage.setItem('currentTripId', id); 
-                    currentDayIdx.value = 0; 
-                    loadCurrentTripData(); 
-                    showTripList.value = false; 
-                };
+                const switchTrip = id => { currentTripId.value = id; localStorage.setItem('currentTripId', id); currentDayIdx.value = 0; loadCurrentTripData(); showTripList.value = false; };
                 
                 const deleteTrip = id => { 
                     if(confirm('Delete?')) { 
-                        if(db) db.ref('trips/' + id).remove(); 
-                        delete allTrips.value[id]; 
-                        tripOrder.value = tripOrder.value.filter(x => x !== id); 
-                        if(db) db.ref('tripOrder').set(tripOrder.value); 
-                        if(currentTripId.value === id) { 
-                            const newId = Object.keys(allTrips.value)[0]; 
-                            if(newId) { switchTrip(newId); } else { createNewTrip(); } 
-                        } 
+                        if(db) db.ref('trips/' + id).remove(); delete allTrips.value[id]; 
+                        tripOrder.value = tripOrder.value.filter(x => x !== id); if(db) db.ref('tripOrder').set(tripOrder.value); 
+                        if(currentTripId.value === id) { const newId = Object.keys(allTrips.value)[0]; if(newId) { switchTrip(newId); } else { createNewTrip(); } } 
                     } 
                 };
 
-                // === Watchers ===
                 watch(viewMode, (newVal) => { 
-                    if (newVal === 'map') { 
-                        nextTick(() => { 
-                            setTimeout(() => { 
-                                if (!map) { 
-                                    map = L.map('map').setView([38.72, -9.14], 14); 
-                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); 
-                                    markersLayer = L.layerGroup().addTo(map); 
-                                } 
-                                map.invalidateSize(); 
-                                drawRoute(); 
-                            }, 100); 
-                        }); 
-                    } 
-                    if (newVal === 'plan') {
-                        resizeAllTextareas();
-                        initSortable();
-                    }
+                    if (newVal === 'map') { nextTick(() => { setTimeout(() => { if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); markersLayer = L.layerGroup().addTo(map); } map.invalidateSize(); drawRoute(); }, 100); }); } 
+                    if (newVal === 'plan') { resizeAllTextareas(); initSortable(); }
                 });
                 watch(currentDayIdx, () => { initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute()); });
                 watch(showTripList, v => { if(v) initTripSortable(); });
@@ -1516,116 +1378,126 @@
                     if(saveDebounceTimer) clearTimeout(saveDebounceTimer); 
                     saveDebounceTimer = setTimeout(() => { 
                         db.ref(`trips/${currentTripId.value}`).update({ 
-                            days: JSON.parse(JSON.stringify(days.value)), 
-                            expenses: JSON.parse(JSON.stringify(expenses.value)), 
-                            settings: settings, 
-                            participants: participants.value, 
-                            todos: JSON.parse(JSON.stringify(todos.value)),
-                            flights: JSON.parse(JSON.stringify(flights.value))
+                            days: JSON.parse(JSON.stringify(days.value)), expenses: JSON.parse(JSON.stringify(expenses.value)), 
+                            settings: settings, participants: participants.value, todos: JSON.parse(JSON.stringify(todos.value)), flights: JSON.parse(JSON.stringify(flights.value))
                         }); 
                     }, 500); 
                 }, {deep:true});
 
-                // === CRUD 操作 ===
-                const sortDays = (targetDate = null) => { 
-                    const currentDate = targetDate || currentDay.value?.fullDate; 
-                    days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); 
-                    if (currentDate) { 
-                        const newIndex = days.value.findIndex(d => d.fullDate === currentDate); 
-                        if (newIndex !== -1) currentDayIdx.value = newIndex; 
-                    } 
-                };
+                const sortDays = (targetDate = null) => { const currentDate = targetDate || currentDay.value?.fullDate; days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); if (currentDate) { const newIndex = days.value.findIndex(d => d.fullDate === currentDate); if (newIndex !== -1) currentDayIdx.value = newIndex; } };
                 const addFlight = () => { flights.value.push({id:Date.now(), ...newFlight, connected:false}); };
                 const removeFlight = id => flights.value = flights.value.filter(x => x.id !== id);
-                const addDay = () => { 
-                    let lastDate = days.value.length > 0 ? days.value[days.value.length - 1].fullDate : new Date().toISOString().split('T')[0]; 
-                    const d = new Date(lastDate); 
-                    d.setDate(d.getDate() + 1); 
-                    const newDate = d.toISOString().split('T')[0]; 
-                    days.value.push({ fullDate: newDate, title: '', items: [] }); 
-                    sortDays(newDate); 
-                };
-                const addItem = () => { 
-                    if (!currentDay.value?.items) return; 
-                    currentDay.value.items.push({ 
-                        id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', 
-                        connected: false, error: false, isManualPin: false, lat: null, lon: null 
-                    }); 
-                    nextTick(() => {
-                        resizeAllTextareas();
-                        initSortable();
-                    }); 
-                };
-                const deleteItem = i => {
-                    currentDay.value.items.splice(i, 1);
-                    nextTick(() => initSortable());
-                };
-                const confirmAndDeleteDay = () => { 
-                    if(confirm('Delete Day?')) { 
-                        days.value.splice(currentDayIdx.value, 1); 
-                        currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); 
-                    } 
-                };
+                const addDay = () => { let lastDate = days.value.length > 0 ? days.value[days.value.length - 1].fullDate : new Date().toISOString().split('T')[0]; const d = new Date(lastDate); d.setDate(d.getDate() + 1); const newDate = d.toISOString().split('T')[0]; days.value.push({ fullDate: newDate, title: '', items: [] }); sortDays(newDate); };
+                const addItem = () => { if (!currentDay.value?.items) return; currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false, isManualPin: false, lat: null, lon: null }); nextTick(() => { resizeAllTextareas(); initSortable(); }); };
+                const deleteItem = i => { currentDay.value.items.splice(i, 1); nextTick(() => initSortable()); };
+                const confirmAndDeleteDay = () => { if(confirm('Delete Day?')) { days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } };
                 const addParticipant = () => { if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
                 const startEditingParticipant = (idx, name) => { editingParticipantIdx.value = idx; editingParticipantName.value = name; };
-                const finishEditingParticipant = (idx) => { 
-                    const oldName = participants.value[idx]; 
-                    const newName = editingParticipantName.value.trim(); 
-                    if(newName && newName !== oldName) { 
-                        participants.value[idx] = newName; 
-                        expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); 
-                        days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); 
-                    } 
-                    editingParticipantIdx.value = -1; 
-                };
-                const addExpense = () => { 
-                    if(newExpense.item && newExpense.amount) { 
-                        const finalAmount = newExpense.isNTD ? (newExpense.amount / settings.rate) : newExpense.amount; 
-                        expenses.value.push({ 
-                            item: newExpense.item, 
-                            amount: Number(finalAmount.toFixed(2)), 
-                            originalAmount: newExpense.amount, 
-                            originalCurrency: newExpense.isNTD ? 'TWD' : settings.currency, 
-                            payer: newExpense.payer, 
-                            isSettled: newExpense.isSettled 
-                        }); 
-                        newExpense.item = ''; newExpense.amount = null; newExpense.payer = ''; 
-                    } 
-                };
+                const finishEditingParticipant = (idx) => { const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
+                const addExpense = () => { if(newExpense.item && newExpense.amount) { const finalAmount = newExpense.isNTD ? (newExpense.amount / settings.rate) : newExpense.amount; expenses.value.push({ item: newExpense.item, amount: Number(finalAmount.toFixed(2)), originalAmount: newExpense.amount, originalCurrency: newExpense.isNTD ? 'TWD' : settings.currency, payer: newExpense.payer, isSettled: newExpense.isSettled }); newExpense.item = ''; newExpense.amount = null; newExpense.payer = ''; } };
                 const startLongPress = (item) => { longPressTimer.value = setTimeout(() => { item.isSettled = !item.isSettled; if(navigator.vibrate) navigator.vibrate(50); }, 600); };
                 const clearLongPress = () => { if(longPressTimer.value) { clearTimeout(longPressTimer.value); longPressTimer.value = null; } };
                 const addTodo = () => { if(newTodo.text) { todos.value.push({id:Date.now(), ...newTodo, completed:false}); newTodo.text = ''; newTodo.deadline = ''; } };
                 const deleteTodo = id => todos.value = todos.value.filter(t => t.id !== id);
-                const getSortedTodosByCategory = (c) => { 
-                    const filtered = todos.value.filter(t => t.category === c); 
-                    return filtered.sort((a, b) => { 
-                        if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline); 
-                        if (a.deadline && !b.deadline) return -1; 
-                        if (!a.deadline && b.deadline) return 1; 
-                        return 0; 
-                    }); 
-                };
+                const getSortedTodosByCategory = (c) => { const filtered = todos.value.filter(t => t.category === c); return filtered.sort((a, b) => { if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline); if (a.deadline && !b.deadline) return -1; if (!a.deadline && b.deadline) return 1; return 0; }); };
                 const startTodoLongPress = (todo) => { todoLongPressTimer.value = setTimeout(() => { todoBeforeEdit.value = JSON.parse(JSON.stringify({text: todo.text, deadline: todo.deadline})); editingTodoId.value = todo.id; if(navigator.vibrate) navigator.vibrate(50); }, 600); };
                 const clearTodoLongPress = () => { if(todoLongPressTimer.value) { clearTimeout(todoLongPressTimer.value); todoLongPressTimer.value = null; } };
                 const finishEditingTodo = () => { editingTodoId.value = null; todoBeforeEdit.value = null; };
-                const cancelEditingTodo = () => { 
-                    if (todoBeforeEdit.value && editingTodoId.value) { 
-                        const todo = todos.value.find(t => t.id === editingTodoId.value); 
-                        if (todo) { todo.text = todoBeforeEdit.value.text; todo.deadline = todoBeforeEdit.value.deadline; } 
-                    } 
-                    editingTodoId.value = null; todoBeforeEdit.value = null; 
-                };
-                const calculateLayover = i => { 
-                    const c = flights.value[i], n = flights.value[i+1]; 
-                    if(!c || !n) return ''; 
-                    const m = (t, d) => { const [h, mm] = t.split(':').map(Number); return h*60 + mm + (d ? 1440 : 0); }; 
-                    let a = m(c.arrTime, c.nextDay), d = m(n.depTime, false); 
-                    if(d < a) d += 1440; 
-                    const df = d - a; 
-                    return `${Math.floor(df/60)}h ${df%60}m`; 
+                const cancelEditingTodo = () => { if (todoBeforeEdit.value && editingTodoId.value) { const todo = todos.value.find(t => t.id === editingTodoId.value); if (todo) { todo.text = todoBeforeEdit.value.text; todo.deadline = todoBeforeEdit.value.deadline; } } editingTodoId.value = null; todoBeforeEdit.value = null; };
+                const calculateLayover = i => { const c = flights.value[i], n = flights.value[i+1]; if(!c || !n) return ''; const m = (t, d) => { const [h, mm] = t.split(':').map(Number); return h*60 + mm + (d ? 1440 : 0); }; let a = m(c.arrTime, c.nextDay), d = m(n.depTime, false); if(d < a) d += 1440; const df = d - a; return `${Math.floor(df/60)}h ${df%60}m`; };
+
+                // === 📦 導出行程資料功能 ===
+                const exportAsText = () => {
+                    let text = `【${settings.name}】行程表\n`;
+                    text += `導出時間：${new Date().toLocaleString('zh-TW')}\n`;
+                    text += `目的地：${settings.location || '未設定'}\n`;
+                    text += `${'═'.repeat(40)}\n\n`;
+                    
+                    days.value.forEach((day, idx) => {
+                        const dateObj = new Date(day.fullDate);
+                        const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+                        text += `📅 Day ${idx + 1} - ${dateStr} (${getWeekdayFull(day.fullDate)})\n`;
+                        if (day.title) text += `   主題：${day.title}\n`;
+                        text += `${'─'.repeat(35)}\n`;
+                        
+                        if (day.items && day.items.length > 0) {
+                            day.items.forEach((item, i) => {
+                                const emoji = getTypeEmoji(item.type);
+                                text += `${item.time || '--:--'} ${emoji} ${item.activity || '(未命名)'}\n`;
+                                if (item.location) text += `        📍 ${item.location}\n`;
+                                if (item.note) text += `        💡 ${item.note}\n`;
+                                if (item.ticket) text += `        💰 ${settings.currency}${item.ticket}\n`;
+                                if (item.openTime) text += `        🕐 營業：${item.openTime}\n`;
+                            });
+                        } else {
+                            text += `   (尚無行程)\n`;
+                        }
+                        text += `\n`;
+                    });
+                    
+                    if (flights.value.length > 0) {
+                        text += `\n✈️ 航班資訊\n${'─'.repeat(35)}\n`;
+                        flights.value.forEach(f => {
+                            text += `${f.flightNumber || 'N/A'}: ${f.dep} → ${f.arr}\n`;
+                            text += `   出發：${f.depDate || ''} ${f.depTime}  抵達：${f.arrTime}${f.nextDay ? ' (+1)' : ''}\n`;
+                        });
+                    }
+                    
+                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${settings.name || '行程表'}_${new Date().toISOString().split('T')[0]}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 };
 
-                // === 🎨 增强版地图图标生成 ===
+                const exportAsCSV = () => {
+                    let csv = '\uFEFF';
+                    csv += '天數,日期,星期,時間,類型,行程名稱,地點,備註,費用,營業時間\n';
+                    
+                    days.value.forEach((day, idx) => {
+                        const dateObj = new Date(day.fullDate);
+                        const dateStr = `${dateObj.getFullYear()}/${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+                        const weekday = getWeekdayFull(day.fullDate);
+                        
+                        if (day.items && day.items.length > 0) {
+                            day.items.forEach(item => {
+                                const row = [
+                                    `Day ${idx + 1}`,
+                                    dateStr,
+                                    weekday,
+                                    item.time || '',
+                                    getTypeName(item.type),
+                                    (item.activity || '').replace(/,/g, '，').replace(/\n/g, ' '),
+                                    (item.location || '').replace(/,/g, '，').replace(/\n/g, ' '),
+                                    (item.note || '').replace(/,/g, '，').replace(/\n/g, ' '),
+                                    item.ticket ? `${settings.currency}${item.ticket}` : '',
+                                    item.openTime || ''
+                                ];
+                                csv += row.join(',') + '\n';
+                            });
+                        } else {
+                            csv += `Day ${idx + 1},${dateStr},${weekday},,,,,,\n`;
+                        }
+                    });
+                    
+                    if (flights.value.length > 0) {
+                        csv += '\n航班編號,出發地,目的地,日期,出發時間,抵達時間,跨日\n';
+                        flights.value.forEach(f => {
+                            csv += `${f.flightNumber || ''},${f.dep},${f.arr},${f.depDate || ''},${f.depTime},${f.arrTime},${f.nextDay ? '+1' : ''}\n`;
+                        });
+                    }
+                    
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${settings.name || '行程表'}_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+
                 const getAdvancedIcon = (item, idx) => {
                     const type = TYPES_LIST.find(x => x.val === item.type);
                     const bgClass = type?.bg || 'bg-slate-400';
@@ -1634,226 +1506,58 @@
                     const iconMap = { 'spot': 'ph-map-pin', 'restaurant': 'ph-fork-knife', 'cafe': 'ph-coffee', 'shop': 'ph-shopping-bag', 'transport': 'ph-train', 'hotel': 'ph-bed' };
                     const iconClass = iconMap[item.type] || 'ph-map-pin';
                     const isManual = item.isManualPin;
-                    
-                    return L.divIcon({
-                        html: `<div class="pin-wrapper ${isManual ? 'manual-pin-icon' : ''}">
-                            <div class="pin-main" style="background-color:${isManual ? '#8B5CF6' : bgColor}">
-                                <i class="ph-bold ${iconClass}"></i>
-                            </div>
-                            <div class="pin-badge">${idx + 1}</div>
-                        </div>`,
-                        className: '',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18],
-                        popupAnchor: [0, -20]
-                    });
+                    return L.divIcon({ html: `<div class="pin-wrapper ${isManual ? 'manual-pin-icon' : ''}"><div class="pin-main" style="background-color:${isManual ? '#8B5CF6' : bgColor}"><i class="ph-bold ${iconClass}"></i></div><div class="pin-badge">${idx + 1}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20] });
                 };
 
-                // === 🎨 增强版 Popup 内容生成 ===
                 const createPopupContent = (item, dayIdx) => {
                     const type = TYPES_LIST.find(x => x.val === item.type);
                     const bgColor = type?.bg?.match(/\[([^\]]+)\]/)?.[1] || '#64748b';
                     const emoji = type?.emoji || '📍';
                     const typeName = type?.label || '景點';
-                    
-                    const darkenColor = (color) => {
-                        const hex = color.replace('#', '');
-                        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 30);
-                        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - 30);
-                        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - 30);
-                        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-                    };
-                    
+                    const darkenColor = (color) => { const hex = color.replace('#', ''); const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 30); const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - 30); const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - 30); return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`; };
                     const headerColor1 = item.isManualPin ? '#8B5CF6' : bgColor;
                     const headerColor2 = darkenColor(headerColor1);
-                    
                     let metaHtml = '';
-                    if (item.openTime) {
-                        metaHtml += `<span class="map-popup-tag" style="background:#F0F9FF;color:#0369A1;border-color:#BAE6FD;">🕐 ${item.openTime}</span>`;
-                    }
-                    if (item.ticket) {
-                        metaHtml += `<span class="map-popup-tag" style="background:#FEF3C7;color:#B45309;border-color:#FDE68A;">💰 ${settings.currency}${item.ticket}</span>`;
-                    }
-                    if (item.isManualPin) {
-                        metaHtml += `<span class="map-popup-tag" style="background:#F3E8FF;color:#7C3AED;border-color:#E9D5FF;">📍 手動標記</span>`;
-                    }
-                    
+                    if (item.openTime) { metaHtml += `<span class="map-popup-tag" style="background:#F0F9FF;color:#0369A1;border-color:#BAE6FD;">🕐 ${item.openTime}</span>`; }
+                    if (item.ticket) { metaHtml += `<span class="map-popup-tag" style="background:#FEF3C7;color:#B45309;border-color:#FDE68A;">💰 ${settings.currency}${item.ticket}</span>`; }
+                    if (item.isManualPin) { metaHtml += `<span class="map-popup-tag" style="background:#F3E8FF;color:#7C3AED;border-color:#E9D5FF;">📍 手動標記</span>`; }
                     let noteHtml = '';
-                    if (item.note) {
-                        noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${item.note}</span></div>`;
-                    }
-                    
+                    if (item.note) { noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${item.note}</span></div>`; }
                     const gmapUrl = getGoogleMapUrl(item);
-                    
-                    return `
-                        <div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};">
-                            <div class="map-popup-header">
-                                <div class="map-popup-header-icon">${emoji}</div>
-                                <div class="map-popup-header-content">
-                                    <div class="map-popup-title">${item.activity || '未命名地點'}</div>
-                                    <div class="map-popup-time">
-                                        <i class="ph-bold ph-clock"></i> ${item.time || '--:--'} · D${dayIdx + 1} · ${typeName}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="map-popup-body">
-                                <div class="map-popup-location">
-                                    <i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i>
-                                    <span>${item.location || '未設定地址'}</span>
-                                </div>
-                                ${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}
-                                ${noteHtml}
-                                <div class="map-popup-actions">
-                                    ${gmapUrl !== '#' ? `<a href="${gmapUrl}" target="_blank" class="map-popup-btn map-popup-btn-secondary">
-                                        <i class="ph-bold ph-navigation-arrow"></i> Google Maps
-                                    </a>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    return `<div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};"><div class="map-popup-header"><div class="map-popup-header-icon">${emoji}</div><div class="map-popup-header-content"><div class="map-popup-title">${item.activity || '未命名地點'}</div><div class="map-popup-time"><i class="ph-bold ph-clock"></i> ${item.time || '--:--'} · D${dayIdx + 1} · ${typeName}</div></div></div><div class="map-popup-body"><div class="map-popup-location"><i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i><span>${item.location || '未設定地址'}</span></div>${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}${noteHtml}<div class="map-popup-actions">${gmapUrl !== '#' ? `<a href="${gmapUrl}" target="_blank" class="map-popup-btn map-popup-btn-secondary"><i class="ph-bold ph-navigation-arrow"></i> Google Maps</a>` : ''}</div></div></div>`;
                 };
 
-                // === 繪製路線 ===
                 const drawRoute = async () => {
-                    if (!map) {
-                        map = L.map('map').setView([38.72, -9.14], 14);
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
-                        markersLayer = L.layerGroup().addTo(map);
-                    }
-                    
+                    if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map); markersLayer = L.layerGroup().addTo(map); }
                     markersLayer.clearLayers();
                     const items = currentDay.value.items || [];
                     const validItems = items.filter(x => x.location?.trim() || (x.isManualPin && x.lat && x.lon));
                     if (!validItems.length) return;
-                    
-                    loading.value = true;
-                    loadingText.value = '載入地圖中...';
-                    
+                    loading.value = true; loadingText.value = '載入地圖中...';
                     const points = [];
-                    
                     for (let i = 0; i < validItems.length; i++) {
-                        const item = validItems[i];
-                        let lat, lon;
-                        
-                        if (item.isManualPin && item.lat && item.lon) {
-                            lat = item.lat;
-                            lon = item.lon;
-                        } else if (item.lat && item.lon && item.cachedLoc === item.location) {
-                            lat = item.lat;
-                            lon = item.lon;
-                        } else {
-                            try {
-                                const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`);
-                                const d = await r.json();
-                                if (d.length) {
-                                    lat = parseFloat(d[0].lat);
-                                    lon = parseFloat(d[0].lon);
-                                    item.lat = lat;
-                                    item.lon = lon;
-                                    item.cachedLoc = item.location;
-                                }
-                            } catch (e) {
-                                console.error('Geocoding error:', e);
-                            }
+                        const item = validItems[i]; let lat, lon;
+                        if (item.isManualPin && item.lat && item.lon) { lat = item.lat; lon = item.lon; }
+                        else if (item.lat && item.lon && item.cachedLoc === item.location) { lat = item.lat; lon = item.lon; }
+                        else {
+                            try { const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.location)}&format=json&limit=1`); const d = await r.json(); if (d.length) { lat = parseFloat(d[0].lat); lon = parseFloat(d[0].lon); item.lat = lat; item.lon = lon; item.cachedLoc = item.location; } } catch (e) { console.error('Geocoding error:', e); }
                         }
-                        
-                        if (lat && lon) {
-                            const originalIdx = items.indexOf(item);
-                            points.push({ lat, lon, item, idx: originalIdx });
-                        }
+                        if (lat && lon) { const originalIdx = items.indexOf(item); points.push({ lat, lon, item, idx: originalIdx }); }
                     }
-                    
                     const bounds = [];
-                    points.forEach((pt, i) => {
-                        const marker = L.marker([pt.lat, pt.lon], { 
-                            icon: getAdvancedIcon(pt.item, pt.idx) 
-                        }).addTo(markersLayer);
-                        
-                        marker.bindPopup(createPopupContent(pt.item, currentDayIdx.value), {
-                            maxWidth: 300,
-                            className: 'custom-popup'
-                        });
-                        
-                        bounds.push([pt.lat, pt.lon]);
-                    });
-
-                    for (let i = 0; i < points.length - 1; i++) {
-                        const start = points[i];
-                        const end = points[i + 1];
-                        const curvePoints = getCurvePoints(start.lat, start.lon, end.lat, end.lon, i);
-                        
-                        L.polyline(curvePoints, {
-                            color: '#DC2626',
-                            weight: 3,
-                            dashArray: '10, 10',
-                            opacity: 0.7,
-                            lineCap: 'round'
-                        }).addTo(markersLayer);
-                    }
-                    
-                    if (bounds.length) {
-                        map.fitBounds(bounds, { padding: [80, 80] });
-                    }
-                    
+                    points.forEach((pt, i) => { const marker = L.marker([pt.lat, pt.lon], { icon: getAdvancedIcon(pt.item, pt.idx) }).addTo(markersLayer); marker.bindPopup(createPopupContent(pt.item, currentDayIdx.value), { maxWidth: 300, className: 'custom-popup' }); bounds.push([pt.lat, pt.lon]); });
+                    for (let i = 0; i < points.length - 1; i++) { const start = points[i]; const end = points[i + 1]; const curvePoints = getCurvePoints(start.lat, start.lon, end.lat, end.lon, i); L.polyline(curvePoints, { color: '#DC2626', weight: 3, dashArray: '10, 10', opacity: 0.7, lineCap: 'round' }).addTo(markersLayer); }
+                    if (bounds.length) { map.fitBounds(bounds, { padding: [80, 80] }); }
                     loading.value = false;
                 };
 
-                const getCurvePoints = (lat1, lon1, lat2, lon2, idx) => {
-                    const midLat = (lat1 + lat2) / 2;
-                    const midLon = (lon1 + lon2) / 2;
-                    const dx = lat2 - lat1;
-                    const dy = lon2 - lon1;
-                    const curvePower = 0.15;
-                    const side = idx % 2 === 0 ? 1 : -1;
-                    const cx = midLat - dy * curvePower * side;
-                    const cy = midLon + dx * curvePower * side;
-                    
-                    const points = [];
-                    for (let t = 0; t <= 1; t += 0.05) {
-                        const lat = Math.pow(1-t, 2) * lat1 + 2 * (1-t) * t * cx + Math.pow(t, 2) * lat2;
-                        const lon = Math.pow(1-t, 2) * lon1 + 2 * (1-t) * t * cy + Math.pow(t, 2) * lon2;
-                        points.push([lat, lon]);
-                    }
-                    return points;
-                };
+                const getCurvePoints = (lat1, lon1, lat2, lon2, idx) => { const midLat = (lat1 + lat2) / 2; const midLon = (lon1 + lon2) / 2; const dx = lat2 - lat1; const dy = lon2 - lon1; const curvePower = 0.15; const side = idx % 2 === 0 ? 1 : -1; const cx = midLat - dy * curvePower * side; const cy = midLon + dx * curvePower * side; const points = []; for (let t = 0; t <= 1; t += 0.05) { const lat = Math.pow(1-t, 2) * lat1 + 2 * (1-t) * t * cx + Math.pow(t, 2) * lat2; const lon = Math.pow(1-t, 2) * lon1 + 2 * (1-t) * t * cy + Math.pow(t, 2) * lon2; points.push([lat, lon]); } return points; };
+                const switchMapDay = (index) => { currentDayIdx.value = index; nextTick(() => drawRoute()); };
+                const locateUser = () => { if (!navigator.geolocation) { alert('您的瀏覽器不支援定位功能'); return; } loading.value = true; loadingText.value = '正在定位中...'; navigator.geolocation.getCurrentPosition((position) => { const { latitude, longitude } = position.coords; if (userMarker) map.removeLayer(userMarker); userMarker = L.marker([latitude, longitude], { icon: L.divIcon({ html: '<div style="width:40px;height:40px;background:#3B82F6;border:4px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3)"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>', className: '', iconSize: [40, 40], iconAnchor: [20, 20] }) }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup(); map.flyTo([latitude, longitude], 16, { duration: 1.5 }); loading.value = false; }, (error) => { loading.value = false; alert('❌ 定位失敗'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }); };
 
-                const switchMapDay = (index) => { 
-                    currentDayIdx.value = index; 
-                    nextTick(() => drawRoute()); 
-                };
-
-                const locateUser = () => { 
-                    if (!navigator.geolocation) { alert('您的瀏覽器不支援定位功能'); return; } 
-                    loading.value = true; 
-                    loadingText.value = '正在定位中...'; 
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => { 
-                            const { latitude, longitude } = position.coords; 
-                            if (userMarker) map.removeLayer(userMarker); 
-                            userMarker = L.marker([latitude, longitude], { 
-                                icon: L.divIcon({ 
-                                    html: '<div style="width:40px;height:40px;background:#3B82F6;border:4px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3)"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>', 
-                                    className: '', 
-                                    iconSize: [40, 40], 
-                                    iconAnchor: [20, 20] 
-                                }) 
-                            }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup(); 
-                            map.flyTo([latitude, longitude], 16, { duration: 1.5 }); 
-                            loading.value = false; 
-                        }, 
-                        (error) => { loading.value = false; alert('❌ 定位失敗'); }, 
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    ); 
-                };
-
-                // === 初始化 ===
-                onMounted(() => { 
-                    syncData(); 
-                    applyGlobalTheme(); 
-                });
+                onMounted(() => { syncData(); applyGlobalTheme(); });
                 
                 return {
-                    // 狀態
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, 
                     settings, flights, newFlight, sortedFlights,
                     days, currentDayIdx, currentDay, 
@@ -1864,8 +1568,6 @@
                     globalMenu, showUnlockPrompt, unlockPassword, isUnlocked,
                     showManualPinModal, manualPinMode, manualPinData,
                     TYPES_LIST,
-                    
-                    // 方法
                     addFlight, removeFlight, calculateLayover, formatFlightDate,
                     addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, switchMapDay,
@@ -1880,7 +1582,8 @@
                     startTodoLongPress, clearTodoLongPress, finishEditingTodo, cancelEditingTodo,
                     toggleLock, attemptUnlock,
                     switchTrip, createNewTrip, deleteTrip,
-                    openManualPinModal, openManualPinForItem, cancelManualPin, confirmManualPin, clearManualPin
+                    openManualPinModal, openManualPinForItem, cancelManualPin, confirmManualPin, clearManualPin,
+                    exportAsText, exportAsCSV
                 };
             }
         });
