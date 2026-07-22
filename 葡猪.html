@@ -1052,6 +1052,8 @@
         
         const firebaseConfig = {apiKey: "AIzaSyC_mIkGuJCMKAcoRf78bipUJzzodTk_zVs",authDomain: "lisboaaa-2c65b.firebaseapp.com",databaseURL: "https://lisboaaa-2c65b-default-rtdb.firebaseio.com",projectId: "lisboaaa-2c65b",appId: "1:391483387676:web:d527043aee656dfc5854d9"};
         let db; try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch(e){}
+        const ROOM_PARAM = (new URLSearchParams(window.location.search).get('room') || '').trim().toLowerCase();
+        let roomParamApplied = false;
         
         const app = createApp({
             setup() {
@@ -1130,6 +1132,25 @@
                 let map, markersLayer, userMarker, sortableInstance, tripSortableInstance;
                 let saveDebounceTimer = null;
                 const longPressTimer = ref(null);
+                const sessionBackedUpTrips = new Set();
+
+                const createAutomaticBackup = async (reason, tripId = currentTripId.value, force = false) => {
+                    if (!db || !tripId || (!force && sessionBackedUpTrips.has(tripId))) return true;
+                    const trip = allTrips.value[tripId];
+                    if (!trip) return true;
+                    try {
+                        await db.ref(`tripBackups/${tripId}`).push().set({
+                            createdAt: firebase.database.ServerValue.TIMESTAMP,
+                            reason,
+                            trip: JSON.parse(JSON.stringify(trip))
+                        });
+                        sessionBackedUpTrips.add(tripId);
+                        return true;
+                    } catch (error) {
+                        console.error('Automatic backup failed:', error);
+                        return false;
+                    }
+                };
 
                 const autoSetRate = () => { if(!settings.location) return; const loc = settings.location.toLowerCase(); for(const [key, value] of Object.entries(CURRENCY_RATES)) { if(loc.includes(key)) { settings.currency = value.currency; settings.rate = value.rate; return; } } };
                 const toggleLock = () => { if (settings.isLocked && !isUnlocked.value) { if (settings.password) { showUnlockPrompt.value = true; } else { isUnlocked.value = true; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } } else { settings.isLocked = !settings.isLocked; isUnlocked.value = false; } };
@@ -1182,6 +1203,9 @@
                 const getWeatherIcon = i => i === 'sun' ? 'ph-fill ph-sun text-yellow-300' : (i === 'rain' ? 'ph-fill ph-cloud-rain text-blue-300' : 'ph-fill ph-cloud text-white/90');
 
                 const getGoogleMapUrl = (item) => {
+                    if (item.isManualPin && item.lat && item.lon) {
+                        return `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
+                    }
                     const searchTerm = item.location?.trim() || item.activity?.trim();
                     if (searchTerm) {
                         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchTerm)}`;
@@ -1327,9 +1351,23 @@
                 const syncData = () => { 
                     if(db) { 
                         db.ref('tripOrder').on('value', s => { if(s.val()) tripOrder.value = s.val(); }); 
-                        db.ref('trips').on('value', s => { 
-                            isConnected.value = true; allTrips.value = s.val() || {}; 
-                            const savedId = localStorage.getItem('currentTripId'); 
+                        db.ref('trips').on('value', s => {
+                            isConnected.value = true; allTrips.value = s.val() || {};
+                            if(!roomParamApplied && ROOM_PARAM) {
+                                const requestedId = Object.keys(allTrips.value).find(id => {
+                                    const trip = allTrips.value[id] || {};
+                                    const roomCode = String(trip.settings?.roomCode || '').trim().toLowerCase();
+                                    return id.toLowerCase() === ROOM_PARAM || roomCode === ROOM_PARAM;
+                                });
+                                roomParamApplied = true;
+                                if(requestedId) {
+                                    currentTripId.value = requestedId;
+                                    localStorage.setItem('currentTripId', requestedId);
+                                    loadCurrentTripData();
+                                    return;
+                                }
+                            }
+                            const savedId = localStorage.getItem('currentTripId');
                             if(savedId && allTrips.value[savedId]) { currentTripId.value = savedId; loadCurrentTripData(); } 
                             else if(!currentTripId.value || !allTrips.value[currentTripId.value]) { 
                                 const firstId = Object.keys(allTrips.value)[0]; 
@@ -1357,13 +1395,22 @@
                     sortDays(); applyGlobalTheme(); initSortable(); resizeAllTextareas(); 
                 };
                 
-                const switchTrip = id => { currentTripId.value = id; localStorage.setItem('currentTripId', id); currentDayIdx.value = 0; loadCurrentTripData(); showTripList.value = false; };
-                
-                const deleteTrip = id => { 
-                    if(confirm('Delete?')) { 
-                        if(db) db.ref('trips/' + id).remove(); delete allTrips.value[id]; 
-                        tripOrder.value = tripOrder.value.filter(x => x !== id); if(db) db.ref('tripOrder').set(tripOrder.value); 
-                        if(currentTripId.value === id) { const newId = Object.keys(allTrips.value)[0]; if(newId) { switchTrip(newId); } else { createNewTrip(); } } 
+                const updateRoomParam = id => {
+                    const roomCode = allTrips.value[id]?.settings?.roomCode || id;
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('room', roomCode);
+                    window.history.replaceState({}, '', url);
+                };
+
+                const switchTrip = id => { currentTripId.value = id; localStorage.setItem('currentTripId', id); currentDayIdx.value = 0; loadCurrentTripData(); updateRoomParam(id); showTripList.value = false; };
+
+                const deleteTrip = async id => {
+                    if(confirm('Delete?')) {
+                        const backedUp = await createAutomaticBackup('before-delete-trip', id, true);
+                        if(!backedUp) { alert('自動備份失敗，已取消刪除。'); return; }
+                        if(db) db.ref('trips/' + id).remove(); delete allTrips.value[id];
+                        tripOrder.value = tripOrder.value.filter(x => x !== id); if(db) db.ref('tripOrder').set(tripOrder.value);
+                        if(currentTripId.value === id) { const newId = Object.keys(allTrips.value)[0]; if(newId) { switchTrip(newId); } else { createNewTrip(); } }
                     } 
                 };
 
@@ -1376,8 +1423,9 @@
                 watch([days, expenses, settings, participants, todos, flights], () => { 
                     if(!db || !currentTripId.value) return; 
                     if(saveDebounceTimer) clearTimeout(saveDebounceTimer); 
-                    saveDebounceTimer = setTimeout(() => { 
-                        db.ref(`trips/${currentTripId.value}`).update({ 
+                    saveDebounceTimer = setTimeout(async () => {
+                        await createAutomaticBackup('session-start');
+                        db.ref(`trips/${currentTripId.value}`).update({
                             days: JSON.parse(JSON.stringify(days.value)), expenses: JSON.parse(JSON.stringify(expenses.value)), 
                             settings: settings, participants: participants.value, todos: JSON.parse(JSON.stringify(todos.value)), flights: JSON.parse(JSON.stringify(flights.value))
                         }); 
@@ -1390,7 +1438,7 @@
                 const addDay = () => { let lastDate = days.value.length > 0 ? days.value[days.value.length - 1].fullDate : new Date().toISOString().split('T')[0]; const d = new Date(lastDate); d.setDate(d.getDate() + 1); const newDate = d.toISOString().split('T')[0]; days.value.push({ fullDate: newDate, title: '', items: [] }); sortDays(newDate); };
                 const addItem = () => { if (!currentDay.value?.items) return; currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false, isManualPin: false, lat: null, lon: null }); nextTick(() => { resizeAllTextareas(); initSortable(); }); };
                 const deleteItem = i => { currentDay.value.items.splice(i, 1); nextTick(() => initSortable()); };
-                const confirmAndDeleteDay = () => { if(confirm('Delete Day?')) { days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } };
+                const confirmAndDeleteDay = async () => { if(confirm('Delete Day?')) { const backedUp = await createAutomaticBackup('before-delete-day', currentTripId.value, true); if(!backedUp) { alert('自動備份失敗，已取消刪除。'); return; } days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } };
                 const addParticipant = () => { if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
                 const startEditingParticipant = (idx, name) => { editingParticipantIdx.value = idx; editingParticipantName.value = name; };
                 const finishEditingParticipant = (idx) => { const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
@@ -1510,6 +1558,7 @@
                 };
 
                 const createPopupContent = (item, dayIdx) => {
+                    const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
                     const type = TYPES_LIST.find(x => x.val === item.type);
                     const bgColor = type?.bg?.match(/\[([^\]]+)\]/)?.[1] || '#64748b';
                     const emoji = type?.emoji || '📍';
@@ -1518,13 +1567,13 @@
                     const headerColor1 = item.isManualPin ? '#8B5CF6' : bgColor;
                     const headerColor2 = darkenColor(headerColor1);
                     let metaHtml = '';
-                    if (item.openTime) { metaHtml += `<span class="map-popup-tag" style="background:#F0F9FF;color:#0369A1;border-color:#BAE6FD;">🕐 ${item.openTime}</span>`; }
-                    if (item.ticket) { metaHtml += `<span class="map-popup-tag" style="background:#FEF3C7;color:#B45309;border-color:#FDE68A;">💰 ${settings.currency}${item.ticket}</span>`; }
+                    if (item.openTime) { metaHtml += `<span class="map-popup-tag" style="background:#F0F9FF;color:#0369A1;border-color:#BAE6FD;">🕐 ${escapeHtml(item.openTime)}</span>`; }
+                    if (item.ticket) { metaHtml += `<span class="map-popup-tag" style="background:#FEF3C7;color:#B45309;border-color:#FDE68A;">💰 ${escapeHtml(settings.currency)}${escapeHtml(item.ticket)}</span>`; }
                     if (item.isManualPin) { metaHtml += `<span class="map-popup-tag" style="background:#F3E8FF;color:#7C3AED;border-color:#E9D5FF;">📍 手動標記</span>`; }
                     let noteHtml = '';
-                    if (item.note) { noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${item.note}</span></div>`; }
+                    if (item.note) { noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${escapeHtml(item.note)}</span></div>`; }
                     const gmapUrl = getGoogleMapUrl(item);
-                    return `<div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};"><div class="map-popup-header"><div class="map-popup-header-icon">${emoji}</div><div class="map-popup-header-content"><div class="map-popup-title">${item.activity || '未命名地點'}</div><div class="map-popup-time"><i class="ph-bold ph-clock"></i> ${item.time || '--:--'} · D${dayIdx + 1} · ${typeName}</div></div></div><div class="map-popup-body"><div class="map-popup-location"><i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i><span>${item.location || '未設定地址'}</span></div>${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}${noteHtml}<div class="map-popup-actions">${gmapUrl !== '#' ? `<a href="${gmapUrl}" target="_blank" class="map-popup-btn map-popup-btn-secondary"><i class="ph-bold ph-navigation-arrow"></i> Google Maps</a>` : ''}</div></div></div>`;
+                    return `<div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};"><div class="map-popup-header"><div class="map-popup-header-icon">${escapeHtml(emoji)}</div><div class="map-popup-header-content"><div class="map-popup-title">${escapeHtml(item.activity || '未命名地點')}</div><div class="map-popup-time"><i class="ph-bold ph-clock"></i> ${escapeHtml(item.time || '--:--')} · D${dayIdx + 1} · ${escapeHtml(typeName)}</div></div></div><div class="map-popup-body"><div class="map-popup-location"><i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i><span>${escapeHtml(item.location || '未設定地址')}</span></div>${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}${noteHtml}<div class="map-popup-actions">${gmapUrl !== '#' ? `<a href="${escapeHtml(gmapUrl)}" target="_blank" rel="noopener noreferrer" class="map-popup-btn map-popup-btn-secondary"><i class="ph-bold ph-navigation-arrow"></i> Google Maps</a>` : ''}</div></div></div>`;
                 };
 
                 const drawRoute = async () => {
