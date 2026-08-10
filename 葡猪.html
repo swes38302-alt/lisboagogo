@@ -291,6 +291,12 @@
         .card-connected-top { border-top: none; padding-top: 10px; border-top-left-radius: 0; border-top-right-radius: 0; }
         .card-connected-bottom { border-bottom: none; padding-bottom: 4px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
         .card-dashed-border { border: 2px dashed var(--theme-light) !important; box-shadow: none !important; }
+        .meal-card { border-color: #FDE68A !important; background: #FFFBEB !important; }
+        .meal-card.meal-lunch { border-color: #FBCFE8 !important; background: #FFF7FB !important; }
+        .meal-card.meal-dinner { border-color: #DDD6FE !important; background: #FAF8FF !important; }
+        .meal-slot-badge { display: inline-flex; align-items: center; margin-top: 3px; padding: 2px 7px; border-radius: 999px; font-size: 9px; line-height: 1.2; font-weight: 800; color: #92400E; background: #FEF3C7; }
+        .meal-slot-badge.meal-lunch { color: #9D174D; background: #FCE7F3; }
+        .meal-slot-badge.meal-dinner { color: #5B21B6; background: #EDE9FE; }
         .subtle-link-btn { pointer-events: auto; color: var(--theme-primary); background: white; border: 1px solid #E2E8F0; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); z-index: 60; }
         
         .settlement-card { background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%); border: 1px solid #BAE6FD; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
@@ -860,7 +866,7 @@
                 
                 <div id="itinerary-list" class="space-y-0 pl-2">
                     <div v-for="(item, idx) in currentDay.items" :key="item.id" class="itinerary-wrapper relative group" :class="[(item.connected || isConnectedToPrev(idx)) ? 'mb-0' : 'mb-5']" :data-id="idx">
-                        <div class="p-3 shadow-sm bg-white relative flex gap-3 border border-slate-100 rounded-xl" :class="[isConnectedToNext(idx) ? 'card-connected-bottom' : '', isConnectedToPrev(idx) ? 'card-connected-top' : '', (isConnectedToNext(idx) || isConnectedToPrev(idx)) ? 'card-dashed-border' : '']">
+                        <div class="p-3 shadow-sm bg-white relative flex gap-3 border border-slate-100 rounded-xl" :class="[isConnectedToNext(idx) ? 'card-connected-bottom' : '', isConnectedToPrev(idx) ? 'card-connected-top' : '', (isConnectedToNext(idx) || isConnectedToPrev(idx)) ? 'card-dashed-border' : '', getMealCardClass(item)]">
                             <div v-if="isConnectedToPrev(idx) && !getPrevItem(idx)?.showTransport" class="group-divider"></div>
                             <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-md" :class="getTypeColor(item.type)"></div>
                             <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1 relative">
@@ -870,7 +876,10 @@
                             </div>
                             <div class="flex-1 min-w-0 space-y-2">
                                 <div class="flex justify-between items-start">
-                                    <input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
+                                    <div class="min-w-0 flex-1">
+                                        <input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
+                                        <span v-if="getMealSlot(item)" class="meal-slot-badge" :class="getMealCardClass(item)">{{ getMealSlot(item) }}</span>
+                                    </div>
                                     <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-xl text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
                                 </div>
                                 <div class="relative">
@@ -1161,6 +1170,22 @@
                 const getTypeName = v => TYPES_LIST.find(t => t.val === v)?.label || '景點';
                 const getTypeEmoji = v => TYPES_LIST.find(t => t.val === v)?.emoji || '📍';
                 const getTypeColor = v => TYPES_LIST.find(t => t.val === v)?.bg || 'bg-slate-400';
+                const getMealSlot = item => {
+                    if (item.type !== 'restaurant') return '';
+                    if (item.mealSlot) return item.mealSlot;
+                    const hour = Number((item.time || '').split(':')[0]);
+                    if (Number.isNaN(hour)) return '用餐';
+                    if (hour < 11) return '早餐';
+                    if (hour < 16) return '午餐';
+                    return '晚餐';
+                };
+                const getMealCardClass = item => {
+                    const slot = getMealSlot(item);
+                    if (!slot) return '';
+                    if (slot === '午餐') return 'meal-card meal-lunch';
+                    if (slot === '晚餐') return 'meal-card meal-dinner';
+                    return 'meal-card';
+                };
                 const autoResize = e => { const el = e.target; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
                 const resizeAllTextareas = () => { nextTick(() => { document.querySelectorAll('.auto-textarea').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }); };
                 
@@ -1622,7 +1647,7 @@
                     drawRoute, locateUser, switchMapDay,
                     addExpense, startLongPress, clearLongPress,
                     applyGlobalTheme, getWeatherIcon, autoSetRate,
-                    getTypeName, getTypeEmoji, getTypeColor, autoResize, resizeAllTextareas,
+                    getTypeName, getTypeEmoji, getTypeColor, getMealSlot, getMealCardClass, autoResize, resizeAllTextareas,
                     isConnectedToNext, isConnectedToPrev, getPrevItem, 
                     checkLocation, getGoogleMapUrl, getWeekdayAbbr,
                     openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
