@@ -571,8 +571,8 @@
         .location-error-hint button { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; }
         .manual-pin-badge { font-size: 9px; background: #8B5CF6; color: white; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
 
-        .shopping-route-modal { background: #fffaf0; width: min(94vw, 430px); max-height: 88vh; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 70px rgba(15,23,42,.32); border: 1px solid #e7d8b8; }
-        .shopping-route-header { padding: 17px 18px 14px; color: white; background: linear-gradient(135deg,#16324f,#244b70); position: sticky; top: 0; z-index: 2; }
+        .shopping-route-modal { background: #fffaf0; width: min(94vw, 430px); height: 88vh; max-height: 780px; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 70px rgba(15,23,42,.32); border: 1px solid #e7d8b8; }
+        .shopping-route-header { flex: 0 0 auto; padding: 17px 18px 14px; color: white; background: linear-gradient(135deg,#16324f,#244b70); position: sticky; top: 0; z-index: 2; }
         .shopping-route-body { padding: 14px; overflow-y: auto; max-height: calc(88vh - 92px); background-image: radial-gradient(#d9c9aa 0.7px, transparent 0.7px); background-size: 15px 15px; }
         .shopping-route-zone { position: relative; border-radius: 18px; padding: 13px 11px 10px; margin-bottom: 13px; border: 1px solid rgba(15,23,42,.08); box-shadow: 0 5px 15px rgba(15,23,42,.06); }
         .shopping-route-zone:not(:last-child)::after { content: '↓'; position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: white; background: #16324f; border: 3px solid #fffaf0; font-weight: 900; z-index: 1; }
@@ -589,18 +589,18 @@
         .shopping-store-name { min-width: 0; font-size: 11px; line-height: 1.2; font-weight: 850; }
         .shopping-store-hours { text-align: right; font-size: 9px; line-height: 1.15; color: #64748b; font-weight: 700; }
         .shopping-route-launch { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 7px 10px; border-radius: 999px; color: #16324f; background: #fff4cf; border: 1px solid #f1d891; font-size: 10px; font-weight: 900; }
-        .shopping-map-scroll { overflow: auto; padding: 12px; background: #f7edda; }
-        .shopping-map-canvas { width: 760px; height: 500px; position: relative; overflow: hidden; border: 2px solid #9d8658; border-radius: 18px; background: #fffaf0; box-shadow: inset 0 0 0 5px rgba(157,134,88,.12); }
+        .shopping-map-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 12px; background: #f7edda; }
+        .shopping-map-canvas { width: 100%; aspect-ratio: 942 / 1668; position: relative; overflow: hidden; border: 2px solid #9d8658; border-radius: 18px; background: #fffaf0 url('assets/shopping-route-bg-portrait.webp') center/cover no-repeat; box-shadow: inset 0 0 0 5px rgba(157,134,88,.12); }
         .shopping-map-zone-bg { position: absolute; border-radius: 42% 58% 55% 45%; opacity: .82; filter: saturate(.8); }
         .shopping-map-zone-bg.z1 { left: 22px; top: 42px; width: 360px; height: 205px; background: #dfead9; }
         .shopping-map-zone-bg.z2 { right: 23px; top: 45px; width: 350px; height: 210px; background: #f3d7d5; }
         .shopping-map-zone-bg.z3 { right: 28px; bottom: 38px; width: 375px; height: 220px; background: #d9e8ed; }
         .shopping-map-zone-bg.z4 { left: 24px; bottom: 35px; width: 380px; height: 205px; background: #f4dfbd; }
-        .shopping-map-zone-label { position: absolute; padding: 7px 13px; color: white; border-radius: 9px; font-size: 12px; font-weight: 900; box-shadow: 0 3px 7px rgba(15,23,42,.12); z-index: 3; }
-        .shopping-map-zone-label.z1 { left: 148px; top: 18px; background: #6d986b; }
-        .shopping-map-zone-label.z2 { right: 78px; top: 18px; background: #bf686b; }
-        .shopping-map-zone-label.z3 { right: 86px; bottom: 13px; background: #3d7b99; }
-        .shopping-map-zone-label.z4 { left: 94px; bottom: 13px; background: #c58531; }
+        .shopping-map-zone-label { position: absolute; padding: 6px 11px; color: #18324a; border-radius: 999px; font-size: 10px; font-weight: 900; background: rgba(255,250,240,.86) !important; border: 1px solid rgba(157,134,88,.35); box-shadow: 0 3px 10px rgba(15,23,42,.09); backdrop-filter: blur(5px); z-index: 3; }
+        .shopping-map-zone-label.z1 { left: 4%; top: 2%; }
+        .shopping-map-zone-label.z2 { right: 4%; top: 27%; }
+        .shopping-map-zone-label.z3 { left: 4%; top: 52%; }
+        .shopping-map-zone-label.z4 { right: 4%; bottom: 2%; }
         .shopping-map-road { position: absolute; height: 18px; border-radius: 999px; background: #173b5d; box-shadow: inset 0 0 0 2px #e9c36b; z-index: 2; transform-origin: left center; }
         .shopping-map-road::after { content: ''; position: absolute; left: 10px; right: 10px; top: 7px; height: 3px; background: repeating-linear-gradient(90deg,#f8dc86 0 7px,transparent 7px 14px); }
         .shopping-map-road.r1 { left: 60px; top: 180px; width: 330px; transform: rotate(-5deg); }
@@ -612,11 +612,15 @@
         .shopping-map-road-arrow.a2 { right: 50px; top: 264px; transform: rotate(92deg); }
         .shopping-map-road-arrow.a3 { left: 164px; bottom: 86px; transform: rotate(180deg); }
         .shopping-map-landmark { position: absolute; z-index: 1; font-size: 30px; opacity: .8; }
-        .shopping-map-pin { position: absolute; z-index: 5; transform: translate(-50%,-50%); border: 0; background: transparent; width: 78px; padding: 0; text-align: center; cursor: pointer; }
-        .shopping-map-pin-number { width: 25px; height: 25px; margin: 0 auto 2px; display: grid; place-items: center; border-radius: 50%; color: #16324f; background: #fffaf0; border: 2px solid #16324f; font-size: 10px; font-weight: 900; box-shadow: 0 2px 5px rgba(15,23,42,.2); }
-        .shopping-map-pin-name { display: block; padding: 2px 3px; border-radius: 4px; color: #172033; background: rgba(255,250,240,.86); font-size: 7px; line-height: 1.05; font-weight: 900; text-transform: uppercase; }
-        .shopping-map-pin.active .shopping-map-pin-number { color: white; background: #e11d48; border-color: #e11d48; transform: scale(1.13); }
-        .shopping-map-detail { position: sticky; left: 0; bottom: 0; z-index: 8; margin: 10px 12px 12px; padding: 12px; border-radius: 14px; color: white; background: linear-gradient(135deg,#173b5d,#102b44); box-shadow: 0 10px 25px rgba(15,23,42,.25); }
+        .shopping-map-pin { position: absolute; z-index: 5; transform: translate(-50%,-50%); border: 0; background: transparent; width: 38px; padding: 5px; text-align: center; cursor: pointer; }
+        .shopping-map-pin-number { width: 28px; height: 28px; margin: 0 auto; padding: 0; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 50% 50% 50% 9px; transform: rotate(-45deg); color: transparent; background: #fffaf0; border: 2px solid #16324f; font-size: 10px; font-weight: 900; box-shadow: 0 3px 8px rgba(15,23,42,.25); }
+        .shopping-map-pin-name { display: none; }
+        .shopping-map-pin-number::after { content: attr(data-no); color: #16324f; transform: rotate(45deg); }
+        .shopping-map-pin.active .shopping-map-pin-number { color: transparent; background: #e11d48; border-color: #e11d48; transform: rotate(-45deg) scale(1.13); }
+        .shopping-map-pin.active .shopping-map-pin-number::after { color: white; }
+        .shopping-map-pin:hover .shopping-map-pin-number { border-color: #e11d48; }
+        .shopping-map-zone-bg, .shopping-map-road, .shopping-map-road-arrow, .shopping-map-landmark { display: none; }
+        .shopping-map-detail { flex: 0 0 auto; position: relative; z-index: 8; margin: 10px 12px 12px; padding: 12px; border-radius: 14px; color: white; background: linear-gradient(135deg,#173b5d,#102b44); box-shadow: 0 10px 25px rgba(15,23,42,.25); }
     </style>
 </head>
 
@@ -793,7 +797,7 @@
                         <div>
                             <div class="text-[10px] font-bold tracking-[.18em] text-white/65">9/12 SAT · INTERACTIVE ROUTE</div>
                             <h2 id="shopping-route-title" class="text-base font-black mt-1">原宿 → 表參道 → 澀谷</h2>
-                            <p class="text-[10px] text-white/70 mt-1">點擊店家即可開啟 Google Maps · 營業時間以當日公告為準</p>
+                            <p class="text-[10px] text-white/70 mt-1">由上往下滑動 · 點標記查看店名、營業時間與 Google Maps</p>
                         </div>
                         <button @click="showShoppingRoute = false" aria-label="關閉購物動線" class="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center shrink-0"><i class="ph-bold ph-x"></i></button>
                     </div>
@@ -808,8 +812,8 @@
                         <div class="shopping-map-road r1"></div><div class="shopping-map-road r2"></div><div class="shopping-map-road r3"></div><div class="shopping-map-road r4"></div>
                         <div class="shopping-map-road-arrow a1">➤</div><div class="shopping-map-road-arrow a2">➤</div><div class="shopping-map-road-arrow a3">➤</div>
                         <span class="shopping-map-landmark" style="left:35px;top:65px">⛩️</span><span class="shopping-map-landmark" style="right:40px;top:74px">🌸</span><span class="shopping-map-landmark" style="left:45px;bottom:55px">🏙️</span><span class="shopping-map-landmark" style="left:340px;top:250px">🛍️</span>
-                        <button v-for="store in shoppingStores" :key="store.no" @click="selectedShoppingStore = store" class="shopping-map-pin" :class="{active:selectedShoppingStore?.no === store.no}" :style="{left:store.x+'px',top:store.y+'px'}" :aria-label="`${store.no} ${store.name}`">
-                            <span class="shopping-map-pin-number">{{ store.no }}</span><span class="shopping-map-pin-name">{{ store.name }}</span>
+                        <button v-for="store in shoppingStores" :key="store.no" @click="selectedShoppingStore = store" class="shopping-map-pin" :class="{active:selectedShoppingStore?.no === store.no}" :style="{left:store.x+'%',top:store.y+'%'}" :aria-label="`${store.no} ${store.name}`">
+                            <span class="shopping-map-pin-number" :data-no="store.no">{{ store.no }}</span><span class="shopping-map-pin-name">{{ store.name }}</span>
                         </button>
                     </div>
                 </div>
@@ -1167,32 +1171,32 @@
                 const mapSearch = query => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 const shoppingZones = [
                     { name:'區域 1｜原宿北・明治通', subtitle:'由北往南', className:'zone-green', stores:[
-                        {no:1,x:82,y:135,name:'ASICS FLAGSHIP HARAJUKU',hours:'11:00–20:00',maps:mapSearch('ASICS FLAGSHIP HARAJUKU')},
-                        {no:2,x:128,y:92,name:'HOKA HARAJUKU',hours:'11:00–20:00',maps:mapSearch('HOKA HARAJUKU')},
-                        {no:3,x:178,y:145,name:'Kinetics',hours:'11:00–20:00',maps:mapSearch('Kinetics Harajuku Tokyo')},
-                        {no:4,x:225,y:92,name:'atmos HARAJUKU',hours:'11:00–20:00',maps:mapSearch('atmos Harajuku')},
-                        {no:5,x:275,y:140,name:'BEAMS HARAJUKU',hours:'週六 11:00–20:00',maps:mapSearch('BEAMS HARAJUKU')},
-                        {no:6,x:320,y:88,name:'NEW BALANCE HARAJUKU',hours:'11:00–20:00',maps:mapSearch('New Balance Harajuku')},
-                        {no:7,x:355,y:142,name:"BILLY'S HARAJUKU",hours:'11:00–20:00',maps:mapSearch("BILLY'S HARAJUKU")},
-                        {no:8,x:390,y:88,name:'KICKS LAB.',hours:'11:00–20:00',maps:mapSearch('KICKS LAB Harajuku')}
+                        {no:1,x:56,y:4,name:'ASICS FLAGSHIP HARAJUKU',hours:'11:00–20:00',maps:mapSearch('ASICS FLAGSHIP HARAJUKU')},
+                        {no:2,x:62,y:8,name:'HOKA HARAJUKU',hours:'11:00–20:00',maps:mapSearch('HOKA HARAJUKU')},
+                        {no:3,x:59,y:12,name:'Kinetics',hours:'11:00–20:00',maps:mapSearch('Kinetics Harajuku Tokyo')},
+                        {no:4,x:51,y:16,name:'atmos HARAJUKU',hours:'11:00–20:00',maps:mapSearch('atmos Harajuku')},
+                        {no:5,x:42,y:20,name:'BEAMS HARAJUKU',hours:'週六 11:00–20:00',maps:mapSearch('BEAMS HARAJUKU')},
+                        {no:6,x:36,y:24,name:'NEW BALANCE HARAJUKU',hours:'11:00–20:00',maps:mapSearch('New Balance Harajuku')},
+                        {no:7,x:43,y:28,name:"BILLY'S HARAJUKU",hours:'11:00–20:00',maps:mapSearch("BILLY'S HARAJUKU")},
+                        {no:8,x:55,y:32,name:'KICKS LAB.',hours:'11:00–20:00',maps:mapSearch('KICKS LAB Harajuku')}
                     ]},
                     { name:'區域 2｜Cat Street・表參道', subtitle:'沿 Cat Street', className:'zone-rose', stores:[
-                        {no:9,x:445,y:98,name:'atmos BLUE OMOTESANDO',hours:'11:00–20:00',maps:mapSearch('atmos BLUE Omotesando')},
-                        {no:10,x:510,y:138,name:'Onitsuka Tiger',hours:'11:00–20:00',maps:mapSearch('Onitsuka Tiger Omotesando')},
-                        {no:11,x:580,y:108,name:'BIRKENSTOCK',hours:'11:00–20:00',maps:mapSearch('Birkenstock Harajuku Tokyo')},
-                        {no:12,x:650,y:160,name:'MERRELL',hours:'11:00–20:00',maps:mapSearch('Merrell Harajuku Tokyo')}
+                        {no:9,x:61,y:36,name:'atmos BLUE OMOTESANDO',hours:'11:00–20:00',maps:mapSearch('atmos BLUE Omotesando')},
+                        {no:10,x:55,y:40,name:'Onitsuka Tiger',hours:'11:00–20:00',maps:mapSearch('Onitsuka Tiger Omotesando')},
+                        {no:11,x:46,y:44,name:'BIRKENSTOCK',hours:'11:00–20:00',maps:mapSearch('Birkenstock Harajuku Tokyo')},
+                        {no:12,x:43,y:49,name:'MERRELL',hours:'11:00–20:00',maps:mapSearch('Merrell Harajuku Tokyo')}
                     ]},
                     { name:'區域 3｜神宮前・澀谷', subtitle:'往神南方向', className:'zone-blue', stores:[
-                        {no:13,x:690,y:240,name:'SALOMON',hours:'11:00–20:00',maps:mapSearch('Salomon Store Tokyo Shibuya')},
-                        {no:14,x:665,y:300,name:'KITH TOKYO',hours:'11:00–20:00',maps:mapSearch('KITH TOKYO')},
-                        {no:15,x:610,y:338,name:'DISTANCE TOKYO',hours:'11:00–20:00',maps:mapSearch('DISTANCE TOKYO running')},
-                        {no:16,x:535,y:352,name:'ballaholic TOKYO',hours:'12:00–20:00',maps:mapSearch('ballaholic TOKYO')}
+                        {no:13,x:50,y:54,name:'SALOMON',hours:'11:00–20:00',maps:mapSearch('Salomon Store Tokyo Shibuya')},
+                        {no:14,x:58,y:59,name:'KITH TOKYO',hours:'11:00–20:00',maps:mapSearch('KITH TOKYO')},
+                        {no:15,x:58,y:64,name:'DISTANCE TOKYO',hours:'11:00–20:00',maps:mapSearch('DISTANCE TOKYO running')},
+                        {no:16,x:49,y:69,name:'ballaholic TOKYO',hours:'12:00–20:00',maps:mapSearch('ballaholic TOKYO')}
                     ]},
                     { name:'區域 4｜澀谷中心・神南', subtitle:'20:00 前先逛 17–19', className:'zone-amber', stores:[
-                        {no:17,x:450,y:415,name:'REGAL Shoe & Co.',hours:'11:00–20:00',maps:mapSearch('REGAL Shoe & Co. Shibuya')},
-                        {no:18,x:355,y:420,name:'MORTAR TOKYO',hours:'11:00–20:00',maps:mapSearch('MORTAR TOKYO')},
-                        {no:19,x:255,y:415,name:'BEAMS Shibuya',hours:'11:00–20:00',maps:mapSearch('BEAMS Shibuya Jinnan')},
-                        {no:20,x:118,y:420,name:'MIZUNO SHOP／PARCO',hours:'11:00–21:00',maps:mapSearch('Mizuno Shop Shibuya PARCO')}
+                        {no:17,x:43,y:74,name:'REGAL Shoe & Co.',hours:'11:00–20:00',maps:mapSearch('REGAL Shoe & Co. Shibuya')},
+                        {no:18,x:48,y:80,name:'MORTAR TOKYO',hours:'11:00–20:00',maps:mapSearch('MORTAR TOKYO')},
+                        {no:19,x:57,y:86,name:'BEAMS Shibuya',hours:'11:00–20:00',maps:mapSearch('BEAMS Shibuya Jinnan')},
+                        {no:20,x:51,y:94,name:'MIZUNO SHOP／PARCO',hours:'11:00–21:00',maps:mapSearch('Mizuno Shop Shibuya PARCO')}
                     ]}
                 ];
                 const shoppingStores = computed(() => shoppingZones.flatMap(zone => zone.stores));
