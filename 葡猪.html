@@ -590,6 +590,9 @@
         .shopping-store-hours { text-align: right; font-size: 9px; line-height: 1.15; color: #64748b; font-weight: 700; }
         .shopping-route-launch { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 7px 10px; border-radius: 999px; color: #16324f; background: #fff4cf; border: 1px solid #f1d891; font-size: 10px; font-weight: 900; }
         .shopping-map-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 12px; background: #f7edda; }
+        .shopping-map-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+        .shopping-map-legend span { padding: 4px 7px; border-radius: 999px; color: #334155; background: rgba(255,255,255,.88); border: 1px solid #e7d8b8; font-size: 9px; line-height: 1; font-weight: 800; }
+        .shopping-map-legend .priority-key { color: #be123c; background: #fff1f2; border-color: #fda4af; }
         .shopping-map-canvas { width: 100%; aspect-ratio: 942 / 1668; position: relative; overflow: hidden; border: 2px solid #9d8658; border-radius: 18px; background: #fffaf0 url('assets/shopping-route-bg-portrait.webp') center/cover no-repeat; box-shadow: inset 0 0 0 5px rgba(157,134,88,.12); }
         .shopping-map-zone-bg { position: absolute; border-radius: 42% 58% 55% 45%; opacity: .82; filter: saturate(.8); }
         .shopping-map-zone-bg.z1 { left: 22px; top: 42px; width: 360px; height: 205px; background: #dfead9; }
@@ -612,9 +615,15 @@
         .shopping-map-road-arrow.a2 { right: 50px; top: 264px; transform: rotate(92deg); }
         .shopping-map-road-arrow.a3 { left: 164px; bottom: 86px; transform: rotate(180deg); }
         .shopping-map-landmark { position: absolute; z-index: 1; font-size: 30px; opacity: .8; }
-        .shopping-map-pin { position: absolute; z-index: 5; transform: translate(-50%,-50%); border: 0; background: transparent; width: 38px; padding: 5px; text-align: center; cursor: pointer; }
+        .shopping-map-pin { position: absolute; z-index: 5; transform: translate(-50%,-50%); border: 0; background: transparent; width: 38px; padding: 5px; text-align: center; cursor: pointer; overflow: visible; }
         .shopping-map-pin-number { width: 28px; height: 28px; margin: 0 auto; padding: 0; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 50% 50% 50% 9px; transform: rotate(-45deg); color: transparent; background: #fffaf0; border: 2px solid #16324f; font-size: 10px; font-weight: 900; box-shadow: 0 3px 8px rgba(15,23,42,.25); }
-        .shopping-map-pin-name { display: none; }
+        .shopping-map-pin-emoji { position: absolute; right: -1px; bottom: -2px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: white; border: 1px solid #cbd5e1; box-shadow: 0 2px 5px rgba(15,23,42,.2); font-size: 10px; line-height: 1; }
+        .shopping-map-pin-name { display: none; position: absolute; top: 50%; left: 41px; transform: translateY(-50%); width: max-content; max-width: 112px; padding: 4px 7px; border-radius: 7px; color: #881337; background: rgba(255,255,255,.94); border: 1px solid #fb7185; box-shadow: 0 3px 8px rgba(15,23,42,.16); font-size: 8px; line-height: 1.15; font-weight: 950; white-space: nowrap; }
+        .shopping-map-pin.label-left .shopping-map-pin-name { left: auto; right: 41px; }
+        .shopping-map-pin.priority { z-index: 6; }
+        .shopping-map-pin.priority .shopping-map-pin-number { background: #e11d48; border-color: white; box-shadow: 0 4px 10px rgba(190,18,60,.35); }
+        .shopping-map-pin.priority .shopping-map-pin-number::after { color: white; }
+        .shopping-map-pin.priority .shopping-map-pin-name { display: block; }
         .shopping-map-pin-number::after { content: attr(data-no); color: #16324f; transform: rotate(45deg); }
         .shopping-map-pin.active .shopping-map-pin-number { color: transparent; background: #e11d48; border-color: #e11d48; transform: rotate(-45deg) scale(1.13); }
         .shopping-map-pin.active .shopping-map-pin-number::after { color: white; }
@@ -803,6 +812,9 @@
                     </div>
                 </div>
                 <div class="shopping-map-scroll hide-scroll">
+                    <div class="shopping-map-legend" aria-label="店家分類圖例">
+                        <span>🏃 跑鞋</span><span>👟 球鞋</span><span>🧢 潮流</span><span>🏔️ 戶外</span><span>👞 皮鞋</span><span>🇯🇵 日系</span><span class="priority-key">● 優先店</span>
+                    </div>
                     <div class="shopping-map-canvas">
                         <div class="shopping-map-zone-bg z1"></div><div class="shopping-map-zone-bg z2"></div><div class="shopping-map-zone-bg z3"></div><div class="shopping-map-zone-bg z4"></div>
                         <div class="shopping-map-zone-label z1">區域 1｜原宿北・明治通</div>
@@ -812,14 +824,14 @@
                         <div class="shopping-map-road r1"></div><div class="shopping-map-road r2"></div><div class="shopping-map-road r3"></div><div class="shopping-map-road r4"></div>
                         <div class="shopping-map-road-arrow a1">➤</div><div class="shopping-map-road-arrow a2">➤</div><div class="shopping-map-road-arrow a3">➤</div>
                         <span class="shopping-map-landmark" style="left:35px;top:65px">⛩️</span><span class="shopping-map-landmark" style="right:40px;top:74px">🌸</span><span class="shopping-map-landmark" style="left:45px;bottom:55px">🏙️</span><span class="shopping-map-landmark" style="left:340px;top:250px">🛍️</span>
-                        <button v-for="store in shoppingStores" :key="store.no" @click="selectedShoppingStore = store" class="shopping-map-pin" :class="{active:selectedShoppingStore?.no === store.no}" :style="{left:store.x+'%',top:store.y+'%'}" :aria-label="`${store.no} ${store.name}`">
-                            <span class="shopping-map-pin-number" :data-no="store.no">{{ store.no }}</span><span class="shopping-map-pin-name">{{ store.name }}</span>
+                        <button v-for="store in shoppingStores" :key="store.no" @click="selectedShoppingStore = store" class="shopping-map-pin" :class="{active:selectedShoppingStore?.no === store.no, priority:store.priority, 'label-left':store.labelSide === 'left'}" :style="{left:store.x+'%',top:store.y+'%'}" :aria-label="`${store.no} ${store.name} ${store.category}`">
+                            <span class="shopping-map-pin-number" :data-no="store.no">{{ store.no }}</span><span class="shopping-map-pin-emoji" :title="store.category">{{ store.emoji }}</span><span class="shopping-map-pin-name">{{ store.shortName || store.name }}</span>
                         </button>
                     </div>
                 </div>
                 <div v-if="selectedShoppingStore" class="shopping-map-detail">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0"><div class="text-[10px] text-white/60 font-bold">STOP {{ selectedShoppingStore.no }} · 營業時間 {{ selectedShoppingStore.hours }}</div><div class="font-black text-sm truncate mt-0.5">{{ selectedShoppingStore.name }}</div></div>
+                        <div class="min-w-0"><div class="text-[10px] text-white/60 font-bold">{{ selectedShoppingStore.emoji }} {{ selectedShoppingStore.category }} · 營業時間 {{ selectedShoppingStore.hours }}</div><div class="font-black text-sm truncate mt-0.5">{{ selectedShoppingStore.name }}</div></div>
                         <a :href="selectedShoppingStore.maps" target="_blank" rel="noopener noreferrer" class="shrink-0 bg-white text-red-500 px-3 py-2 rounded-lg text-[10px] font-black flex items-center gap-1"><i class="ph-bold ph-navigation-arrow"></i> Google Maps</a>
                     </div>
                 </div>
@@ -1171,32 +1183,32 @@
                 const mapSearch = query => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 const shoppingZones = [
                     { name:'區域 1｜原宿北・明治通', subtitle:'由北往南', className:'zone-green', stores:[
-                        {no:1,x:56,y:4,name:'ASICS FLAGSHIP HARAJUKU',hours:'11:00–20:00',maps:mapSearch('ASICS FLAGSHIP HARAJUKU')},
-                        {no:2,x:62,y:8,name:'HOKA HARAJUKU',hours:'11:00–20:00',maps:mapSearch('HOKA HARAJUKU')},
-                        {no:3,x:59,y:12,name:'Kinetics',hours:'11:00–20:00',maps:mapSearch('Kinetics Harajuku Tokyo')},
-                        {no:4,x:51,y:16,name:'atmos HARAJUKU',hours:'11:00–20:00',maps:mapSearch('atmos Harajuku')},
-                        {no:5,x:42,y:20,name:'BEAMS HARAJUKU',hours:'週六 11:00–20:00',maps:mapSearch('BEAMS HARAJUKU')},
-                        {no:6,x:36,y:24,name:'NEW BALANCE HARAJUKU',hours:'11:00–20:00',maps:mapSearch('New Balance Harajuku')},
-                        {no:7,x:43,y:28,name:"BILLY'S HARAJUKU",hours:'11:00–20:00',maps:mapSearch("BILLY'S HARAJUKU")},
-                        {no:8,x:55,y:32,name:'KICKS LAB.',hours:'11:00–20:00',maps:mapSearch('KICKS LAB Harajuku')}
+                        {no:1,x:56,y:4,name:'Kinetics HARAJUKU',category:'球鞋／限定款',emoji:'👟',hours:'11:00–20:00',maps:mapSearch('Kinetics HARAJUKU, 1-12-7 Jingumae Tokyo')},
+                        {no:2,x:62,y:8,name:'HOKA HARAJUKU',shortName:'HOKA',category:'跑鞋',emoji:'🏃',priority:true,labelSide:'left',hours:'11:00–20:00',maps:mapSearch('HOKA Harajuku, 1-11-11 Jingumae Tokyo')},
+                        {no:3,x:59,y:12,name:'ASICS FLAGSHIP HARAJUKU',category:'跑鞋',emoji:'🏃',hours:'11:00–19:00',maps:mapSearch('ASICS FLAGSHIP HARAJUKU, 1-5-8 Jingumae Tokyo')},
+                        {no:4,x:51,y:16,name:'BEAMS HARAJUKU',category:'潮流服飾',emoji:'🧢',hours:'週六 11:00–20:00',maps:mapSearch('BEAMS Harajuku, 3-24-7 Jingumae Tokyo')},
+                        {no:5,x:42,y:20,name:'atmos HARAJUKU',shortName:'atmos',category:'球鞋／限定款',emoji:'👟',priority:true,labelSide:'right',hours:'11:00–20:00',maps:mapSearch('atmos Harajuku, 3-22-7 Jingumae Tokyo')}
                     ]},
                     { name:'區域 2｜Cat Street・表參道', subtitle:'沿 Cat Street', className:'zone-rose', stores:[
-                        {no:9,x:61,y:36,name:'atmos BLUE OMOTESANDO',hours:'11:00–20:00',maps:mapSearch('atmos BLUE Omotesando')},
-                        {no:10,x:55,y:40,name:'Onitsuka Tiger',hours:'11:00–20:00',maps:mapSearch('Onitsuka Tiger Omotesando')},
-                        {no:11,x:46,y:44,name:'BIRKENSTOCK',hours:'11:00–20:00',maps:mapSearch('Birkenstock Harajuku Tokyo')},
-                        {no:12,x:43,y:49,name:'MERRELL',hours:'11:00–20:00',maps:mapSearch('Merrell Harajuku Tokyo')}
+                        {no:6,x:36,y:24,name:'NEW BALANCE HARAJUKU',shortName:'NEW BALANCE',category:'跑鞋',emoji:'🏃',priority:true,labelSide:'right',hours:'11:00–19:00',maps:mapSearch('New Balance Harajuku, 4-32-16 Jingumae Tokyo')},
+                        {no:7,x:43,y:28,name:'KICKS LAB. HARAJUKU',shortName:'KICKS LAB.',category:'球鞋／限定款',emoji:'👟',priority:true,labelSide:'right',hours:'12:00–20:00',maps:mapSearch('KICKS LAB HARAJUKU, 4-32-4 Jingumae Tokyo')},
+                        {no:8,x:55,y:32,name:"BILLY'S ENT HARAJUKU",category:'球鞋／限定款',emoji:'👟',hours:'11:00–20:00',maps:mapSearch("BILLY'S ENT HARAJUKU, 4-28-20 Jingumae Tokyo")},
+                        {no:9,x:61,y:36,name:'Onitsuka Tiger OMOTESANDO',shortName:'Onitsuka Tiger',category:'日系休閒鞋',emoji:'🇯🇵',priority:true,labelSide:'left',hours:'11:00–20:00',maps:mapSearch('Onitsuka Tiger Omotesando, 4-24-14 Jingumae Tokyo')},
+                        {no:10,x:55,y:40,name:'atmos BLUE OMOTESANDO',category:'球鞋／限定款',emoji:'👟',hours:'11:00–20:00',maps:mapSearch('atmos BLUE Omotesando, 4-29-4 Jingumae Tokyo')},
+                        {no:11,x:46,y:44,name:'BIRKENSTOCK HARAJUKU',category:'皮鞋／涼鞋',emoji:'👞',hours:'11:00–20:00',maps:mapSearch('BIRKENSTOCK Harajuku Concept Store, 6-29-4 Jingumae Tokyo')},
+                        {no:12,x:43,y:49,name:'MERRELL HARAJUKU FLAGSHIP',category:'戶外機能',emoji:'🏔️',hours:'11:30–20:00',maps:mapSearch('MERRELL HARAJUKU FLAGSHIP, 6-29-5 Jingumae Tokyo')}
                     ]},
                     { name:'區域 3｜神宮前・澀谷', subtitle:'往神南方向', className:'zone-blue', stores:[
-                        {no:13,x:50,y:54,name:'SALOMON',hours:'11:00–20:00',maps:mapSearch('Salomon Store Tokyo Shibuya')},
-                        {no:14,x:58,y:59,name:'KITH TOKYO',hours:'11:00–20:00',maps:mapSearch('KITH TOKYO')},
-                        {no:15,x:58,y:64,name:'DISTANCE TOKYO',hours:'11:00–20:00',maps:mapSearch('DISTANCE TOKYO running')},
-                        {no:16,x:49,y:69,name:'ballaholic TOKYO',hours:'12:00–20:00',maps:mapSearch('ballaholic TOKYO')}
+                        {no:13,x:50,y:54,name:'SALOMON STORE TOKYO SHIBUYA',shortName:'SALOMON',category:'戶外機能',emoji:'🏔️',priority:true,labelSide:'right',hours:'11:00–20:00',maps:mapSearch('SALOMON STORE TOKYO SHIBUYA, 6-16-13 Jingumae Tokyo')},
+                        {no:14,x:58,y:59,name:'DISTANCE TOKYO',category:'跑鞋',emoji:'🏃',hours:'11:00–20:00',maps:mapSearch('DISTANCE TOKYO, 6-18-12 Jingumae Tokyo')},
+                        {no:15,x:58,y:64,name:'ballaholic TOKYO',category:'潮流服飾',emoji:'🧢',hours:'週六 12:00–20:00',maps:mapSearch('ballaholic TOKYO, 6-23-13 Jingumae Tokyo')}
                     ]},
-                    { name:'區域 4｜澀谷中心・神南', subtitle:'20:00 前先逛 17–19', className:'zone-amber', stores:[
-                        {no:17,x:43,y:74,name:'REGAL Shoe & Co.',hours:'11:00–20:00',maps:mapSearch('REGAL Shoe & Co. Shibuya')},
-                        {no:18,x:48,y:80,name:'MORTAR TOKYO',hours:'11:00–20:00',maps:mapSearch('MORTAR TOKYO')},
-                        {no:19,x:57,y:86,name:'BEAMS Shibuya',hours:'11:00–20:00',maps:mapSearch('BEAMS Shibuya Jinnan')},
-                        {no:20,x:51,y:94,name:'MIZUNO SHOP／PARCO',hours:'11:00–21:00',maps:mapSearch('Mizuno Shop Shibuya PARCO')}
+                    { name:'區域 4｜澀谷中心・神南', subtitle:'16–18 先逛，19–20 開到 21:00', className:'zone-amber', stores:[
+                        {no:16,x:49,y:69,name:'MORTAR TOKYO',shortName:'MORTAR',category:'球鞋／限定款',emoji:'👟',priority:true,labelSide:'right',hours:'11:00–20:00',maps:mapSearch('MORTAR TOKYO, 1-3-4 Jinnan Tokyo')},
+                        {no:17,x:43,y:74,name:'REGAL Shoe & Co.',category:'皮鞋／涼鞋',emoji:'👞',hours:'週六 11:00–20:00',maps:mapSearch('REGAL Shoe & Co., 1-9-4 Jinnan Tokyo')},
+                        {no:18,x:48,y:80,name:'BEAMS Shibuya',category:'潮流服飾',emoji:'🧢',hours:'11:00–20:00',maps:mapSearch('BEAMS Shibuya, 1-15-1 Jinnan Tokyo')},
+                        {no:19,x:57,y:86,name:'MIZUNO SHOP／澀谷 PARCO',shortName:'MIZUNO／PARCO',category:'跑鞋',emoji:'🏃',priority:true,labelSide:'left',hours:'11:00–21:00',maps:mapSearch('Mizuno Shop Shibuya PARCO, 15-1 Udagawacho Tokyo')},
+                        {no:20,x:51,y:94,name:'KITH TOKYO／MIYASHITA PARK',shortName:'KITH',category:'潮流服飾',emoji:'🧢',priority:true,labelSide:'left',hours:'11:00–21:00',maps:mapSearch('KITH TOKYO MIYASHITA PARK, 6-20-10 Jingumae Tokyo')}
                     ]}
                 ];
                 const shoppingStores = computed(() => shoppingZones.flatMap(zone => zone.stores));
