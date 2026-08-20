@@ -593,6 +593,14 @@
         .shopping-map-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
         .shopping-map-legend span { padding: 4px 7px; border-radius: 999px; color: #334155; background: rgba(255,255,255,.88); border: 1px solid #e7d8b8; font-size: 9px; line-height: 1; font-weight: 800; }
         .shopping-map-legend .priority-key { color: #be123c; background: #fff1f2; border-color: #fda4af; }
+        .shopping-map-priority-list { display: flex; gap: 6px; overflow-x: auto; padding: 1px 1px 7px; margin-bottom: 2px; scrollbar-width: none; }
+        .shopping-map-priority-list::-webkit-scrollbar { display: none; }
+        .shopping-map-priority-chip { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; color: #9f1239; background: #fff; border: 1px solid #fda4af; font-size: 9px; line-height: 1; font-weight: 900; box-shadow: 0 2px 5px rgba(15,23,42,.07); }
+        .shopping-map-priority-chip.active { color: white; background: #e11d48; border-color: #e11d48; }
+        .shopping-map-route-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 1px 6px; color: #475569; font-size: 9px; font-weight: 900; }
+        .shopping-map-route-links { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; margin-bottom: 10px; }
+        .shopping-map-route-link { min-width: 0; padding: 7px 8px; border-radius: 10px; color: white; background: linear-gradient(135deg,#1a73e8,#1557b0); box-shadow: 0 3px 8px rgba(26,115,232,.2); font-size: 9px; line-height: 1.15; font-weight: 900; text-align: left; }
+        .shopping-map-route-link small { display: block; margin-top: 2px; color: rgba(255,255,255,.72); font-size: 8px; font-weight: 700; }
         .shopping-map-canvas { width: 100%; aspect-ratio: 942 / 1668; position: relative; overflow: hidden; border: 2px solid #9d8658; border-radius: 18px; background: #fffaf0 url('assets/shopping-route-bg-portrait.webp') center/cover no-repeat; box-shadow: inset 0 0 0 5px rgba(157,134,88,.12); }
         .shopping-map-zone-bg { position: absolute; border-radius: 42% 58% 55% 45%; opacity: .82; filter: saturate(.8); }
         .shopping-map-zone-bg.z1 { left: 22px; top: 42px; width: 360px; height: 205px; background: #dfead9; }
@@ -623,7 +631,7 @@
         .shopping-map-pin.priority { z-index: 6; }
         .shopping-map-pin.priority .shopping-map-pin-number { background: #e11d48; border-color: white; box-shadow: 0 4px 10px rgba(190,18,60,.35); }
         .shopping-map-pin.priority .shopping-map-pin-number::after { color: white; }
-        .shopping-map-pin.priority .shopping-map-pin-name { display: block; }
+        .shopping-map-pin.active .shopping-map-pin-name { display: block; }
         .shopping-map-pin-number::after { content: attr(data-no); color: #16324f; transform: rotate(45deg); }
         .shopping-map-pin.active .shopping-map-pin-number { color: transparent; background: #e11d48; border-color: #e11d48; transform: rotate(-45deg) scale(1.13); }
         .shopping-map-pin.active .shopping-map-pin-number::after { color: white; }
@@ -814,6 +822,13 @@
                 <div class="shopping-map-scroll hide-scroll">
                     <div class="shopping-map-legend" aria-label="店家分類圖例">
                         <span>🏃 跑鞋</span><span>👟 球鞋</span><span>🧢 潮流</span><span>🏔️ 戶外</span><span>👞 皮鞋</span><span>🇯🇵 日系</span><span class="priority-key">● 優先店</span>
+                    </div>
+                    <div class="shopping-map-priority-list" aria-label="優先店家">
+                        <button v-for="store in shoppingPriorityStores" :key="'priority-'+store.no" @click="selectedShoppingStore = store" class="shopping-map-priority-chip" :class="{active:selectedShoppingStore?.no === store.no}">{{ store.emoji }} {{ store.shortName || store.name }}</button>
+                    </div>
+                    <div class="shopping-map-route-title"><span>🗺️ Google Maps 實際步行導航</span><span>分段較穩定</span></div>
+                    <div class="shopping-map-route-links">
+                        <a v-for="route in shoppingRouteLinks" :key="route.label" :href="route.url" target="_blank" rel="noopener noreferrer" class="shopping-map-route-link"><i class="ph-bold ph-navigation-arrow"></i> {{ route.label }}<small>{{ route.range }} · {{ route.note }}</small></a>
                     </div>
                     <div class="shopping-map-canvas">
                         <div class="shopping-map-zone-bg z1"></div><div class="shopping-map-zone-bg z2"></div><div class="shopping-map-zone-bg z3"></div><div class="shopping-map-zone-bg z4"></div>
@@ -1212,6 +1227,26 @@
                     ]}
                 ];
                 const shoppingStores = computed(() => shoppingZones.flatMap(zone => zone.stores));
+                const shoppingPriorityStores = computed(() => shoppingStores.value.filter(store => store.priority));
+                const mapDirections = stops => {
+                    const destination = stops[stops.length - 1];
+                    const waypoints = stops.slice(1, -1);
+                    return `https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=${encodeURIComponent(stops[0])}&destination=${encodeURIComponent(destination)}${waypoints.length ? `&waypoints=${encodeURIComponent(waypoints.join('|'))}` : ''}`;
+                };
+                const shoppingRouteLinks = [
+                    { label:'① 原宿北段', range:'店 1–5', note:'Kinetics → atmos', url:mapDirections([
+                        'Kinetics HARAJUKU, 1-12-7 Jingumae Tokyo','HOKA Harajuku, 1-11-11 Jingumae Tokyo','ASICS FLAGSHIP HARAJUKU, 1-5-8 Jingumae Tokyo','BEAMS Harajuku, 3-24-7 Jingumae Tokyo','atmos Harajuku, 3-22-7 Jingumae Tokyo'
+                    ])},
+                    { label:'② 裏原・表參道', range:'店 6–10', note:'NB → atmos BLUE', url:mapDirections([
+                        'New Balance Harajuku, 4-32-16 Jingumae Tokyo','KICKS LAB HARAJUKU, 4-32-4 Jingumae Tokyo',"BILLY'S ENT HARAJUKU, 4-28-20 Jingumae Tokyo",'Onitsuka Tiger Omotesando, 4-24-14 Jingumae Tokyo','atmos BLUE Omotesando, 4-29-4 Jingumae Tokyo'
+                    ])},
+                    { label:'③ Cat Street 南段', range:'店 11–15', note:'BIRKENSTOCK → ballaholic', url:mapDirections([
+                        'BIRKENSTOCK Harajuku Concept Store, 6-29-4 Jingumae Tokyo','MERRELL HARAJUKU FLAGSHIP, 6-29-5 Jingumae Tokyo','SALOMON STORE TOKYO SHIBUYA, 6-16-13 Jingumae Tokyo','DISTANCE TOKYO, 6-18-12 Jingumae Tokyo','ballaholic TOKYO, 6-23-13 Jingumae Tokyo'
+                    ])},
+                    { label:'④ 神南・澀谷段', range:'店 16–20', note:'MORTAR → KITH', url:mapDirections([
+                        'MORTAR TOKYO, 1-3-4 Jinnan Tokyo','REGAL Shoe & Co., 1-9-4 Jinnan Tokyo','BEAMS Shibuya, 1-15-1 Jinnan Tokyo','Mizuno Shop Shibuya PARCO, 15-1 Udagawacho Tokyo','KITH TOKYO MIYASHITA PARK, 6-20-10 Jingumae Tokyo'
+                    ])}
+                ];
 
                 const showManualPinModal = ref(false);
                 const manualPinMode = ref('gmap');
@@ -1774,7 +1809,7 @@
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
                     todos, newTodo, editingTodoId,
                     globalMenu, showUnlockPrompt, unlockPassword, isUnlocked,
-                    showShoppingRoute, shoppingZones, shoppingStores, selectedShoppingStore,
+                    showShoppingRoute, shoppingZones, shoppingStores, shoppingPriorityStores, shoppingRouteLinks, selectedShoppingStore,
                     showManualPinModal, manualPinMode, manualPinData,
                     TYPES_LIST,
                     addFlight, removeFlight, calculateLayover, formatFlightDate,
