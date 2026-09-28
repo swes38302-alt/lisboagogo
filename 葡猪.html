@@ -336,6 +336,9 @@
         .sticky-header { position: sticky; top: 0; z-index: 3000; background: rgba(253, 251, 247, 0.98); backdrop-filter: blur(10px); margin-left: -1rem; margin-right: -1rem; padding: 10px 16px 14px 16px; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.05); }
         .date-card { transition: all 0.2s; border: 1px solid #F1F5F9; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
         .date-card.active { background: var(--theme-primary); color: white; border-color: var(--theme-primary); box-shadow: 0 4px 8px -2px rgba(0,0,0,0.25); transform: translateY(-2px); }
+        .date-card.today:not(.active) { border-color: var(--theme-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 15%, transparent); }
+        .date-card .today-label { color: var(--theme-primary); opacity: 1; }
+        .date-card.active .today-label { color: white; }
         .date-card .weekday-abbr { font-size: 8px; font-weight: 700; opacity: 0.6; letter-spacing: 0.5px; }
         .date-card.active .weekday-abbr { opacity: 0.85; }
         
@@ -968,8 +971,8 @@
             <div v-show="viewMode === 'plan'" class="p-4 pb-20">
                 <div v-if="days.length > 0" class="sticky-header mb-6">
                     <div class="flex overflow-x-auto hide-scroll space-x-2 items-center">
-                        <div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="date-card shrink-0 w-12 h-16 rounded-xl flex flex-col items-center justify-center cursor-pointer" :class="currentDayIdx === index ? 'active' : 'text-slate-400'">
-                            <span class="text-[10px] font-bold opacity-70">D{{ index + 1 }}</span>
+                        <div v-for="(day, index) in days" :key="index" @click="currentDayIdx = index" class="date-card shrink-0 w-12 h-16 rounded-xl flex flex-col items-center justify-center cursor-pointer" :class="[currentDayIdx === index ? 'active' : 'text-slate-400', day.fullDate === todayDateKey ? 'today' : '']">
+                            <span class="text-[10px] font-bold opacity-70" :class="day.fullDate === todayDateKey ? 'today-label' : ''">{{ day.fullDate === todayDateKey ? '今天' : `D${index + 1}` }}</span>
                             <span class="text-base font-black leading-none mt-0.5">{{ new Date(day.fullDate).getDate() }}</span>
                             <span class="weekday-abbr mt-0.5">{{ getWeekdayAbbr(day.fullDate) }}</span>
                         </div>
@@ -1262,7 +1265,7 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, reactive, watch, nextTick, onMounted } = Vue;
+        const { createApp, ref, computed, reactive, watch, nextTick, onMounted, onUnmounted } = Vue;
         
         const THEMES = {'lisbon': { main: '#006C84', light: '#6EB5C0', bg: '#FDFBF7' }, 'japan': { main: '#E11D48', light: '#FDA4AF', bg: '#FFF1F2' }, 'tokyo': { main: '#0EA5E9', light: '#7DD3FC', bg: '#F0F9FF' }, 'london': { main: '#1E3A8A', light: '#93C5FD', bg: '#F8FAFC' }, 'uk': { main: '#B91C1C', light: '#FCA5A5', bg: '#FEF2F2' }, 'korea': { main: '#8B5CF6', light: '#C4B5FD', bg: '#F5F3FF' }, 'nature': { main: '#059669', light: '#6EE7B7', bg: '#ECFDF5' }};
         const CURRENCY_RATES = { 'japan': { currency: '¥', rate: 0.21 }, 'tokyo': { currency: '¥', rate: 0.21 }, 'uk': { currency: '£', rate: 40.5 }, 'london': { currency: '£', rate: 40.5 }, 'korea': { currency: '₩', rate: 0.024 }, 'seoul': { currency: '₩', rate: 0.024 }, 'usa': { currency: '$', rate: 31.5 }, 'europe': { currency: '€', rate: 34.5 }, 'lisbon': { currency: '€', rate: 34.5 }, 'portugal': { currency: '€', rate: 34.5 } };
@@ -1290,6 +1293,19 @@
                 const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '' });
                 const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false,depDate:new Date().toISOString().split('T')[0]});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
+                const todayDateKey=ref('');
+                let loadedTripId = null;
+                const getTodayDateKey = location => {
+                    const isJapan = /tokyo|japan|東京|日本/i.test(String(location || ''));
+                    const parts = new Intl.DateTimeFormat('en-US', { timeZone:isJapan ? 'Asia/Tokyo' : undefined, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+                    const value = type => parts.find(part => part.type === type)?.value || '';
+                    return `${value('year')}-${value('month')}-${value('day')}`;
+                };
+                const centerSelectedDay = () => nextTick(() => {
+                    const strip = document.querySelector('.date-card.active')?.parentElement;
+                    const card = strip?.querySelector('.date-card.active');
+                    if (strip && card && strip.clientWidth) strip.scrollLeft += card.getBoundingClientRect().left - strip.getBoundingClientRect().left - (strip.clientWidth - card.clientWidth) / 2;
+                });
                 const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false});
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
                 const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
@@ -1833,6 +1849,9 @@
                 
                 const loadCurrentTripData = () => {
                     const t = allTrips.value[currentTripId.value]; if(!t) return;
+                    const tripId = currentTripId.value;
+                    const sameTrip = loadedTripId === tripId;
+                    const selectedDate = sameTrip ? days.value[currentDayIdx.value]?.fullDate : null;
                     const incomingVault = t.vault || null;
                     const tripChanged = vaultSessionTripId !== currentTripId.value;
                     if (tripChanged) {
@@ -1843,10 +1862,25 @@
                     }
                     vaultEnvelope.value = incomingVault;
                     Object.assign(settings, t.settings);
-                    flights.value = t.flights ? Object.values(t.flights) : []; 
-                    days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] })); 
-                    participants.value = t.participants || []; expenses.value = t.expenses || []; todos.value = t.todos || []; 
-                    sortDays(); applyGlobalTheme(); initSortable(); resizeAllTextareas(); 
+                    flights.value = t.flights ? Object.values(t.flights) : [];
+                    days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] }));
+                    days.value.sort((a, b) => String(a.fullDate || '').localeCompare(String(b.fullDate || '')));
+                    todayDateKey.value = getTodayDateKey(t.settings?.location);
+                    const savedDate = localStorage.getItem(`lastDay:${tripId}`);
+                    const recentDays = days.value.filter(day => day.fullDate && day.fullDate <= todayDateKey.value);
+                    const fallbackDate = recentDays.at(-1)?.fullDate || days.value[0]?.fullDate;
+                    const targetDate = sameTrip ? selectedDate : (days.value.some(day => day.fullDate === todayDateKey.value) ? todayDateKey.value : (days.value.some(day => day.fullDate === savedDate) ? savedDate : fallbackDate));
+                    currentDayIdx.value = Math.max(0, days.value.findIndex(day => day.fullDate === targetDate));
+                    if (days.value[currentDayIdx.value]?.fullDate) localStorage.setItem(`lastDay:${tripId}`, days.value[currentDayIdx.value].fullDate);
+                    if (!sameTrip) {
+                        const savedView = localStorage.getItem(`lastView:${tripId}`);
+                        viewMode.value = targetDate === todayDateKey.value ? 'plan' : (['flight','plan','map','voucher','todo','money'].includes(savedView) ? savedView : 'plan');
+                        localStorage.setItem(`lastView:${tripId}`, viewMode.value);
+                    }
+                    loadedTripId = tripId;
+                    participants.value = t.participants || []; expenses.value = t.expenses || []; todos.value = t.todos || [];
+                    applyGlobalTheme(); initSortable(); resizeAllTextareas();
+                    centerSelectedDay();
                 };
                 
                 const updateRoomParam = id => {
@@ -1868,11 +1902,18 @@
                     } 
                 };
 
-                watch(viewMode, (newVal) => { 
-                    if (newVal === 'map') { nextTick(() => { setTimeout(() => { if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); markersLayer = L.layerGroup().addTo(map); } map.invalidateSize(); drawRoute(); }, 100); }); } 
-                    if (newVal === 'plan') { resizeAllTextareas(); initSortable(); }
+                watch(viewMode, (newVal) => {
+                    if (loadedTripId === currentTripId.value) localStorage.setItem(`lastView:${currentTripId.value}`, newVal);
+                    if (newVal === 'map') { nextTick(() => { setTimeout(() => { if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); markersLayer = L.layerGroup().addTo(map); } map.invalidateSize(); drawRoute(); }, 100); }); }
+                    if (newVal === 'plan') { resizeAllTextareas(); initSortable(); centerSelectedDay(); }
                 });
-                watch(currentDayIdx, () => { initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute()); });
+                watch(currentDayIdx, () => {
+                    if (loadedTripId === currentTripId.value && currentDay.value.fullDate) localStorage.setItem(`lastDay:${currentTripId.value}`, currentDay.value.fullDate);
+                    initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute());
+                });
+                watch(() => currentDay.value.fullDate, date => {
+                    if (loadedTripId === currentTripId.value && date) localStorage.setItem(`lastDay:${currentTripId.value}`, date);
+                });
                 watch(showTripList, v => { if(v) initTripSortable(); });
                 watch([days, expenses, settings, participants, todos, flights], () => { 
                     if(!db || !currentTripId.value) return; 
@@ -2058,12 +2099,21 @@
                 const switchMapDay = (index) => { currentDayIdx.value = index; nextTick(() => drawRoute()); };
                 const locateUser = () => { if (!navigator.geolocation) { alert('您的瀏覽器不支援定位功能'); return; } loading.value = true; loadingText.value = '正在定位中...'; navigator.geolocation.getCurrentPosition((position) => { const { latitude, longitude } = position.coords; if (userMarker) map.removeLayer(userMarker); userMarker = L.marker([latitude, longitude], { icon: L.divIcon({ html: '<div style="width:40px;height:40px;background:#3B82F6;border:4px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3)"><i class="ph-fill ph-navigation-arrow text-white text-lg"></i></div>', className: '', iconSize: [40, 40], iconAnchor: [20, 20] }) }).addTo(map).bindPopup("<b>📍 我的位置</b>").openPopup(); map.flyTo([latitude, longitude], 16, { duration: 1.5 }); loading.value = false; }, (error) => { loading.value = false; alert('❌ 定位失敗'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }); };
 
-                onMounted(() => { syncData(); applyGlobalTheme(); });
+                const updateDayWhenReturning = () => {
+                    if (document.visibilityState !== 'visible' || !loadedTripId) return;
+                    const date = getTodayDateKey(settings.location);
+                    if (date === todayDateKey.value) return;
+                    todayDateKey.value = date;
+                    const index = days.value.findIndex(day => day.fullDate === date);
+                    if (index >= 0) { currentDayIdx.value = index; viewMode.value = 'plan'; centerSelectedDay(); }
+                };
+                onMounted(() => { syncData(); applyGlobalTheme(); document.addEventListener('visibilitychange', updateDayWhenReturning); });
+                onUnmounted(() => document.removeEventListener('visibilitychange', updateDayWhenReturning));
                 
                 return {
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, 
                     settings, flights, newFlight, sortedFlights,
-                    days, currentDayIdx, currentDay, 
+                    days, currentDayIdx, currentDay, todayDateKey,
                     expenses, newExpense, totalExpense, splitCalculation,
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
