@@ -710,6 +710,14 @@
                             <button @click="applyGlobalTheme" class="flex-btn-safe bg-white border border-slate-200 w-10 h-10 rounded-lg text-theme-main hover:bg-slate-50 flex items-center justify-center"><i class="ph-bold ph-magic-wand"></i></button>
                         </div>
                     </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">行程主題色</label>
+                        <div class="flex flex-wrap items-center gap-2 mt-1">
+                            <button type="button" @click="setThemeColor('')" class="h-9 px-3 rounded-lg border text-xs font-bold" :class="!settings.themeColor ? 'border-[var(--theme-primary)] bg-white text-theme-main' : 'border-slate-200 bg-white text-slate-500'" :aria-pressed="!settings.themeColor">依地點自動</button>
+                            <button v-for="choice in THEME_CHOICES" :key="choice.color" type="button" @click="setThemeColor(choice.color)" class="w-9 h-9 rounded-full border-2 flex items-center justify-center text-white shadow-sm" :style="{ backgroundColor: choice.color, borderColor: settings.themeColor === choice.color ? '#334155' : '#ffffff' }" :aria-label="choice.name" :title="choice.name" :aria-pressed="settings.themeColor === choice.color"><i v-if="settings.themeColor === choice.color" class="ph-bold ph-check text-sm"></i></button>
+                            <label class="relative h-9 px-2 rounded-lg border border-slate-200 bg-white flex items-center gap-1 text-xs font-bold text-slate-500 cursor-pointer" title="自訂顏色"><i class="ph-bold ph-palette"></i> 自訂<input type="color" :value="settings.themeColor || autoThemeColor" @input="setThemeColor($event.target.value)" aria-label="自訂行程主題色" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"></label>
+                        </div>
+                    </div>
                    <div class="flex gap-3">
                         <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase">貨幣</label><input v-model="settings.currency" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center"></div>
                         <div class="flex-[1.5]"><label class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">匯率<button @click="autoSetRate" class="text-blue-500 hover:text-blue-700 text-xs"><i class="ph-bold ph-arrows-clockwise"></i></button></label><input v-model="settings.rate" type="number" step="0.01" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-center"></div>
@@ -1268,6 +1276,7 @@
         const { createApp, ref, computed, reactive, watch, nextTick, onMounted, onUnmounted } = Vue;
         
         const THEMES = {'lisbon': { main: '#006C84', light: '#6EB5C0', bg: '#FDFBF7' }, 'japan': { main: '#E11D48', light: '#FDA4AF', bg: '#FFF1F2' }, 'tokyo': { main: '#0EA5E9', light: '#7DD3FC', bg: '#F0F9FF' }, 'london': { main: '#1E3A8A', light: '#93C5FD', bg: '#F8FAFC' }, 'uk': { main: '#B91C1C', light: '#FCA5A5', bg: '#FEF2F2' }, 'korea': { main: '#8B5CF6', light: '#C4B5FD', bg: '#F5F3FF' }, 'nature': { main: '#059669', light: '#6EE7B7', bg: '#ECFDF5' }};
+        const THEME_CHOICES = [{ name: '玫紅', color: '#E11D48' }, { name: '海藍', color: '#0284C7' }, { name: '青綠', color: '#0F766E' }, { name: '紫色', color: '#7C3AED' }, { name: '橘色', color: '#C2410C' }];
         const CURRENCY_RATES = { 'japan': { currency: '¥', rate: 0.21 }, 'tokyo': { currency: '¥', rate: 0.21 }, 'uk': { currency: '£', rate: 40.5 }, 'london': { currency: '£', rate: 40.5 }, 'korea': { currency: '₩', rate: 0.024 }, 'seoul': { currency: '₩', rate: 0.024 }, 'usa': { currency: '$', rate: 31.5 }, 'europe': { currency: '€', rate: 34.5 }, 'lisbon': { currency: '€', rate: 34.5 }, 'portugal': { currency: '€', rate: 34.5 } };
         const TYPES_LIST = [{ val: 'spot', label: '景點', emoji: '📍', bg: 'bg-[#006C84]' }, { val: 'restaurant', label: '美食', emoji: '🍔', bg: 'bg-[#E11D48]' }, { val: 'cafe', label: '咖啡', emoji: '☕', bg: 'bg-[#D97706]' }, { val: 'shop', label: '購物', emoji: '🛍️', bg: 'bg-[#7C3AED]' }, { val: 'transport', label: '交通', emoji: '🚇', bg: 'bg-[#334155]' }, { val: 'hotel', label: '住宿', emoji: '🏨', bg: 'bg-[#475569]' }];
         const CREDENTIAL_TYPES = [
@@ -1290,7 +1299,7 @@
             setup() {
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
                 const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
-                const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '' });
+                const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '', themeColor: '' });
                 const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false,depDate:new Date().toISOString().split('T')[0]});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
                 const todayDateKey=ref('');
@@ -1747,15 +1756,33 @@
 
                 const clearManualPin = (item) => { item.lat = null; item.lon = null; item.isManualPin = false; checkLocation(item); };
 
+                const getAutomaticTheme = location => {
+                    const loc = String(location || '').toLowerCase();
+                    let theme = THEMES['lisbon'];
+                    for(const k in THEMES) if(loc.includes(k)) { theme = THEMES[k]; break; }
+                    return theme;
+                };
+                const autoThemeColor = computed(() => getAutomaticTheme(settings.location).main);
+                const blendWithWhite = (hex, whiteWeight) => {
+                    const amount = Math.max(0, Math.min(1, whiteWeight));
+                    const channel = offset => Math.round(parseInt(hex.slice(offset, offset + 2), 16) * (1 - amount) + 255 * amount).toString(16).padStart(2, '0');
+                    return `#${channel(1)}${channel(3)}${channel(5)}`;
+                };
+                const applyThemeColors = () => {
+                    const custom = /^#[0-9a-fA-F]{6}$/.test(settings.themeColor || '') ? settings.themeColor : '';
+                    const theme = custom ? { main: custom, light: blendWithWhite(custom, 0.53), bg: blendWithWhite(custom, 0.94) } : getAutomaticTheme(settings.location);
+                    document.documentElement.style.setProperty('--theme-primary', theme.main);
+                    document.documentElement.style.setProperty('--theme-light', theme.light);
+                    document.documentElement.style.setProperty('--theme-bg', theme.bg);
+                };
+                const setThemeColor = color => {
+                    settings.themeColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color.toUpperCase() : '';
+                    applyThemeColors();
+                };
                 const applyGlobalTheme = async () => {
-                    if(!settings.location) return; 
-                    const loc = settings.location.toLowerCase(); 
-                    let theme = THEMES['lisbon']; 
-                    for(const k in THEMES) if(loc.includes(k)) { theme = THEMES[k]; break; } 
-                    document.documentElement.style.setProperty('--theme-primary', theme.main); 
-                    document.documentElement.style.setProperty('--theme-light', theme.light); 
-                    document.documentElement.style.setProperty('--theme-bg', theme.bg); 
-                    autoSetRate(); 
+                    applyThemeColors();
+                    if(!settings.location) return;
+                    autoSetRate();
                     try { 
                         const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(settings.location)}&format=json&limit=1`); 
                         const d = await r.json(); 
@@ -1841,7 +1868,7 @@
                 
                 const createNewTrip = () => { 
                     const id = 't_' + Date.now(); 
-                    const d = { settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:''}, days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], participants:[], todos:[] }; 
+                    const d = { settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:'', themeColor:''}, days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], participants:[], todos:[] };
                     allTrips.value[id] = d; currentTripId.value = id; localStorage.setItem('currentTripId', id); 
                     if(db) { db.ref('trips/' + id).set(d); const newOrder = [id, ...tripOrder.value]; tripOrder.value = newOrder; db.ref('tripOrder').set(newOrder); } 
                     loadCurrentTripData(); return id; 
@@ -1861,7 +1888,7 @@
                         decryptVaultEntries(incomingVault, vaultKey).then(entries => { vaultEntries.value = entries; }).catch(() => lockVault());
                     }
                     vaultEnvelope.value = incomingVault;
-                    Object.assign(settings, t.settings);
+                    Object.assign(settings, { themeColor: '' }, t.settings);
                     flights.value = t.flights ? Object.values(t.flights) : [];
                     days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] }));
                     days.value.sort((a, b) => String(a.fullDate || '').localeCompare(String(b.fullDate || '')));
@@ -2123,7 +2150,7 @@
                     vaultEnvelope, vaultEntries, vaultUnlocked, vaultSaving, vaultPassphrase, vaultPassphraseConfirm, vaultError,
                     showCredentialForm, editingCredentialId, credentialForm, credentialFormError, revealedCredentials, sortedVaultEntries,
                     showManualPinModal, manualPinMode, manualPinData,
-                    TYPES_LIST, CREDENTIAL_TYPES,
+                    TYPES_LIST, CREDENTIAL_TYPES, THEME_CHOICES, autoThemeColor, setThemeColor,
                     addFlight, removeFlight, calculateLayover, formatFlightDate,
                     addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, switchMapDay,
