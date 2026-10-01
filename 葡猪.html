@@ -1199,13 +1199,13 @@
             <!-- Money View -->
             <div v-show="viewMode === 'money'" class="p-4 pb-20">
                 <div class="bg-[#1E293B] text-white p-6 rounded-2xl mb-4 text-center shadow-lg">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總支出 Total</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總紀錄（共同＋個人）</div>
                     <div class="text-4xl font-black font-mono tracking-tight">{{ settings.currency }} {{ totalExpense.toFixed(1) }}</div>
-                    <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">≈ NT$ {{ Math.round(totalExpense * settings.rate).toLocaleString() }}</div>
+                    <div class="text-sm font-bold text-cyan-400 mt-1 font-mono mb-4">NT$ {{ totalExpenseTwd.toLocaleString() }} <span v-if="estimatedTwdCount" class="text-[10px] text-cyan-200">（含 {{ estimatedTwdCount }} 筆估算）</span></div>
                      <div v-if="participants.length > 0" class="border-t border-slate-700 pt-3 mt-2">
-                        <div class="text-[10px] text-slate-400 mb-1">平均每人花費</div>
-                        <div class="flex items-center justify-center gap-2"><span class="text-lg font-bold font-mono">{{ settings.currency }} {{ (totalExpense / participants.length).toFixed(1) }}</span><span class="text-xs text-cyan-400 font-mono font-bold">(NT$ {{ Math.round((totalExpense / participants.length) * settings.rate).toLocaleString() }})</span></div>
-                    </div>
+                        <div class="text-[10px] text-slate-400 mb-1">共同支出平均每人（不含個人花費）</div>
+                        <div class="text-lg font-bold font-mono">NT$ {{ splitCalculation.averageTwd.toLocaleString() }}</div>
+                     </div>
                 </div>
                  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-users text-theme-main"></i> 旅伴管理</h3>
@@ -1223,7 +1223,7 @@
                     <div class="space-y-2">
                         <div v-for="d in splitCalculation.summary" :key="d.name" class="flex justify-between items-center text-xs border-b border-slate-50 pb-1 last:border-0">
                             <div class="font-bold text-slate-600">{{ d.name }}</div>
-                            <div class="flex gap-3"><span class="text-slate-400">已付 {{ settings.currency }}{{ d.paid }}</span><span :class="d.diff >= 0 ? 'text-green-500' : 'text-red-500'" class="font-bold w-20 text-right">{{ d.diff >= 0 ? '應收' : '應付' }} {{ Math.abs(d.diff) }}</span></div>
+                            <div class="flex gap-3 items-start"><span class="text-slate-400 text-right">共同已付 NT$ {{ d.paidTwd.toLocaleString() }}<span class="block">個人花費 NT$ {{ d.personalTwd.toLocaleString() }}</span></span><span :class="d.diffTwd >= 0 ? 'text-green-500' : 'text-red-500'" class="font-bold text-right min-w-[105px]"><span class="block whitespace-nowrap">{{ d.diffTwd >= 0 ? '應收' : '應付' }} NT$ {{ Math.abs(d.diffTwd).toLocaleString() }}</span><span class="block text-[10px] font-medium text-slate-400 whitespace-nowrap">≈ {{ settings.currency }} {{ d.foreignDiff.toLocaleString() }}</span></span></div>
                         </div>
                     </div>
                 </div>
@@ -1232,39 +1232,51 @@
                     <div v-for="(t, idx) in splitCalculation.transactions" :key="idx" class="settlement-card">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2"><span class="font-bold text-slate-700">{{ t.from }}</span><div class="flex flex-col items-center px-2"><span class="text-[9px] text-slate-400">支付給</span><i class="ph-bold ph-arrow-right text-theme-main"></i></div><span class="font-bold text-slate-700">{{ t.to }}</span></div>
-                            <div class="text-right"><span class="font-mono font-bold text-theme-main text-lg block">{{ settings.currency }} {{ t.amount }}</span><span class="font-mono text-xs text-slate-400 font-bold">(≈ NT$ {{ t.twdAmount }})</span></div>
+                            <div class="text-right"><span class="font-mono font-bold text-theme-main text-lg block">NT$ {{ t.twdAmount.toLocaleString() }}</span><span class="font-mono text-xs text-slate-400 font-bold">(≈ {{ settings.currency }} {{ t.foreignAmount.toLocaleString() }})</span></div>
                         </div>
                     </div>
                 </div>
+                <div v-if="splitCalculation.unassignedCount" class="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">有 {{ splitCalculation.unassignedCount }} 筆共同費用的付款人未指定或已從旅伴移除，暫未納入結算。請在明細確認付款人。</div>
+                <div v-if="estimatedTwdCount" class="mb-4 rounded-xl bg-cyan-50 border border-cyan-200 p-3 text-xs text-cyan-900">有 {{ estimatedTwdCount }} 筆台幣是依匯率估算。要讓結算與刷卡帳單一致，請在明細補入實際台幣；未補前的應收／應付為估算。</div>
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <div class="space-y-2">
                         <div class="flex justify-between items-center mb-1">
                             <div class="text-xs font-bold text-slate-400">新增支出</div>
                             <div class="flex gap-2">
-                                <button @click="newExpense.isSettled = !newExpense.isSettled" class="toggle-btn settled" :class="{ 'active': newExpense.isSettled }"><i :class="newExpense.isSettled ? 'ph-fill ph-check-circle' : 'ph-bold ph-users'"></i> {{ newExpense.isSettled ? '已結清' : '一般' }}</button>
+                                <button v-if="newExpense.splitType === 'shared'" @click="newExpense.isSettled = !newExpense.isSettled" class="toggle-btn settled" :class="{ 'active': newExpense.isSettled }"><i :class="newExpense.isSettled ? 'ph-fill ph-check-circle' : 'ph-bold ph-users'"></i> {{ newExpense.isSettled ? '已結清' : '未結算' }}</button>
                                 <button @click="newExpense.isNTD = !newExpense.isNTD" class="toggle-btn" :class="{ 'active': newExpense.isNTD }">{{ newExpense.isNTD ? 'NT$' : settings.currency }}</button>
                             </div>
                         </div>
+                        <div class="flex gap-2 text-xs font-bold"><button @click="newExpense.splitType='shared'" class="flex-1 rounded-lg px-2 py-2" :class="newExpense.splitType==='shared' ? 'bg-theme-main text-white' : 'bg-slate-100 text-slate-500'">👥 共同分帳</button><button @click="newExpense.splitType='personal'" class="flex-1 rounded-lg px-2 py-2" :class="newExpense.splitType==='personal' ? 'bg-theme-main text-white' : 'bg-slate-100 text-slate-500'">👤 個人記帳</button></div>
                         <input v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
                         <div class="flex gap-2"><select v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select><input v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2"></div>
+                        <div v-if="!newExpense.isNTD"><input v-model="newExpense.actualTwd" type="number" min="0" step="1" placeholder="實際台幣（選填；留空用匯率估算）" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2"><div class="text-[10px] text-slate-400 mt-1">刷卡入帳後補上實際台幣，分帳就不會因換匯產生尾差。</div></div>
+                        <div v-if="newExpense.splitType==='personal'" class="text-[10px] text-slate-500">個人花費會出現在本人明細與旅程總花費，不計入應收／應付。</div>
+                        <div v-if="expenseFormError" class="text-xs text-red-600">{{ expenseFormError }}</div>
                         <button @click="addExpense" class="w-full bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-plus"></i> 新增費用</button>
                     </div>
                 </div>
+                <div class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button @click="ledgerSelectedPerson=''" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">全部明細</button><button v-for="p in participants" :key="p" @click="ledgerSelectedPerson=p" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">{{ p }}</button></div>
                 <div class="space-y-2 pb-10">
-                     <div v-for="(exp, idx) in expenses" :key="idx" class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" :class="{'expense-item-settled': exp.isSettled}" @touchstart="startLongPress(exp)" @touchend="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                     <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" :class="{'expense-item-settled': exp.isSettled}" @touchstart="startLongPress(exp)" @touchend="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
                         <div class="flex justify-between items-center">
-                            <div class="flex flex-col min-w-0 flex-1"><span class="text-sm font-bold text-slate-700 flex items-center gap-2">{{ exp.item }}<i v-if="exp.isSettled" class="ph-fill ph-check-circle text-green-500 text-xs"></i></span><span v-if="exp.payer" class="text-[10px] text-slate-400">Paid by {{ exp.payer }}</span></div>
+                            <div class="flex flex-col min-w-0 flex-1"><span class="text-sm font-bold text-slate-700 flex items-center gap-2">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle text-green-500 text-xs"></i></span><span v-if="exp.payer" class="text-[10px] text-slate-400">付款：{{ exp.payer }}</span><span class="text-[10px] font-bold" :class="exp.splitType==='personal' ? 'text-indigo-500' : 'text-theme-main'">{{ exp.splitType==='personal' ? '👤 個人・不分帳' : '👥 共同分帳' }}</span></div>
                             <div class="flex items-center gap-3 flex-shrink-0 ml-2">
-                                <div class="text-right"><span class="font-mono font-bold block amount" :class="exp.isSettled ? 'text-green-600' : 'text-theme-main'">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ exp.originalAmount || exp.amount }}</span><span v-if="exp.originalCurrency === 'TWD'" class="text-[9px] text-slate-300 block">≈ {{ settings.currency }} {{ Number(exp.amount).toFixed(1) }}</span><span v-if="!exp.isSettled" class="press-hint">長按標記結清</span></div>
+                                <div class="text-right"><span class="font-mono font-bold block amount" :class="exp.isSettled ? 'text-green-600' : 'text-theme-main'">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ exp.originalAmount ?? exp.amount }}</span><span class="text-[10px] text-slate-500 block">{{ isExpenseTwdEstimated(exp) ? '估算 ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!exp.isSettled && exp.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
                                 <div class="flex gap-1 opacity-0 group-hover:opacity-100"><button @click="expenses.splice(idx, 1)" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div>
                             </div>
                         </div>
+                        <div v-if="exp.originalCurrency !== 'TWD'" class="mt-2 flex items-center gap-2 border-t border-slate-50 pt-2 text-[10px] text-slate-500" @touchstart.stop @mousedown.stop><span>實際台幣</span><input type="number" min="0" step="1" :value="exp.twdAmountSource==='actual' ? exp.twdAmount : ''" @change="setExpenseTwdAmount(exp, $event.target.value)" placeholder="未填，使用估算" class="min-w-0 flex-1 rounded bg-slate-50 px-2 py-1 text-xs"></div>
+                        <div v-if="!participants.includes(exp.payer)" class="mt-2 flex items-center gap-2 text-[10px] text-amber-700" @touchstart.stop @mousedown.stop><span>指定付款人</span><select v-model="exp.payer" class="min-w-0 flex-1 rounded bg-amber-50 px-2 py-1 text-xs"><option value="" disabled>請選擇</option><option v-for="p in participants" :key="p" :value="p">{{ p }}</option></select></div>
                     </div>
                      <div class="expense-list-separator">👇 來自行程的費用</div>
                     <template v-for="day in days"><template v-for="item in day.items">
-                        <div v-if="item.isPaid && (Number(item.ticket)>0 || item.ticket)" class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm itinerary-expense-card" :class="{'settled': item.isSettled}" @touchstart="startLongPress(item)" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                        <div v-if="item.isPaid && Number(item.ticket)>0 && (!ledgerSelectedPerson || item.payer===ledgerSelectedPerson)" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm itinerary-expense-card" :class="{'settled': item.isSettled}" @touchstart="startLongPress(item)" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                            <div class="flex justify-between items-center">
                             <div class="flex flex-col min-w-0 flex-1"><span class="text-sm font-bold text-slate-700">{{ item.activity || '行程費用' }}</span><div class="flex items-center gap-2 flex-wrap"><span class="text-[10px] text-white px-1.5 py-0.5 rounded font-bold bg-red-300">D{{ days.indexOf(day)+1 }}</span><span v-if="item.payer" class="text-[10px] text-slate-400">Paid by {{ item.payer }}</span><span v-if="item.isSettled" class="text-[10px] text-green-600 font-bold bg-green-50 px-1 rounded border border-green-200">已結清</span></div></div>
-                            <div class="flex flex-col items-end"><span class="font-mono font-bold flex-shrink-0 ml-2 text-red-300" :class="{'line-through opacity-50': item.isSettled}">{{settings.currency}} {{ item.ticket }}</span><span v-if="!item.isSettled" class="press-hint">長按標記結清</span></div>
+                            <div class="flex flex-col items-end"><span class="font-mono font-bold flex-shrink-0 ml-2 text-red-300" :class="{'line-through opacity-50': item.isSettled}">{{settings.currency}} {{ item.ticket }}</span><span class="text-[10px] text-slate-500">{{ isItineraryTwdEstimated(item) ? '估算 ' : '' }}NT$ {{ itineraryTwd(item).toLocaleString() }}</span><span v-if="!item.isSettled && item.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
+                            </div>
+                            <div class="mt-2 flex items-center gap-2 border-t border-slate-50 pt-2 text-[10px]" @touchstart.stop @mousedown.stop><button @click="item.splitType = item.splitType==='personal' ? 'shared' : 'personal'" class="rounded px-2 py-1 font-bold" :class="item.splitType==='personal' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-600'">{{ item.splitType==='personal' ? '👤 個人・不分帳' : '👥 共同分帳' }}</button><input type="number" min="0" step="1" :value="item.settlementTwdAmount ?? ''" @change="setItineraryTwdAmount(item, $event.target.value)" placeholder="實際台幣" class="min-w-0 flex-1 rounded bg-slate-50 px-2 py-1 text-xs"></div>
                         </div>
                     </template></template>
                 </div>
@@ -1315,7 +1327,8 @@
                     const card = strip?.querySelector('.date-card.active');
                     if (strip && card && strip.clientWidth) strip.scrollLeft += card.getBoundingClientRect().left - strip.getBoundingClientRect().left - (strip.clientWidth - card.clientWidth) / 2;
                 });
-                const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false});
+                const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false, splitType:'shared', actualTwd:null});
+                const expenseFormError=ref(''), ledgerSelectedPerson=ref('');
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
                 const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
                 const editingTodoId = ref(null), todoLongPressTimer = ref(null), todoBeforeEdit = ref(null);
@@ -1398,7 +1411,7 @@
                     const v = tripOrder.value.filter(id => allTrips.value[id]); 
                     return [...v, ...Object.keys(allTrips.value).filter(id => !v.includes(id))]; 
                 });
-                const totalExpense = computed(() => { 
+                const totalExpense = computed(() => {
                     let t = expenses.value.reduce((a,b) => a + (Number(b.amount)||0), 0); 
                     days.value.forEach(d => { 
                         if (d?.items) d.items.forEach(i => { 
@@ -1407,37 +1420,51 @@
                     }); 
                     return t; 
                 });
-                const splitCalculation = computed(() => { 
-                    if(!participants.value.length) return { perPerson:0, balances:{}, transactions:[], summary:[] }; 
-                    const validExpenses = expenses.value.filter(e => !e.isSettled); 
-                    const expenseTotal = validExpenses.reduce((a,b) => a + (Number(b.amount)||0), 0); 
-                    let dayTotal = 0; 
-                    days.value.forEach(d => { 
-                        d?.items?.forEach(i => { 
-                            if(i?.isPaid && i.ticket && !i.isSettled) dayTotal += (Number(i.ticket) || 0); 
-                        }); 
-                    }); 
-                    const total = expenseTotal + dayTotal; 
-                    const perPerson = total / participants.value.length; 
-                    const balances = {}; 
-                    participants.value.forEach(p => balances[p] = -perPerson); 
-                    validExpenses.forEach(e => { if(e.payer && participants.value.includes(e.payer)) balances[e.payer] += Number(e.amount); }); 
-                    days.value.forEach(d => { d?.items?.forEach(i => { if(i?.isPaid && i.ticket && i.payer && participants.value.includes(i.payer) && !i.isSettled) balances[i.payer] += Number(i.ticket); }); }); 
-                    const summary = participants.value.map(p => ({ name:p, paid:Number((balances[p]+perPerson).toFixed(0)), diff:Math.round(balances[p]) })); 
-                    let creditors=[], debtors=[]; 
-                    Object.entries(balances).forEach(([n,a]) => { if(a>0.01) creditors.push({name:n,amount:a}); else if(a<-0.01) debtors.push({name:n,amount:-a}); }); 
+                const exchangeRate = computed(() => { const n = Number(settings.rate); return Number.isFinite(n) && n > 0 ? n : 0; });
+                const expenseTwd = e => {
+                    const exact = Number(e.twdAmount);
+                    if(e.twdAmount !== undefined && e.twdAmount !== null && e.twdAmount !== '' && Number.isFinite(exact)) return Math.round(exact);
+                    if(e.originalCurrency === 'TWD') return Math.round(Number(e.originalAmount) || 0);
+                    return Math.round((Number(e.amount) || 0) * exchangeRate.value);
+                };
+                const itineraryTwd = item => {
+                    const exact = Number(item.settlementTwdAmount);
+                    if(item.settlementTwdAmount !== undefined && item.settlementTwdAmount !== null && item.settlementTwdAmount !== '' && Number.isFinite(exact)) return Math.round(exact);
+                    return Math.round((Number(item.ticket) || 0) * exchangeRate.value);
+                };
+                const isExpenseTwdEstimated = e => e.twdAmountSource === 'estimate' || (e.originalCurrency !== 'TWD' && e.twdAmount === undefined);
+                const isItineraryTwdEstimated = item => item.settlementTwdAmount === undefined || item.settlementTwdAmount === null || item.settlementTwdAmount === '';
+                const totalExpenseTwd = computed(() => expenses.value.reduce((sum,e) => sum + expenseTwd(e), 0) + days.value.reduce((sum,d) => sum + (d?.items || []).reduce((s,i) => s + (i?.isPaid ? itineraryTwd(i) : 0), 0), 0));
+                const estimatedTwdCount = computed(() => expenses.value.filter(isExpenseTwdEstimated).length + days.value.reduce((sum,d) => sum + (d?.items || []).filter(i => i?.isPaid && Number(i.ticket) > 0 && isItineraryTwdEstimated(i)).length, 0));
+                const splitCalculation = computed(() => {
+                    if(!participants.value.length) return { averageTwd:0, balances:{}, transactions:[], summary:[], unassignedCount:0 };
+                    const members = participants.value;
+                    const shared = expenses.value.filter(e => e.splitType !== 'personal' && !e.isSettled).map(e => ({payer:e.payer, twd:expenseTwd(e)}));
+                    days.value.forEach(d => d?.items?.forEach(i => { if(i?.isPaid && Number(i.ticket)>0 && i.splitType !== 'personal' && !i.isSettled) shared.push({payer:i.payer, twd:itineraryTwd(i)}); }));
+                    const unassignedCount = shared.filter(e => !members.includes(e.payer)).length;
+                    const valid = shared.filter(e => members.includes(e.payer));
+                    const total = valid.reduce((sum,e) => sum + e.twd, 0);
+                    const baseShare = Math.floor(total / members.length), remainder = total % members.length;
+                    const balances = {}, paid = {}, personal = {};
+                    members.forEach((p,idx) => { balances[p] = -(baseShare + (idx < remainder ? 1 : 0)); paid[p] = 0; personal[p] = 0; });
+                    valid.forEach(e => { balances[e.payer] += e.twd; paid[e.payer] += e.twd; });
+                    expenses.value.filter(e => e.splitType === 'personal' && members.includes(e.payer)).forEach(e => personal[e.payer] += expenseTwd(e));
+                    days.value.forEach(d => d?.items?.forEach(i => { if(i?.isPaid && i.splitType === 'personal' && members.includes(i.payer)) personal[i.payer] += itineraryTwd(i); }));
+                    const summary = members.map(p => ({ name:p, paidTwd:paid[p], personalTwd:personal[p], diffTwd:balances[p], foreignDiff:exchangeRate.value ? Math.round(Math.abs(balances[p]) / exchangeRate.value) : 0 }));
+                    let creditors=[], debtors=[];
+                    Object.entries(balances).forEach(([n,a]) => { if(a>0) creditors.push({name:n,amount:a}); else if(a<0) debtors.push({name:n,amount:-a}); });
                     creditors.sort((a,b) => b.amount-a.amount); 
                     debtors.sort((a,b) => b.amount-a.amount); 
                     const transactions=[]; 
                     let i=0,j=0; 
                     while(i<creditors.length && j<debtors.length){ 
                         const amt = Math.min(creditors[i].amount, debtors[j].amount); 
-                        transactions.push({ from:debtors[j].name, to:creditors[i].name, amount:amt.toFixed(1), twdAmount: Math.round(amt * settings.rate).toLocaleString() }); 
-                        creditors[i].amount -= amt; debtors[j].amount -= amt; 
-                        if(creditors[i].amount<0.01) i++; 
-                        if(debtors[j].amount<0.01) j++; 
-                    } 
-                    return { perPerson:perPerson.toFixed(1), balances, transactions, summary }; 
+                        transactions.push({ from:debtors[j].name, to:creditors[i].name, twdAmount:amt, foreignAmount:exchangeRate.value ? Math.round(amt / exchangeRate.value) : 0 });
+                        creditors[i].amount -= amt; debtors[j].amount -= amt;
+                        if(creditors[i].amount===0) i++;
+                        if(debtors[j].amount===0) j++;
+                    }
+                    return { averageTwd:Math.round(total / members.length), balances, transactions, summary, unassignedCount };
                 });
 
                 let map, markersLayer, userMarker, sortableInstance, tripSortableInstance;
@@ -1964,8 +1991,20 @@
                 const addParticipant = () => { if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
                 const startEditingParticipant = (idx, name) => { editingParticipantIdx.value = idx; editingParticipantName.value = name; };
                 const finishEditingParticipant = (idx) => { const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
-                const addExpense = () => { if(newExpense.item && newExpense.amount) { const finalAmount = newExpense.isNTD ? (newExpense.amount / settings.rate) : newExpense.amount; expenses.value.push({ item: newExpense.item, amount: Number(finalAmount.toFixed(2)), originalAmount: newExpense.amount, originalCurrency: newExpense.isNTD ? 'TWD' : settings.currency, payer: newExpense.payer, isSettled: newExpense.isSettled }); newExpense.item = ''; newExpense.amount = null; newExpense.payer = ''; } };
-                const startLongPress = (item) => { longPressTimer.value = setTimeout(() => { item.isSettled = !item.isSettled; if(navigator.vibrate) navigator.vibrate(50); }, 600); };
+                const addExpense = () => {
+                    expenseFormError.value = '';
+                    const amount = Number(newExpense.amount), actual = newExpense.actualTwd;
+                    if(!newExpense.item.trim() || !newExpense.payer || !Number.isFinite(amount) || amount <= 0) { expenseFormError.value = '請填寫項目、付款人和大於 0 的金額。'; return; }
+                    if(!newExpense.isNTD && actual !== null && actual !== '' && (!Number.isInteger(Number(actual)) || Number(actual) < 0)) { expenseFormError.value = '實際台幣須為非負整數。'; return; }
+                    if(!newExpense.isNTD && (actual === null || actual === '') && !exchangeRate.value) { expenseFormError.value = '請先設定匯率，或填入實際台幣金額。'; return; }
+                    const finalAmount = newExpense.isNTD ? (exchangeRate.value ? amount / exchangeRate.value : 0) : amount;
+                    const hasActual = actual !== null && actual !== '';
+                    expenses.value.push({ item:newExpense.item.trim(), amount:Number(finalAmount.toFixed(2)), originalAmount:amount, originalCurrency:newExpense.isNTD ? 'TWD' : settings.currency, payer:newExpense.payer, isSettled:newExpense.splitType === 'shared' && newExpense.isSettled, splitType:newExpense.splitType, twdAmount:newExpense.isNTD ? Math.round(amount) : hasActual ? Number(actual) : Math.round(amount * exchangeRate.value), twdAmountSource:newExpense.isNTD || hasActual ? 'actual' : 'estimate' });
+                    newExpense.item = ''; newExpense.amount = null; newExpense.actualTwd = null; newExpense.payer = '';
+                };
+                const setExpenseTwdAmount = (expense, value) => { if(value === '') { delete expense.twdAmount; delete expense.twdAmountSource; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) { expense.twdAmount = n; expense.twdAmountSource = 'actual'; } };
+                const setItineraryTwdAmount = (item, value) => { if(value === '') { delete item.settlementTwdAmount; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) item.settlementTwdAmount = n; };
+                const startLongPress = (item) => { if(item.splitType === 'personal') return; longPressTimer.value = setTimeout(() => { item.isSettled = !item.isSettled; if(navigator.vibrate) navigator.vibrate(50); }, 600); };
                 const clearLongPress = () => { if(longPressTimer.value) { clearTimeout(longPressTimer.value); longPressTimer.value = null; } };
                 const addTodo = () => { if(newTodo.text) { todos.value.push({id:Date.now(), ...newTodo, completed:false}); newTodo.text = ''; newTodo.deadline = ''; } };
                 const deleteTodo = id => todos.value = todos.value.filter(t => t.id !== id);
@@ -2141,7 +2180,8 @@
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, 
                     settings, flights, newFlight, sortedFlights,
                     days, currentDayIdx, currentDay, todayDateKey,
-                    expenses, newExpense, totalExpense, splitCalculation,
+                    expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson,
+                    expenseTwd, itineraryTwd, isExpenseTwdEstimated, isItineraryTwdEstimated, setExpenseTwdAmount, setItineraryTwdAmount,
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
                     todos, newTodo, editingTodoId,
