@@ -1238,10 +1238,10 @@
                 </div>
                 <div v-if="splitCalculation.unassignedCount" class="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">有 {{ splitCalculation.unassignedCount }} 筆共同費用的付款人未指定或已從旅伴移除，暫未納入結算。請在明細確認付款人。</div>
                 <div v-if="estimatedTwdCount" class="mb-4 rounded-xl bg-cyan-50 border border-cyan-200 p-3 text-xs text-cyan-900">有 {{ estimatedTwdCount }} 筆台幣是依匯率估算。要讓結算與刷卡帳單一致，請在明細補入實際台幣；未補前的應收／應付為估算。</div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                <div id="expense-form" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <div class="space-y-2">
                         <div class="flex justify-between items-center mb-1">
-                            <div class="text-xs font-bold text-slate-400">新增支出</div>
+                            <div class="text-xs font-bold text-slate-400">{{ editingExpenseTarget ? '編輯支出' : '新增支出' }}</div>
                             <div class="flex gap-2">
                                 <button v-if="newExpense.splitType === 'shared'" @click="newExpense.isSettled = !newExpense.isSettled" class="toggle-btn settled" :class="{ 'active': newExpense.isSettled }"><i :class="newExpense.isSettled ? 'ph-fill ph-check-circle' : 'ph-bold ph-users'"></i> {{ newExpense.isSettled ? '已結清' : '未結算' }}</button>
                                 <button @click="newExpense.isNTD = !newExpense.isNTD" class="toggle-btn" :class="{ 'active': newExpense.isNTD }">{{ newExpense.isNTD ? 'NT$' : settings.currency }}</button>
@@ -1253,7 +1253,7 @@
                         <div v-if="!newExpense.isNTD"><input v-model="newExpense.actualTwd" type="number" min="0" step="1" placeholder="實際台幣（選填；留空用匯率估算）" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2"><div class="text-[10px] text-slate-400 mt-1">刷卡入帳後補上實際台幣，分帳就不會因換匯產生尾差。</div></div>
                         <div v-if="newExpense.splitType==='personal'" class="text-[10px] text-slate-500">個人花費會出現在本人明細與旅程總花費，不計入應收／應付。</div>
                         <div v-if="expenseFormError" class="text-xs text-red-600">{{ expenseFormError }}</div>
-                        <button @click="addExpense" class="w-full bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-plus"></i> 新增費用</button>
+                        <div class="flex gap-2"><button v-if="editingExpenseTarget" @click="cancelExpenseEdit" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">取消</button><button @click="addExpense" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i :class="editingExpenseTarget ? 'ph-bold ph-check' : 'ph-bold ph-plus'"></i> {{ editingExpenseTarget ? '儲存修改' : '新增費用' }}</button></div>
                     </div>
                 </div>
                 <div class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button @click="ledgerSelectedPerson=''" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">全部明細</button><button v-for="p in participants" :key="p" @click="ledgerSelectedPerson=p" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">{{ p }}</button></div>
@@ -1263,9 +1263,9 @@
                             <div class="flex flex-col min-w-0 flex-1"><span class="text-sm font-bold text-slate-700 flex items-center gap-2">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle text-green-500 text-xs"></i></span><span v-if="exp.payer" class="text-[10px] text-slate-400">付款：{{ exp.payer }}</span><span class="text-[10px] font-bold" :class="exp.splitType==='personal' ? 'text-indigo-500' : 'text-theme-main'">{{ exp.splitType==='personal' ? '👤 個人・不分帳' : '👥 共同分帳' }}</span></div>
                             <div class="flex items-center gap-3 flex-shrink-0 ml-2">
                                 <div class="text-right"><span class="font-mono font-bold block amount" :class="exp.isSettled ? 'text-green-600' : 'text-theme-main'">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ exp.originalAmount ?? exp.amount }}</span><span class="text-[10px] text-slate-500 block">{{ isExpenseTwdEstimated(exp) ? '估算 ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!exp.isSettled && exp.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
-                                <div class="flex gap-1 opacity-0 group-hover:opacity-100"><button @click="expenses.splice(idx, 1)" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button></div>
                             </div>
                         </div>
+                        <div class="flex justify-end gap-3 mt-2 text-xs" @touchstart.stop @mousedown.stop><button @click="startExpenseEdit(exp)" class="text-theme-main font-bold px-2 py-1"><i class="ph-bold ph-pencil-simple"></i> 編輯</button><button @click="deleteExpense(exp)" class="text-slate-400 px-2 py-1"><i class="ph-bold ph-trash"></i> 刪除</button></div>
                         <div v-if="exp.originalCurrency !== 'TWD'" class="mt-2 flex items-center gap-2 border-t border-slate-50 pt-2 text-[10px] text-slate-500" @touchstart.stop @mousedown.stop><span>實際台幣</span><input type="number" min="0" step="1" :value="exp.twdAmountSource==='actual' ? exp.twdAmount : ''" @change="setExpenseTwdAmount(exp, $event.target.value)" placeholder="未填，使用估算" class="min-w-0 flex-1 rounded bg-slate-50 px-2 py-1 text-xs"></div>
                         <div v-if="!participants.includes(exp.payer)" class="mt-2 flex items-center gap-2 text-[10px] text-amber-700" @touchstart.stop @mousedown.stop><span>指定付款人</span><select v-model="exp.payer" class="min-w-0 flex-1 rounded bg-amber-50 px-2 py-1 text-xs"><option value="" disabled>請選擇</option><option v-for="p in participants" :key="p" :value="p">{{ p }}</option></select></div>
                     </div>
@@ -1328,7 +1328,7 @@
                     if (strip && card && strip.clientWidth) strip.scrollLeft += card.getBoundingClientRect().left - strip.getBoundingClientRect().left - (strip.clientWidth - card.clientWidth) / 2;
                 });
                 const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false, splitType:'shared', actualTwd:null});
-                const expenseFormError=ref(''), ledgerSelectedPerson=ref('');
+                const expenseFormError=ref(''), ledgerSelectedPerson=ref(''), editingExpenseTarget=ref(null);
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
                 const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
                 const editingTodoId = ref(null), todoLongPressTimer = ref(null), todoBeforeEdit = ref(null);
@@ -1991,16 +1991,38 @@
                 const addParticipant = () => { if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
                 const startEditingParticipant = (idx, name) => { editingParticipantIdx.value = idx; editingParticipantName.value = name; };
                 const finishEditingParticipant = (idx) => { const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
+                const cancelExpenseEdit = () => {
+                    editingExpenseTarget.value = null; expenseFormError.value = '';
+                    Object.assign(newExpense, {item:'', amount:null, payer:'', isNTD:false, isSettled:false, splitType:'shared', actualTwd:null});
+                };
+                const startExpenseEdit = expense => {
+                    clearLongPress(); editingExpenseTarget.value = expense; expenseFormError.value = '';
+                    Object.assign(newExpense, {item:expense.item || '', amount:expense.originalAmount ?? expense.amount, payer:expense.payer || '', isNTD:expense.originalCurrency === 'TWD', isSettled:!!expense.isSettled, splitType:expense.splitType === 'personal' ? 'personal' : 'shared', actualTwd:expense.twdAmountSource === 'actual' && expense.originalCurrency !== 'TWD' ? expense.twdAmount : null});
+                    nextTick(() => document.getElementById('expense-form')?.scrollIntoView({behavior:'smooth', block:'center'}));
+                };
+                const deleteExpense = expense => {
+                    clearLongPress(); if(!confirm(`刪除「${expense.item || '這筆費用'}」？`)) return;
+                    const idx = expenses.value.indexOf(expense); if(idx < 0) return;
+                    if(editingExpenseTarget.value === expense) cancelExpenseEdit();
+                    expenses.value.splice(idx, 1);
+                };
+                watch(currentTripId, cancelExpenseEdit);
                 const addExpense = () => {
                     expenseFormError.value = '';
                     const amount = Number(newExpense.amount), actual = newExpense.actualTwd;
+                    const existing = editingExpenseTarget.value;
+                    if(existing && !expenses.value.includes(existing)) { expenseFormError.value = '這筆費用已更新或刪除，請取消後重新選擇。'; return; }
                     if(!newExpense.item.trim() || !newExpense.payer || !Number.isFinite(amount) || amount <= 0) { expenseFormError.value = '請填寫項目、付款人和大於 0 的金額。'; return; }
                     if(!newExpense.isNTD && actual !== null && actual !== '' && (!Number.isInteger(Number(actual)) || Number(actual) < 0)) { expenseFormError.value = '實際台幣須為非負整數。'; return; }
                     if(!newExpense.isNTD && (actual === null || actual === '') && !exchangeRate.value) { expenseFormError.value = '請先設定匯率，或填入實際台幣金額。'; return; }
                     const finalAmount = newExpense.isNTD ? (exchangeRate.value ? amount / exchangeRate.value : 0) : amount;
                     const hasActual = actual !== null && actual !== '';
-                    expenses.value.push({ item:newExpense.item.trim(), amount:Number(finalAmount.toFixed(2)), originalAmount:amount, originalCurrency:newExpense.isNTD ? 'TWD' : settings.currency, payer:newExpense.payer, isSettled:newExpense.splitType === 'shared' && newExpense.isSettled, splitType:newExpense.splitType, twdAmount:newExpense.isNTD ? Math.round(amount) : hasActual ? Number(actual) : Math.round(amount * exchangeRate.value), twdAmountSource:newExpense.isNTD || hasActual ? 'actual' : 'estimate' });
-                    newExpense.item = ''; newExpense.amount = null; newExpense.actualTwd = null; newExpense.payer = '';
+                    const currency = newExpense.isNTD ? 'TWD' : settings.currency;
+                    const keepEstimate = existing && !hasActual && !newExpense.isNTD && existing.twdAmountSource === 'estimate' && Number(existing.originalAmount ?? existing.amount) === amount && (existing.originalCurrency || settings.currency) === currency;
+                    const record = { item:newExpense.item.trim(), amount:Number(finalAmount.toFixed(2)), originalAmount:amount, originalCurrency:currency, payer:newExpense.payer, isSettled:newExpense.splitType === 'shared' && newExpense.isSettled, splitType:newExpense.splitType, twdAmount:newExpense.isNTD ? Math.round(amount) : hasActual ? Number(actual) : keepEstimate ? existing.twdAmount : Math.round(amount * exchangeRate.value), twdAmountSource:newExpense.isNTD || hasActual ? 'actual' : 'estimate' };
+                    if(existing) Object.assign(existing, record); else expenses.value.push(record);
+                    if(ledgerSelectedPerson.value && ledgerSelectedPerson.value !== record.payer) ledgerSelectedPerson.value = record.payer;
+                    cancelExpenseEdit();
                 };
                 const setExpenseTwdAmount = (expense, value) => { if(value === '') { delete expense.twdAmount; delete expense.twdAmountSource; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) { expense.twdAmount = n; expense.twdAmountSource = 'actual'; } };
                 const setItineraryTwdAmount = (item, value) => { if(value === '') { delete item.settlementTwdAmount; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) item.settlementTwdAmount = n; };
@@ -2180,7 +2202,8 @@
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, 
                     settings, flights, newFlight, sortedFlights,
                     days, currentDayIdx, currentDay, todayDateKey,
-                    expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson,
+                    expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson, editingExpenseTarget,
+                    startExpenseEdit, cancelExpenseEdit, deleteExpense,
                     expenseTwd, itineraryTwd, isExpenseTwdEstimated, isItineraryTwdEstimated, setExpenseTwdAmount, setItineraryTwdAmount,
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
