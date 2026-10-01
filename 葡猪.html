@@ -345,8 +345,24 @@
         .toggle-btn { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px; }
         .toggle-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
         .toggle-btn.settled.active { background: #10b981; color: white; border-color: #10b981; }
-        .expense-item-settled { opacity: 0.75; background: #F0FDF4 !important; border-color: #86EFAC !important; }
-        .expense-item-settled .amount { color: #10b981 !important; }
+        .expense-card { background: #fff; border: 1px solid rgba(148,163,184,.13); border-radius: 17px; padding: 16px 14px 15px 17px; box-shadow: 0 3px 14px rgba(30,41,59,.035); touch-action: manipulation; transition: border-color .18s, box-shadow .18s; }
+        .expense-card:hover { border-color: rgba(148,163,184,.27); box-shadow: 0 5px 18px rgba(30,41,59,.055); }
+        .expense-card-layout { display: grid; grid-template-columns: minmax(0,1fr) auto 26px; gap: 12px; align-items: start; }
+        .expense-card-title { color: #334155; font-size: 14px; font-weight: 700; line-height: 1.55; overflow-wrap: anywhere; }
+        .expense-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 8px; font-size: 10px; color: #94a3b8; line-height: 1.5; }
+        .expense-card-payer { display: inline-flex; align-items: center; gap: 4px; }
+        .expense-kind { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 5px; background: #f1f5f9; color: #77869b; font-size: 9px; font-weight: 600; }
+        .expense-kind.personal { background: #f3f0ff; color: #8b74b3; }
+        .expense-card-value { text-align: right; padding-top: 1px; white-space: nowrap; }
+        .expense-card .amount { display: flex; justify-content: flex-end; align-items: baseline; gap: 5px; color: var(--theme-primary); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 750; letter-spacing: -.45px; line-height: 1.35; }
+        .expense-card-currency { font-size: 10px; font-weight: 600; letter-spacing: 0; opacity: .7; }
+        .expense-card-conversion { display: block; font-size: 10px; color: #a0abba; margin-top: 5px; font-variant-numeric: tabular-nums; }
+        .expense-delete { width: 26px; height: 28px; margin-top: -2px; display: flex; justify-content: center; align-items: center; color: #c4ccd6; border-radius: 7px; font-size: 14px; transition: color .15s, background .15s; }
+        .expense-delete:hover { color: #e16a78; background: #fff1f2; }
+        .expense-card .press-hint { margin-top: 9px; font-size: 8px; color: #bdc5cf; letter-spacing: .2px; }
+        .expense-item-settled { background: #f7fcf9; border-color: #deede4; box-shadow: 0 2px 9px rgba(30,80,50,.025); }
+        .expense-item-settled .amount { color: #429979; }
+        .expense-settled-icon { display: inline-block; margin-left: 3px; color: #69b897; font-size: 11px; vertical-align: 1px; }
         .expense-list-separator { font-size: 10px; font-weight: bold; color: #94a3b8; text-align: center; margin: 12px 0 8px 0; display: flex; align-items: center; gap: 8px; }
         .expense-list-separator::before, .expense-list-separator::after { content: ''; height: 1px; background: #e2e8f0; flex: 1; }
         .itinerary-expense-card { border-left: 3px solid #8b5cf6 !important; position: relative; user-select: none; }
@@ -1257,12 +1273,12 @@
                     </div>
                 </div>
                 <div class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button @click="ledgerSelectedPerson=''" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">全部明細</button><button v-for="p in participants" :key="p" @click="ledgerSelectedPerson=p" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">{{ p }}</button></div>
-                <div class="space-y-2 pb-10">
-                     <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="bg-white p-3 rounded-xl border border-slate-50 shadow-sm relative group" style="touch-action: manipulation" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
-                        <div class="grid grid-cols-[minmax(0,1fr)_auto_24px] items-center gap-3">
-                            <div class="min-w-0"><div class="text-sm font-bold text-slate-700 leading-snug break-words">{{ exp.item }} <i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle text-green-500 text-xs"></i></div><div class="text-[10px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap"><span>{{ exp.payer || '未指定付款人' }}</span><span :class="exp.splitType==='personal' ? 'text-indigo-500' : 'text-slate-400'">{{ exp.splitType==='personal' ? '👤 個人' : '👥 共同' }}</span></div></div>
-                            <div class="text-right"><span class="font-mono font-bold block amount whitespace-nowrap" :class="exp.isSettled ? 'text-green-600' : 'text-theme-main'">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }} {{ Number(exp.originalAmount ?? exp.amount).toLocaleString() }}</span><span v-if="exp.originalCurrency !== 'TWD'" class="text-[10px] text-slate-400 block whitespace-nowrap">{{ isExpenseTwdEstimated(exp) ? '≈ ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!exp.isSettled && exp.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
-                            <button @click.stop="deleteExpense(exp)" @touchstart.stop @mousedown.stop class="text-slate-300 hover:text-red-400 w-6 h-8 flex items-center justify-center" aria-label="刪除費用" title="刪除"><i class="ph-bold ph-trash"></i></button>
+                <div class="space-y-3 pb-10">
+                     <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                        <div class="expense-card-layout">
+                            <div class="min-w-0"><div class="expense-card-title">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle expense-settled-icon"></i></div><div class="expense-card-meta"><span class="expense-card-payer"><i class="ph ph-user"></i>{{ exp.payer || '未指定付款人' }}</span><span class="expense-kind" :class="{personal: exp.splitType==='personal'}"><i :class="exp.splitType==='personal' ? 'ph ph-user' : 'ph ph-users'"></i>{{ exp.splitType==='personal' ? '個人' : '共同' }}</span></div></div>
+                            <div class="expense-card-value"><span class="amount"><span class="expense-card-currency">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }}</span>{{ Number(exp.originalAmount ?? exp.amount).toLocaleString() }}</span><span v-if="exp.originalCurrency !== 'TWD'" class="expense-card-conversion">{{ isExpenseTwdEstimated(exp) ? '≈ ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!exp.isSettled && exp.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
+                            <button @click.stop="deleteExpense(exp)" @touchstart.stop @mousedown.stop class="expense-delete" aria-label="刪除費用" title="刪除"><i class="ph ph-trash"></i></button>
                         </div>
                     </div>
                      <div class="expense-list-separator">👇 來自行程的費用</div>
