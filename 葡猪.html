@@ -1480,6 +1480,16 @@
                 });
 
                 let map, markersLayer, userMarker, sortableInstance, tripSortableInstance;
+                const initializeMap = () => {
+                    if (map) return;
+                    map = L.map('map').setView([38.72, -9.14], 14);
+                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxNativeZoom: 19,
+                        maxZoom: 20,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    markersLayer = L.layerGroup().addTo(map);
+                };
                 let saveDebounceTimer = null;
                 let vaultKey = null, vaultSessionTripId = null;
                 const longPressTimer = ref(null);
@@ -1970,7 +1980,7 @@
 
                 watch(viewMode, (newVal) => {
                     if (loadedTripId === currentTripId.value) localStorage.setItem(`lastView:${currentTripId.value}`, newVal);
-                    if (newVal === 'map') { nextTick(() => { setTimeout(() => { if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 20}).addTo(map); markersLayer = L.layerGroup().addTo(map); } map.invalidateSize(); drawRoute(); }, 100); }); }
+                    if (newVal === 'map') { nextTick(() => { setTimeout(() => { initializeMap(); map.invalidateSize(); drawRoute(); }, 100); }); }
                     if (newVal === 'plan') { resizeAllTextareas(); initSortable(); centerSelectedDay(); }
                 });
                 watch(currentDayIdx, () => {
@@ -2180,7 +2190,7 @@
                 };
 
                 const drawRoute = async () => {
-                    if (!map) { map = L.map('map').setView([38.72, -9.14], 14); L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map); markersLayer = L.layerGroup().addTo(map); }
+                    initializeMap();
                     markersLayer.clearLayers();
                     const items = currentDay.value.items || [];
                     const validItems = items.filter(x => x.location?.trim() || (x.isManualPin && x.lat && x.lon));
