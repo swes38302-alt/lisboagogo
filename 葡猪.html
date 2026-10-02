@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="assets/trip-sync.js?v=20261002"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
@@ -711,6 +712,11 @@
                  </button>
             </div>
         </header>
+
+        <div v-if="syncMessage" class="mx-3 mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
+            <p>{{ syncMessage }}</p>
+            <div class="flex gap-3 mt-1.5"><button @click="downloadSyncDraft" class="font-bold underline">下載草稿</button><button @click="retryTripSync" class="font-bold underline">重試同步</button><button @click="acceptLatestTrip" class="font-bold underline">載入最新</button></div>
+        </div>
 
         <!-- Settings Modal -->
         <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
@@ -1492,7 +1498,106 @@
                     }).addTo(map);
                     markersLayer = L.layerGroup().addTo(map);
                 };
-                let saveDebounceTimer = null;
+                let applyingTripData = false;
+                const syncStates = new Map();
+                const syncMessage = ref('');
+                const draftKey = id => `travelDraft:v1:${id}`;
+                const captureEditable = () => TripSync.editable({ days: days.value, expenses: expenses.value, settings, participants: participants.value, todos: todos.value, flights: flights.value });
+                const persistDraft = (id, state) => {
+                    try {
+                        if (TripSync.equal(state.base, state.draft)) localStorage.removeItem(draftKey(id));
+                        else localStorage.setItem(draftKey(id), JSON.stringify({ version: 1, base: state.base, draft: state.draft }));
+                    } catch (error) {
+                        if (currentTripId.value === id) syncMessage.value = '本機草稿儲存失敗，請暫勿關閉此頁，並下載草稿備份。';
+                    }
+                };
+                const getSyncState = (id, incoming) => {
+                    if (!syncStates.has(id)) {
+                        const state = { base: TripSync.clone(incoming), draft: TripSync.clone(incoming), timer: null, saving: false, conflicts: [] };
+                        try {
+                            const saved = JSON.parse(localStorage.getItem(draftKey(id)) || 'null');
+                            if (saved?.version === 1 && saved.base?.days && saved.draft?.days) {
+                                state.base = saved.base; state.draft = saved.draft;
+                            }
+                        } catch (error) { console.warn('Draft restore failed:', error); }
+                        syncStates.set(id, state);
+                    }
+                    return syncStates.get(id);
+                };
+                const scheduleTripSave = id => {
+                    const state = syncStates.get(id);
+                    if (!state) return;
+                    clearTimeout(state.timer);
+                    if (!state.conflicts.length && !TripSync.equal(state.base, state.draft)) state.timer = setTimeout(() => saveTripDraft(id), 500);
+                };
+                const saveTripDraft = async id => {
+                    const state = syncStates.get(id);
+                    if (!db || !state || state.saving || state.conflicts.length || TripSync.equal(state.base, state.draft)) return;
+                    state.saving = true;
+                    let saved = false;
+                    const base = TripSync.clone(state.base), draft = TripSync.clone(state.draft);
+                    try {
+                        if (!await createAutomaticBackup('session-start', id)) throw new Error('Backup failed');
+                        let conflicts = [];
+                        const result = await db.ref(`trips/${id}`).transaction(current => {
+                            if (!current) return; // Never resurrect a deleted trip.
+                            const merged = TripSync.merge(base, draft, TripSync.editable(current));
+                            conflicts = merged.conflicts;
+                            if (conflicts.length) return;
+                            return { ...current, ...merged.value }; // Preserve credentials and unknown trip fields.
+                        }, undefined, false);
+                        if (!result.committed) {
+                            state.conflicts = conflicts.length ? conflicts : ['/deleted'];
+                            if (currentTripId.value === id) syncMessage.value = '其他裝置已更新相同內容或移除此旅程；你的修改已保留為本機草稿，未覆蓋雲端。';
+                        } else {
+                            saved = true;
+                            const acknowledged = TripSync.editable(result.snapshot.val());
+                            // Retain edits made while this save was awaiting the network.
+                            const rebased = TripSync.merge(draft, state.draft, acknowledged);
+                            state.base = acknowledged; state.draft = rebased.value; state.conflicts = rebased.conflicts;
+                            allTrips.value[id] = result.snapshot.val();
+                            if (currentTripId.value === id) loadCurrentTripData();
+                        }
+                    } catch (error) {
+                        console.warn('Trip save paused:', error);
+                        if (currentTripId.value === id) syncMessage.value = '同步暫未完成；你的修改已保留為本機草稿，可稍後重試。';
+                    } finally {
+                        state.saving = false; persistDraft(id, state);
+                        if (saved && !state.conflicts.length && !TripSync.equal(state.base, state.draft) && isConnected.value) {
+                            // Only retry automatically after a successful network acknowledgement.
+                            if (TripSync.equal(state.base, TripSync.editable(allTrips.value[id] || {}))) scheduleTripSave(id);
+                        }
+                    }
+                };
+                const retryTripSync = async () => {
+                    const id = currentTripId.value;
+                    if (syncStates.get(id)?.saving) return;
+                    try {
+                        const snapshot = await db.ref(`trips/${id}`).get();
+                        if (!snapshot.val()) { syncMessage.value = '此旅程已從雲端移除；本機草稿仍保留，可先下載備份。'; return; }
+                        allTrips.value[id] = snapshot.val();
+                        if (currentTripId.value === id) loadCurrentTripData();
+                        scheduleTripSave(id);
+                    } catch (error) { syncMessage.value = '目前無法取得雲端最新資料；草稿仍保留，請連線後再試。'; }
+                };
+                const downloadSyncDraft = () => {
+                    const state = syncStates.get(currentTripId.value);
+                    if (!state) return;
+                    const url = URL.createObjectURL(new Blob([JSON.stringify(state.draft, null, 2)], { type: 'application/json' }));
+                    const link = document.createElement('a'); link.href = url; link.download = `旅程草稿-${currentTripId.value}.json`; link.click(); URL.revokeObjectURL(url);
+                };
+                const acceptLatestTrip = async () => {
+                    const id = currentTripId.value, state = syncStates.get(id);
+                    if (!allTrips.value[id] || !state || state.saving || !confirm('載入雲端最新內容？未同步的修改會保留在此裝置的草稿備份，不會覆蓋雲端。')) return;
+                    let latest;
+                    try {
+                        latest = (await db.ref(`trips/${id}`).get()).val();
+                        if (!latest || currentTripId.value !== id) return;
+                    } catch (error) { syncMessage.value = '目前無法取得雲端最新資料；草稿仍保留，請連線後再試。'; return; }
+                    try { localStorage.setItem(`${draftKey(id)}:archive:${Date.now()}`, JSON.stringify(state.draft)); }
+                    catch (error) { downloadSyncDraft(); return; }
+                    clearTimeout(state.timer); syncStates.delete(id); localStorage.removeItem(draftKey(id)); allTrips.value[id] = latest; loadCurrentTripData();
+                };
                 let vaultKey = null, vaultSessionTripId = null;
                 const longPressTimer = ref(null);
                 const sessionBackedUpTrips = new Set();
@@ -1830,10 +1935,10 @@
                     settings.themeColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color.toUpperCase() : '';
                     applyThemeColors();
                 };
-                const applyGlobalTheme = async () => {
+                const applyGlobalTheme = async (refreshRate = true) => {
                     applyThemeColors();
                     if(!settings.location) return;
-                    autoSetRate();
+                    if (refreshRate) autoSetRate();
                     try { 
                         const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(settings.location)}&format=json&limit=1`); 
                         const d = await r.json(); 
@@ -1887,11 +1992,15 @@
                     }); 
                 };
 
-                const syncData = () => { 
-                    if(db) { 
+                const syncData = () => {
+                    if(db) {
+                        db.ref('.info/connected').on('value', s => {
+                            isConnected.value = s.val() === true;
+                            if (isConnected.value) syncStates.forEach((state, id) => scheduleTripSave(id));
+                        });
                         db.ref('tripOrder').on('value', s => { if(s.val()) tripOrder.value = s.val(); }); 
                         db.ref('trips').on('value', s => {
-                            isConnected.value = true; allTrips.value = s.val() || {};
+                            allTrips.value = s.val() || {};
                             if(!roomParamApplied && ROOM_PARAM) {
                                 const requestedId = Object.keys(allTrips.value).find(id => {
                                     const trip = allTrips.value[id] || {};
@@ -1928,6 +2037,15 @@
                 const loadCurrentTripData = () => {
                     const t = allTrips.value[currentTripId.value]; if(!t) return;
                     const tripId = currentTripId.value;
+                    const incoming = TripSync.editable(t);
+                    const state = getSyncState(tripId, incoming);
+                    const merged = TripSync.merge(state.base, state.draft, incoming);
+                    state.conflicts = merged.conflicts;
+                    if (!merged.conflicts.length) { state.base = TripSync.clone(incoming); state.draft = merged.value; }
+                    const data = merged.conflicts.length ? state.draft : merged.value;
+                    syncMessage.value = merged.conflicts.length ? '其他裝置已更新相同內容；你的修改已保留為本機草稿，未覆蓋雲端。' : '';
+                    applyingTripData = true;
+                    try {
                     const sameTrip = loadedTripId === tripId;
                     const selectedDate = sameTrip ? days.value[currentDayIdx.value]?.fullDate : null;
                     const incomingVault = t.vault || null;
@@ -1939,9 +2057,10 @@
                         decryptVaultEntries(incomingVault, vaultKey).then(entries => { vaultEntries.value = entries; }).catch(() => lockVault());
                     }
                     vaultEnvelope.value = incomingVault;
-                    Object.assign(settings, { themeColor: '' }, t.settings);
-                    flights.value = t.flights ? Object.values(t.flights) : [];
-                    days.value = (t.days || []).map(day => ({ ...day, items: Array.isArray(day.items) ? day.items.map(item => ({ ...item, error: item.error || false })) : [] }));
+                    Object.keys(settings).forEach(key => { if (!(key in data.settings)) delete settings[key]; });
+                    Object.assign(settings, data.settings);
+                    flights.value = TripSync.clone(data.flights);
+                    days.value = TripSync.clone(data.days);
                     days.value.sort((a, b) => String(a.fullDate || '').localeCompare(String(b.fullDate || '')));
                     todayDateKey.value = getTodayDateKey(t.settings?.location);
                     const savedDate = localStorage.getItem(`lastDay:${tripId}`);
@@ -1956,9 +2075,11 @@
                         localStorage.setItem(`lastView:${tripId}`, viewMode.value);
                     }
                     loadedTripId = tripId;
-                    participants.value = t.participants || []; expenses.value = t.expenses || []; todos.value = t.todos || [];
-                    applyGlobalTheme(); initSortable(); resizeAllTextareas();
+                    participants.value = TripSync.clone(data.participants); expenses.value = TripSync.clone(data.expenses); todos.value = TripSync.clone(data.todos);
+                    applyGlobalTheme(false); initSortable(); resizeAllTextareas();
                     centerSelectedDay();
+                    } finally { applyingTripData = false; }
+                    persistDraft(tripId, state); scheduleTripSave(tripId);
                 };
                 
                 const updateRoomParam = id => {
@@ -1993,17 +2114,12 @@
                     if (loadedTripId === currentTripId.value && date) localStorage.setItem(`lastDay:${currentTripId.value}`, date);
                 });
                 watch(showTripList, v => { if(v) initTripSortable(); });
-                watch([days, expenses, settings, participants, todos, flights], () => { 
-                    if(!db || !currentTripId.value) return; 
-                    if(saveDebounceTimer) clearTimeout(saveDebounceTimer); 
-                    saveDebounceTimer = setTimeout(async () => {
-                        await createAutomaticBackup('session-start');
-                        db.ref(`trips/${currentTripId.value}`).update({
-                            days: JSON.parse(JSON.stringify(days.value)), expenses: JSON.parse(JSON.stringify(expenses.value)), 
-                            settings: settings, participants: participants.value, todos: JSON.parse(JSON.stringify(todos.value)), flights: JSON.parse(JSON.stringify(flights.value))
-                        }); 
-                    }, 500); 
-                }, {deep:true});
+                watch([days, expenses, settings, participants, todos, flights], () => {
+                    if(!db || applyingTripData || !currentTripId.value || loadedTripId !== currentTripId.value) return;
+                    const id = currentTripId.value, state = syncStates.get(id);
+                    if (!state) return;
+                    state.draft = captureEditable(); persistDraft(id, state); scheduleTripSave(id);
+                }, {deep:true, flush:'sync'});
 
                 const sortDays = (targetDate = null) => { const currentDate = targetDate || currentDay.value?.fullDate; days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); if (currentDate) { const newIndex = days.value.findIndex(d => d.fullDate === currentDate); if (newIndex !== -1) currentDayIdx.value = newIndex; } };
                 const addFlight = () => { flights.value.push({id:Date.now(), ...newFlight, connected:false}); };
@@ -2227,11 +2343,12 @@
                     const index = days.value.findIndex(day => day.fullDate === date);
                     if (index >= 0) { currentDayIdx.value = index; viewMode.value = 'plan'; centerSelectedDay(); }
                 };
-                onMounted(() => { syncData(); applyGlobalTheme(); document.addEventListener('visibilitychange', updateDayWhenReturning); });
+                onMounted(() => { syncData(); applyGlobalTheme(false); document.addEventListener('visibilitychange', updateDayWhenReturning); });
                 onUnmounted(() => document.removeEventListener('visibilitychange', updateDayWhenReturning));
                 
                 return {
-                    viewMode, loading, loadingText, isConnected, showSettings, showTripList, 
+                    viewMode, loading, loadingText, isConnected, showSettings, showTripList, syncMessage,
+                    retryTripSync, downloadSyncDraft, acceptLatestTrip,
                     settings, flights, newFlight, sortedFlights,
                     days, currentDayIdx, currentDay, todayDateKey,
                     expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson, editingExpenseTarget,
