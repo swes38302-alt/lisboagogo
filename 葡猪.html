@@ -43,7 +43,7 @@
         .text-theme-main { color: var(--theme-primary); transition: color 0.5s ease; }
 
         .locked-mode input, .locked-mode textarea, .locked-mode select,
-        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn) {
+        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn), .locked-mode [data-edit-action] {
             pointer-events: none; opacity: 0.7; cursor: not-allowed !important;
         }
         .locked-mode .drag-handle, .locked-mode .trip-drag-handle { display: none; }
@@ -718,6 +718,15 @@
             <div class="flex gap-3 mt-1.5"><button @click="downloadSyncDraft" class="font-bold underline">下載草稿</button><button @click="retryTripSync" class="font-bold underline">重試同步</button><button @click="acceptLatestTrip" class="font-bold underline">載入最新</button></div>
         </div>
 
+        <div v-if="expenseDeleteTarget" class="modal-overlay" @click.self="expenseDeleteTarget = null" @keydown.esc="expenseDeleteTarget = null">
+            <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5" role="dialog" aria-modal="true" aria-labelledby="expense-delete-title">
+                <h2 id="expense-delete-title" class="font-bold text-slate-800">刪除這筆費用？</h2>
+                <p class="mt-2 text-sm text-slate-600 break-words">{{ expenseDeleteTarget.item || '這筆費用' }}</p>
+                <p class="mt-1 text-xs text-slate-500">刪除後將不再列入記帳與分帳。</p>
+                <div class="mt-5 flex gap-3"><button id="expense-delete-cancel" @click="expenseDeleteTarget = null" class="flex-1 rounded-xl bg-slate-100 py-2.5 text-sm font-bold text-slate-600">取消</button><button @click="confirmExpenseDeletion" :disabled="isReadOnly" class="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white disabled:opacity-50">刪除</button></div>
+            </div>
+        </div>
+
         <!-- Settings Modal -->
         <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
             <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 safe-container max-h-[85vh] overflow-y-auto hide-scroll">
@@ -749,7 +758,7 @@
                      <div class="mt-3 pt-3 border-t border-slate-200">
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><i class="ph-bold ph-lock"></i> 旅程鎖定</label>
-                            <button @click="settings.isLocked = !settings.isLocked" class="px-3 py-1 rounded-full text-xs font-bold" :class="settings.isLocked ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'">{{ settings.isLocked ? '🔒 已鎖定' : '🔓 未鎖定' }}</button>
+                            <button @click="toggleLock" class="px-3 py-1 rounded-full text-xs font-bold" :class="settings.isLocked ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'">{{ settings.isLocked ? '🔒 已鎖定' : '🔓 未鎖定' }}</button>
                         </div>
                         <div v-if="settings.isLocked" class="space-y-2"><input v-model="settings.password" type="password" placeholder="設定解鎖密碼（選填）" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm"></div>
                     </div>
@@ -897,7 +906,7 @@
             </section>
         </div>
 
-        <main class="flex-1 overflow-y-auto relative hide-scroll" id="main-scroller" style="background-color: var(--theme-bg);" :class="{'locked-mode': settings.isLocked && !isUnlocked}">
+        <main class="flex-1 overflow-y-auto relative hide-scroll" id="main-scroller" style="background-color: var(--theme-bg);" :class="{'locked-mode': isReadOnly}">
             <div v-if="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-[1000]"><i class="ph-duotone ph-spinner-gap animate-spin text-4xl text-theme-main mb-2"></i><p class="text-xs text-slate-400">{{ loadingText }}</p></div>
             
             <!-- Flight View -->
@@ -906,17 +915,17 @@
                     <div class="absolute -right-6 -top-6 text-theme-main opacity-10"><i class="ph-fill ph-airplane-tilt text-9xl"></i></div>
                     <h2 class="font-bold text-slate-700 mb-3 text-sm relative z-10">新增航班</h2>
                     <div class="flex gap-2 mb-2 relative z-10">
-                        <input v-model="newFlight.dep" @input="e => newFlight.dep = e.target.value.toUpperCase()" placeholder="DEP" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
+                        <input :disabled="isReadOnly" v-model="newFlight.dep" @input="e => newFlight.dep = e.target.value.toUpperCase()" placeholder="DEP" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
                         <div class="self-center text-slate-300"><i class="ph-bold ph-airplane-tilt"></i></div>
-                        <input v-model="newFlight.arr" @input="e => newFlight.arr = e.target.value.toUpperCase()" placeholder="ARR" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
+                        <input :disabled="isReadOnly" v-model="newFlight.arr" @input="e => newFlight.arr = e.target.value.toUpperCase()" placeholder="ARR" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
                     </div>
                     <div class="mb-2 relative z-10">
-                        <input v-model="newFlight.depDate" type="date" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600">
+                        <input :disabled="isReadOnly" v-model="newFlight.depDate" type="date" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600">
                     </div>
                     <div class="flex gap-2 items-center mb-3 relative z-10">
-                        <div class="flex-[2]"><input v-model="newFlight.depTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
-                        <div class="flex-[2]"><input v-model="newFlight.arrTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
-                        <div class="flex-1"><select v-model="newFlight.nextDay" class="w-full bg-slate-50 p-2 rounded text-sm h-[36px] border-none"><option :value="false">無</option><option :value="true">+1</option></select></div>
+                        <div class="flex-[2]"><input :disabled="isReadOnly" v-model="newFlight.depTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
+                        <div class="flex-[2]"><input :disabled="isReadOnly" v-model="newFlight.arrTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
+                        <div class="flex-1"><select :disabled="isReadOnly" v-model="newFlight.nextDay" class="w-full bg-slate-50 p-2 rounded text-sm h-[36px] border-none"><option :value="false">無</option><option :value="true">+1</option></select></div>
                     </div>
                     <button @click="addFlight" class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 relative z-10">新增</button>
                 </div>
@@ -931,7 +940,7 @@
                         <div class="flight-header">
                             <div class="flex items-center gap-2 text-theme-main">
                                 <i class="ph-fill ph-airplane-tilt text-xl"></i>
-                                <input v-model="flight.flightNumber" @input="e => flight.flightNumber = e.target.value.toUpperCase()" class="bg-transparent border-none font-bold text-sm w-24 placeholder-slate-300 text-theme-main uppercase" placeholder="FLIGHT NO">
+                                <input :disabled="isReadOnly" v-model="flight.flightNumber" @input="e => flight.flightNumber = e.target.value.toUpperCase()" class="bg-transparent border-none font-bold text-sm w-24 placeholder-slate-300 text-theme-main uppercase" placeholder="FLIGHT NO">
                             </div>
                             <div class="flex items-center gap-2">
                                 <div v-if="flight.depDate" class="flight-date-display">
@@ -943,7 +952,7 @@
                         </div>
                         <div class="flight-body">
                             <div class="mb-3 -mt-1">
-                                <input v-model="flight.depDate" type="date" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500">
+                                <input :disabled="isReadOnly" v-model="flight.depDate" type="date" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500">
                             </div>
                             <div class="flex justify-between items-center mb-4">
                                 <div class="text-left">
@@ -973,11 +982,11 @@
                             <div class="flight-meta">
                                 <div class="flex-1 border-r border-slate-200 pr-2">
                                     <span class="flight-label block text-center mb-1">出發航廈</span>
-                                    <input v-model="flight.terminal" placeholder="待填" class="flight-input-meta">
+                                    <input :disabled="isReadOnly" v-model="flight.terminal" placeholder="待填" class="flight-input-meta">
                                 </div>
                                 <div class="flex-1">
                                     <span class="flight-label block text-center mb-1">抵達航廈</span>
-                                    <input v-model="flight.arrivalTerminal" placeholder="待填" class="flight-input-meta">
+                                    <input :disabled="isReadOnly" v-model="flight.arrivalTerminal" placeholder="待填" class="flight-input-meta">
                                 </div>
                             </div>
                         </div>
@@ -1015,12 +1024,12 @@
                 <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                            <input type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0">
+                            <input :disabled="isReadOnly" type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0">
                             <span class="text-xs text-slate-300 font-bold">{{ getWeekdayAbbr(currentDay.fullDate) }}</span>
                         </div>
                         <button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
                     </div>
-                    <input v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題">
+                    <input :disabled="isReadOnly" v-model="currentDay.title" class="text-lg font-black w-full border-none p-0 text-slate-700 focus:ring-0" placeholder="設定本日主題">
                     <button v-if="currentDay.fullDate === '2026-09-12'" @click="showShoppingRoute = true" class="shopping-route-launch"><i class="ph-bold ph-map-trifold"></i> 開啟互動購物動線 <i class="ph-bold ph-arrow-right"></i></button>
                 </div>
                 
@@ -1030,14 +1039,14 @@
                             <div v-if="isConnectedToPrev(idx) && !getPrevItem(idx)?.showTransport" class="group-divider"></div>
                             <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-md" :class="getTypeColor(item.type)"></div>
                             <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1 relative">
-                                <input v-model="item.time" type="time" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-600">
+                                <input :disabled="isReadOnly" v-model="item.time" type="time" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-600">
                                 <button type="button" @click="openGlobalMenu($event, item)" class="type-selector-btn no-drag" :class="globalMenu.activeItem === item ? 'ring-2 ring-blue-200' : ''"><span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span></button>
                                 <span class="text-[9px] font-bold text-slate-400 mt-0.5 scale-90">{{ getTypeName(item.type) }}</span>
                             </div>
                             <div class="flex-1 min-w-0 space-y-2">
                                 <div class="flex justify-between items-start">
                                     <div class="min-w-0 flex-1">
-                                        <input v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
+                                        <input :disabled="isReadOnly" v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
                                         <span v-if="getMealSlot(item)" class="meal-slot-badge" :class="getMealCardClass(item)">{{ getMealSlot(item) }}</span>
                                     </div>
                                     <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-xl text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
@@ -1045,7 +1054,7 @@
                                 <div class="relative">
                                     <div class="flex items-center gap-2" :class="item.error ? 'text-red-500' : 'text-slate-600'">
                                         <i :class="item.error ? 'ph-warning-circle text-red-500' : (item.isManualPin ? 'ph-map-pin-plus text-purple-500' : 'ph-map-pin-fill text-teal-500')" class="ph-fill text-sm mt-0.5 shrink-0"></i>
-                                        <input v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
+                                        <input :disabled="isReadOnly" v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
                                         <span v-if="item.isManualPin" class="manual-pin-badge">手動</span>
                                         <a v-if="item.location && (item.lat || !item.isManualPin)" :href="getGoogleMapUrl(item)" target="_blank" class="btn-gmap"><i class="ph-bold ph-navigation-arrow"></i></a>
                                     </div>
@@ -1059,29 +1068,29 @@
                                         <button @click="clearManualPin(item)" class="text-slate-400 hover:text-red-400 ml-1"><i class="ph-bold ph-x-circle text-xs"></i></button>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
+                                <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea :disabled="isReadOnly" v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
                                 <div class="mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
                                      <div class="flex items-center gap-2">
-                                        <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span><input v-model="item.ticket" class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="---"></div>
-                                        <div @click="item.isPaid = !item.isPaid" class="cursor-pointer flex items-center text-lg active:scale-95 shrink-0"><i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i></div>
+                                        <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span><input :disabled="isReadOnly" v-model="item.ticket" class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="---"></div>
+                                        <div data-edit-action @click="!isReadOnly && (item.isPaid = !item.isPaid)" class="cursor-pointer flex items-center text-lg active:scale-95 shrink-0"><i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i></div>
                                         <div v-if="item.isPaid" class="flex items-center gap-1 flex-input-safe">
                                             <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">付款</span>
-                                            <select v-model="item.payer" class="clean-select clean-input w-full text-xs font-bold text-blue-600"><option value="" disabled selected>誰?</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
+                                            <select :disabled="isReadOnly" v-model="item.payer" class="clean-select clean-input w-full text-xs font-bold text-blue-600"><option value="" disabled selected>誰?</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span><input v-model="item.openTime" class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="--:--"></div>
+                                    <div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span><input :disabled="isReadOnly" v-model="item.openTime" class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="--:--"></div>
                                 </div>
                             </div>
                             <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="transport-connector-bridge">
-                                <div @click="item.showTransport = true" class="transport-btn-car"><i class="ph-bold ph-car"></i></div>
-                                <div @click="item.connected = false" class="transport-break-btn"><i class="ph-bold ph-link-break"></i></div>
+                                <div data-edit-action @click="!isReadOnly && (item.showTransport = true)" class="transport-btn-car"><i class="ph-bold ph-car"></i></div>
+                                <div data-edit-action @click="!isReadOnly && (item.connected = false)" class="transport-break-btn"><i class="ph-bold ph-link-break"></i></div>
                             </div>
                         </div>
                         <div v-if="item.connected && item.showTransport && idx < currentDay.items.length - 1" class="mb-0 relative z-20">
-                             <div class="transport-strip-full rounded-b-xl border-x-2 border-b-2 border-dashed border-[var(--theme-light)] border-t-0 shadow-sm"><i class="ph-fill ph-car-profile text-theme-main"></i><input v-model="item.transportNote" class="bg-transparent border-none text-[10px] w-full text-center text-slate-600 focus:ring-0 p-0 placeholder-slate-400" placeholder="輸入交通方式"><button @click="item.showTransport = false" class="text-slate-300 hover:text-theme-main px-1"><i class="ph-bold ph-minus-circle"></i></button><div class="w-px h-3 bg-slate-300 mx-1"></div><button @click="item.connected = false" class="text-slate-300 hover:text-red-400 px-1"><i class="ph-bold ph-link-break"></i></button></div>
+                             <div class="transport-strip-full rounded-b-xl border-x-2 border-b-2 border-dashed border-[var(--theme-light)] border-t-0 shadow-sm"><i class="ph-fill ph-car-profile text-theme-main"></i><input :disabled="isReadOnly" v-model="item.transportNote" class="bg-transparent border-none text-[10px] w-full text-center text-slate-600 focus:ring-0 p-0 placeholder-slate-400" placeholder="輸入交通方式"><button @click="item.showTransport = false" class="text-slate-300 hover:text-theme-main px-1"><i class="ph-bold ph-minus-circle"></i></button><div class="w-px h-3 bg-slate-300 mx-1"></div><button @click="item.connected = false" class="text-slate-300 hover:text-red-400 px-1"><i class="ph-bold ph-link-break"></i></button></div>
                         </div>
                         <div v-if="!item.connected && idx < currentDay.items.length - 1" class="flex justify-center -mt-2.5 mb-2.5 relative z-0 h-4 items-center">
-                            <div @click="item.connected = true; item.showTransport = false" class="subtle-link-btn text-slate-300 shadow-sm"><i class="ph-bold ph-link-simple"></i></div>
+                            <div data-edit-action @click="!isReadOnly && (item.connected = true, item.showTransport = false)" class="subtle-link-btn text-slate-300 shadow-sm"><i class="ph-bold ph-link-simple"></i></div>
                         </div>
                     </div>
                 </div>
@@ -1111,23 +1120,23 @@
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl mb-4 border border-blue-100">
                     <h2 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2"><i class="ph-duotone ph-check-square text-theme-main text-lg"></i> 新增待辦事項</h2>
                     <div class="space-y-2">
-                        <input v-model="newTodo.text" @keyup.enter="addTodo" placeholder="例如：訂門票、換外幣" class="w-full bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700">
-                        <div class="flex gap-2"><select v-model="newTodo.category" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"><option value="before">出發前</option><option value="during">旅程中</option><option value="after">返家後</option></select><input v-model="newTodo.deadline" type="date" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"></div>
+                        <input :disabled="isReadOnly" v-model="newTodo.text" @keyup.enter="addTodo" placeholder="例如：訂門票、換外幣" class="w-full bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700">
+                        <div class="flex gap-2"><select :disabled="isReadOnly" v-model="newTodo.category" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"><option value="before">出發前</option><option value="during">旅程中</option><option value="after">返家後</option></select><input :disabled="isReadOnly" v-model="newTodo.deadline" type="date" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"></div>
                         <button @click="addTodo" class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm"><i class="ph-bold ph-plus mr-1"></i> 新增</button>
                     </div>
                 </div>
                 <div v-for="cat in ['before', 'during', 'after']" :key="cat" class="mb-6">
                     <h3 class="font-bold text-slate-600 mb-2 text-sm flex items-center gap-2"><i class="ph-bold" :class="{'before':'ph-calendar-check','during':'ph-airplane-in-flight','after':'ph-clipboard-text'}[cat]"></i> {{ {'before':'出發前準備','during':'旅程中','after':'返家後'}[cat] }} <span class="text-xs text-slate-400">({{ getSortedTodosByCategory(cat).length }})</span></h3>
                     <div class="space-y-2">
-                        <div v-for="todo in getSortedTodosByCategory(cat)" :key="todo.id" class="todo-item bg-white shadow-sm border border-slate-100" :class="{ 'completed': todo.completed, 'editing': editingTodoId === todo.id }" @touchstart="startTodoLongPress(todo)" @touchend="clearTodoLongPress" @mousedown="startTodoLongPress(todo)" @mouseup="clearTodoLongPress" @mouseleave="clearTodoLongPress">
+                        <div v-for="todo in getSortedTodosByCategory(cat)" :key="todo.id" class="todo-item bg-white shadow-sm border border-slate-100" :class="{ 'completed': todo.completed, 'editing': editingTodoId === todo.id }" @touchstart="startTodoLongPress(todo)" @touchmove="clearTodoLongPress" @touchcancel="clearTodoLongPress" @touchend="clearTodoLongPress" @mousedown="startTodoLongPress(todo)" @mouseup="clearTodoLongPress" @mouseleave="clearTodoLongPress">
                             <div v-if="editingTodoId !== todo.id" class="flex items-start gap-3">
-                                <input type="checkbox" v-model="todo.completed" class="todo-checkbox mt-0.5 flex-shrink-0">
+                                <input :disabled="isReadOnly" type="checkbox" v-model="todo.completed" class="todo-checkbox mt-0.5 flex-shrink-0">
                                 <div class="flex-1 min-w-0"><div class="todo-text font-bold text-sm text-slate-700">{{ todo.text }}</div><div v-if="todo.deadline" class="text-xs text-slate-400 mt-1 flex items-center gap-1"><i class="ph-bold ph-calendar-blank"></i> {{ todo.deadline }}</div></div>
                                 <button @click="deleteTodo(todo.id)" class="text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><i class="ph-bold ph-trash"></i></button>
                             </div>
                             <div v-else class="space-y-2">
-                                <input v-model="todo.text" @keyup.enter="finishEditingTodo" class="todo-edit-input" placeholder="待辦事項">
-                                <input v-model="todo.deadline" type="date" class="todo-edit-input">
+                                <input :disabled="isReadOnly" v-model="todo.text" @keyup.enter="finishEditingTodo" class="todo-edit-input" placeholder="待辦事項">
+                                <input :disabled="isReadOnly" v-model="todo.deadline" type="date" class="todo-edit-input">
                                 <div class="flex gap-2"><button @click="finishEditingTodo" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-xs font-bold">完成</button><button @click="cancelEditingTodo" class="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold">取消</button></div>
                             </div>
                         </div>
@@ -1151,8 +1160,8 @@
                     <h3 class="font-black text-slate-700 text-center">建立加密憑證庫</h3>
                     <p class="text-xs text-slate-400 text-center leading-relaxed mt-2 mb-4">憑證會加密後同步，密碼不會上傳。請使用你們兩人都記得、但不容易猜到的密碼。</p>
                     <div class="space-y-3">
-                        <input v-model="vaultPassphrase" @keyup.enter="createVault" type="password" autocomplete="new-password" class="vault-field" placeholder="設定憑證密碼（至少 6 碼）">
-                        <input v-model="vaultPassphraseConfirm" @keyup.enter="createVault" type="password" autocomplete="new-password" class="vault-field" placeholder="再輸入一次密碼">
+                        <input :disabled="isReadOnly" v-model="vaultPassphrase" @keyup.enter="createVault" type="password" autocomplete="new-password" class="vault-field" placeholder="設定憑證密碼（至少 6 碼）">
+                        <input :disabled="isReadOnly" v-model="vaultPassphraseConfirm" @keyup.enter="createVault" type="password" autocomplete="new-password" class="vault-field" placeholder="再輸入一次密碼">
                         <p v-if="vaultError" class="text-xs font-bold text-red-500"><i class="ph-bold ph-warning-circle"></i> {{ vaultError }}</p>
                         <button @click="createVault" :disabled="vaultSaving" class="w-full bg-theme-main text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"><i class="ph-bold ph-lock-key mr-1"></i>{{ vaultSaving ? '建立中…' : '建立憑證庫' }}</button>
                     </div>
@@ -1163,7 +1172,7 @@
                     <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3"><i class="ph-duotone ph-lock-key text-3xl"></i></div>
                     <h3 class="font-black text-slate-700 text-center">憑證庫已鎖定</h3>
                     <p class="text-xs text-slate-400 text-center mt-2 mb-4">輸入憑證密碼即可查看訂單編號與票券圖片</p>
-                    <input v-model="vaultPassphrase" @keyup.enter="unlockVault" type="password" autocomplete="current-password" class="vault-field" placeholder="憑證密碼">
+                    <input :disabled="isReadOnly" v-model="vaultPassphrase" @keyup.enter="unlockVault" type="password" autocomplete="current-password" class="vault-field" placeholder="憑證密碼">
                     <p v-if="vaultError" class="text-xs font-bold text-red-500 mt-2"><i class="ph-bold ph-warning-circle"></i> {{ vaultError }}</p>
                     <button @click="unlockVault" :disabled="vaultSaving" class="w-full bg-theme-main text-white py-3 rounded-xl font-bold text-sm mt-3 disabled:opacity-50"><i class="ph-bold ph-lock-open mr-1"></i>{{ vaultSaving ? '解鎖中…' : '解鎖' }}</button>
                     <button @click="resetVault" class="block mx-auto mt-5 text-[11px] text-slate-400 underline underline-offset-2">忘記密碼？清除並重建</button>
@@ -1206,14 +1215,14 @@
                 <div class="bg-white w-11/12 max-w-sm rounded-2xl shadow-2xl p-5 max-h-[88vh] overflow-y-auto hide-scroll">
                     <div class="flex items-center justify-between mb-4"><h3 class="font-black text-slate-800 flex items-center gap-2"><i class="ph-duotone ph-ticket text-theme-main text-xl"></i>{{ editingCredentialId ? '編輯憑證' : '新增憑證' }}</h3><button @click="closeCredentialForm" class="text-slate-400"><i class="ph-bold ph-x text-xl"></i></button></div>
                     <div class="space-y-3">
-                        <div><label class="vault-label">類型</label><select v-model="credentialForm.type" class="vault-field"><option v-for="type in CREDENTIAL_TYPES" :key="type.val" :value="type.val">{{ type.emoji }} {{ type.label }}</option></select></div>
-                        <div><label class="vault-label">名稱 *</label><input v-model="credentialForm.title" class="vault-field" placeholder="例如：東京迪士尼海洋門票"></div>
-                        <div class="grid grid-cols-2 gap-2"><div><label class="vault-label">平台／店家</label><input v-model="credentialForm.provider" class="vault-field" placeholder="Klook、飯店…"></div><div><label class="vault-label">日期時間</label><input v-model="credentialForm.dateTime" type="datetime-local" class="vault-field"></div></div>
-                        <div><label class="vault-label">訂單／憑證編號</label><input v-model="credentialForm.bookingNumber" class="vault-field vault-code" autocomplete="off" placeholder="Booking ID、票券編號…"></div>
-                        <div><label class="vault-label">旅客／訂房姓名</label><input v-model="credentialForm.traveler" class="vault-field" placeholder="護照英文姓名"></div>
-                        <div><label class="vault-label">訂單或票券連結</label><input v-model="credentialForm.link" type="url" class="vault-field" placeholder="https://..."></div>
-                        <div><label class="vault-label">備註</label><textarea v-model="credentialForm.notes" rows="3" class="vault-field resize-none" placeholder="集合地點、入場方式、取消規則…"></textarea></div>
-                        <div><label class="vault-label">票券截圖（選填）</label><input @change="handleCredentialImage" type="file" accept="image/*" class="vault-field text-xs"><img v-if="credentialForm.image" :src="credentialForm.image" class="vault-image mt-2"><button v-if="credentialForm.image" @click="credentialForm.image=''" class="text-[11px] text-red-400 mt-1"><i class="ph-bold ph-trash"></i> 移除圖片</button></div>
+                        <div><label class="vault-label">類型</label><select :disabled="isReadOnly" v-model="credentialForm.type" class="vault-field"><option v-for="type in CREDENTIAL_TYPES" :key="type.val" :value="type.val">{{ type.emoji }} {{ type.label }}</option></select></div>
+                        <div><label class="vault-label">名稱 *</label><input :disabled="isReadOnly" v-model="credentialForm.title" class="vault-field" placeholder="例如：東京迪士尼海洋門票"></div>
+                        <div class="grid grid-cols-2 gap-2"><div><label class="vault-label">平台／店家</label><input :disabled="isReadOnly" v-model="credentialForm.provider" class="vault-field" placeholder="Klook、飯店…"></div><div><label class="vault-label">日期時間</label><input :disabled="isReadOnly" v-model="credentialForm.dateTime" type="datetime-local" class="vault-field"></div></div>
+                        <div><label class="vault-label">訂單／憑證編號</label><input :disabled="isReadOnly" v-model="credentialForm.bookingNumber" class="vault-field vault-code" autocomplete="off" placeholder="Booking ID、票券編號…"></div>
+                        <div><label class="vault-label">旅客／訂房姓名</label><input :disabled="isReadOnly" v-model="credentialForm.traveler" class="vault-field" placeholder="護照英文姓名"></div>
+                        <div><label class="vault-label">訂單或票券連結</label><input :disabled="isReadOnly" v-model="credentialForm.link" type="url" class="vault-field" placeholder="https://..."></div>
+                        <div><label class="vault-label">備註</label><textarea :disabled="isReadOnly" v-model="credentialForm.notes" rows="3" class="vault-field resize-none" placeholder="集合地點、入場方式、取消規則…"></textarea></div>
+                        <div><label class="vault-label">票券截圖（選填）</label><input :disabled="isReadOnly" @change="handleCredentialImage" type="file" accept="image/*" class="vault-field text-xs"><img v-if="credentialForm.image" :src="credentialForm.image" class="vault-image mt-2"><button v-if="credentialForm.image" @click="credentialForm.image=''" class="text-[11px] text-red-400 mt-1"><i class="ph-bold ph-trash"></i> 移除圖片</button></div>
                         <p v-if="credentialFormError" class="text-xs font-bold text-red-500">{{ credentialFormError }}</p>
                         <div class="flex gap-2 pt-2"><button v-if="editingCredentialId" @click="deleteCredential" class="w-11 rounded-xl border border-red-100 bg-red-50 text-red-500"><i class="ph-bold ph-trash"></i></button><button @click="saveCredential" :disabled="vaultSaving" class="flex-1 bg-theme-main text-white py-3 rounded-xl text-sm font-bold disabled:opacity-50">{{ vaultSaving ? '加密儲存中…' : '儲存憑證' }}</button></div>
                     </div>
@@ -1233,11 +1242,11 @@
                 </div>
                  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <h3 class="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2"><i class="ph-duotone ph-users text-theme-main"></i> 旅伴管理</h3>
-                    <div class="flex gap-2 mb-3 items-stretch"><input v-model="newParticipant" @keyup.enter="addParticipant" placeholder="新增旅伴 (如: 小明)" class="flex-input-safe bg-slate-50 border-none rounded-lg text-sm p-2"><button @click="addParticipant" class="flex-btn-safe bg-theme-main text-white w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center"><i class="ph-bold ph-plus"></i></button></div>
+                    <div class="flex gap-2 mb-3 items-stretch"><input :disabled="isReadOnly" v-model="newParticipant" @keyup.enter="addParticipant" placeholder="新增旅伴 (如: 小明)" class="flex-input-safe bg-slate-50 border-none rounded-lg text-sm p-2"><button @click="addParticipant" class="flex-btn-safe bg-theme-main text-white w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center"><i class="ph-bold ph-plus"></i></button></div>
                     <div class="flex flex-wrap gap-2">
-                        <div v-for="(p, idx) in participants" :key="idx" class="participant-tag group" @click="startEditingParticipant(idx, p)">
+                        <div v-for="(p, idx) in participants" :key="idx" data-edit-action class="participant-tag group" @click="startEditingParticipant(idx, p)">
                             <span v-if="editingParticipantIdx !== idx">{{ p }}</span>
-                            <input v-if="editingParticipantIdx === idx" v-model="editingParticipantName" @blur="finishEditingParticipant(idx)" @keyup.enter="finishEditingParticipant(idx)" class="w-16 bg-transparent text-white border-none outline-none text-xs font-bold p-0 m-0">
+                            <input :disabled="isReadOnly" v-if="editingParticipantIdx === idx" v-model="editingParticipantName" @blur="finishEditingParticipant(idx)" @keyup.enter="finishEditingParticipant(idx)" class="w-16 bg-transparent text-white border-none outline-none text-xs font-bold p-0 m-0">
                             <button v-if="editingParticipantIdx !== idx" @click.stop="participants.splice(idx, 1)" class="hover:text-red-200 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
                         </div>
                     </div>
@@ -1272,9 +1281,9 @@
                             </div>
                         </div>
                         <div class="flex gap-2 text-xs font-bold"><button @click="newExpense.splitType='shared'" class="flex-1 rounded-lg px-2 py-2" :class="newExpense.splitType==='shared' ? 'bg-theme-main text-white' : 'bg-slate-100 text-slate-500'">👥 共同分帳</button><button @click="newExpense.splitType='personal'" class="flex-1 rounded-lg px-2 py-2" :class="newExpense.splitType==='personal' ? 'bg-theme-main text-white' : 'bg-slate-100 text-slate-500'">👤 個人記帳</button></div>
-                        <input v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
-                        <div class="flex gap-2"><select v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select><input v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2"></div>
-                        <div v-if="!newExpense.isNTD"><input v-model="newExpense.actualTwd" type="number" min="0" step="1" placeholder="實際台幣（選填；留空用匯率估算）" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2"><div class="text-[10px] text-slate-400 mt-1">刷卡入帳後補上實際台幣，分帳就不會因換匯產生尾差。</div></div>
+                        <input :disabled="isReadOnly" v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
+                        <div class="flex gap-2"><select :disabled="isReadOnly" v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select><input :disabled="isReadOnly" v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2"></div>
+                        <div v-if="!newExpense.isNTD"><input :disabled="isReadOnly" v-model="newExpense.actualTwd" type="number" min="0" step="1" placeholder="實際台幣（選填；留空用匯率估算）" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2"><div class="text-[10px] text-slate-400 mt-1">刷卡入帳後補上實際台幣，分帳就不會因換匯產生尾差。</div></div>
                         <div v-if="newExpense.splitType==='personal'" class="text-[10px] text-slate-500">個人花費會出現在本人明細與旅程總花費，不計入應收／應付。</div>
                         <div v-if="expenseFormError" class="text-xs text-red-600">{{ expenseFormError }}</div>
                         <div class="flex gap-2"><button v-if="editingExpenseTarget" @click="cancelExpenseEdit" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">取消</button><button @click="addExpense" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i :class="editingExpenseTarget ? 'ph-bold ph-check' : 'ph-bold ph-plus'"></i> {{ editingExpenseTarget ? '儲存修改' : '新增費用' }}</button></div>
@@ -1282,7 +1291,7 @@
                 </div>
                 <div class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button @click="ledgerSelectedPerson=''" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">全部明細</button><button v-for="p in participants" :key="p" @click="ledgerSelectedPerson=p" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">{{ p }}</button></div>
                 <div class="space-y-3 pb-10">
-                     <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                     <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchmove="clearLongPress" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
                         <div class="expense-card-layout">
                             <div class="min-w-0"><div class="expense-card-title">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle expense-settled-icon"></i></div><div class="expense-card-meta"><span class="expense-card-payer"><i class="ph ph-user"></i>{{ exp.payer || '未指定付款人' }}</span><span class="expense-kind" :class="{personal: exp.splitType==='personal'}"><i :class="exp.splitType==='personal' ? 'ph ph-user' : 'ph ph-users'"></i>{{ exp.splitType==='personal' ? '個人' : '共同' }}</span></div></div>
                             <div class="expense-card-value"><span class="amount"><span class="expense-card-currency">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }}</span>{{ Number(exp.originalAmount ?? exp.amount).toLocaleString() }}</span><span v-if="exp.originalCurrency !== 'TWD'" class="expense-card-conversion">{{ isExpenseTwdEstimated(exp) ? '≈ ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!exp.isSettled && exp.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
@@ -1291,12 +1300,12 @@
                     </div>
                      <div class="expense-list-separator">👇 來自行程的費用</div>
                     <template v-for="day in days"><template v-for="item in day.items">
-                        <div v-if="item.isPaid && Number(item.ticket)>0 && (!ledgerSelectedPerson || item.payer===ledgerSelectedPerson)" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm itinerary-expense-card" :class="{'settled': item.isSettled}" @touchstart="startLongPress(item)" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
+                        <div v-if="item.isPaid && Number(item.ticket)>0 && (!ledgerSelectedPerson || item.payer===ledgerSelectedPerson)" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm itinerary-expense-card" :class="{'settled': item.isSettled}" @touchstart="startLongPress(item)" @touchmove="clearLongPress" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
                             <div class="flex justify-between items-center">
                             <div class="flex flex-col min-w-0 flex-1"><span class="text-sm font-bold text-slate-700">{{ item.activity || '行程費用' }}</span><div class="flex items-center gap-2 flex-wrap"><span class="text-[10px] text-white px-1.5 py-0.5 rounded font-bold bg-red-300">D{{ days.indexOf(day)+1 }}</span><span v-if="item.payer" class="text-[10px] text-slate-400">Paid by {{ item.payer }}</span><span v-if="item.isSettled" class="text-[10px] text-green-600 font-bold bg-green-50 px-1 rounded border border-green-200">已結清</span></div></div>
                             <div class="flex flex-col items-end"><span class="font-mono font-bold flex-shrink-0 ml-2 text-red-300" :class="{'line-through opacity-50': item.isSettled}">{{settings.currency}} {{ item.ticket }}</span><span class="text-[10px] text-slate-500">{{ isItineraryTwdEstimated(item) ? '估算 ' : '' }}NT$ {{ itineraryTwd(item).toLocaleString() }}</span><span v-if="!item.isSettled && item.splitType !== 'personal'" class="press-hint">長按標記結清</span></div>
                             </div>
-                            <div class="mt-2 flex items-center gap-2 border-t border-slate-50 pt-2 text-[10px]" @touchstart.stop @mousedown.stop><button @click="item.splitType = item.splitType==='personal' ? 'shared' : 'personal'" class="rounded px-2 py-1 font-bold" :class="item.splitType==='personal' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-600'">{{ item.splitType==='personal' ? '👤 個人・不分帳' : '👥 共同分帳' }}</button><input type="number" min="0" step="1" :value="item.settlementTwdAmount ?? ''" @change="setItineraryTwdAmount(item, $event.target.value)" placeholder="實際台幣" class="min-w-0 flex-1 rounded bg-slate-50 px-2 py-1 text-xs"></div>
+                            <div class="mt-2 flex items-center gap-2 border-t border-slate-50 pt-2 text-[10px]" @touchstart.stop @mousedown.stop><button @click="item.splitType = item.splitType==='personal' ? 'shared' : 'personal'" class="rounded px-2 py-1 font-bold" :class="item.splitType==='personal' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-600'">{{ item.splitType==='personal' ? '👤 個人・不分帳' : '👥 共同分帳' }}</button><input :disabled="isReadOnly" type="number" min="0" step="1" :value="item.settlementTwdAmount ?? ''" @change="setItineraryTwdAmount(item, $event.target.value)" placeholder="實際台幣" class="min-w-0 flex-1 rounded bg-slate-50 px-2 py-1 text-xs"></div>
                         </div>
                     </template></template>
                 </div>
@@ -1349,12 +1358,15 @@
                 });
                 const expenses=ref([]), newExpense=reactive({item:'', amount:null, payer:'', isNTD: false, isSettled: false, splitType:'shared', actualTwd:null});
                 const expenseFormError=ref(''), ledgerSelectedPerson=ref(''), editingExpenseTarget=ref(null);
+                const expenseDeleteTarget = ref(null);
+                let expenseDeleteTripId = null;
                 const participants=ref([]), newParticipant=ref(''), editingParticipantIdx=ref(-1), editingParticipantName=ref('');
                 const todos=ref([]), newTodo=reactive({text:'', category:'before', deadline:''});
                 const editingTodoId = ref(null), todoLongPressTimer = ref(null), todoBeforeEdit = ref(null);
                 const weather=reactive({temp:'--',icon:'sun'});
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
                 const showUnlockPrompt = ref(false), unlockPassword = ref(''), isUnlocked = ref(false);
+                const isReadOnly = computed(() => settings.isLocked && !isUnlocked.value);
                 const showShoppingRoute = ref(false), selectedShoppingStore = ref(null);
                 const vaultEnvelope = ref(null), vaultEntries = ref([]), vaultUnlocked = ref(false), vaultSaving = ref(false);
                 const vaultPassphrase = ref(''), vaultPassphraseConfirm = ref(''), vaultError = ref('');
@@ -1621,9 +1633,9 @@
                 };
 
                 const autoSetRate = () => { if(!settings.location) return; const loc = settings.location.toLowerCase(); for(const [key, value] of Object.entries(CURRENCY_RATES)) { if(loc.includes(key)) { settings.currency = value.currency; settings.rate = value.rate; return; } } };
-                const toggleLock = () => { if (settings.isLocked && !isUnlocked.value) { if (settings.password) { showUnlockPrompt.value = true; } else { isUnlocked.value = true; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } } else { settings.isLocked = !settings.isLocked; isUnlocked.value = false; } };
-                const attemptUnlock = () => { if (unlockPassword.value === settings.password) { isUnlocked.value = true; showUnlockPrompt.value = false; unlockPassword.value = ''; setTimeout(() => { settings.isLocked = false; isUnlocked.value = false; }, 300); } else { alert('❌ 密碼錯誤！'); unlockPassword.value = ''; } };
-                const openGlobalMenu = (e, i) => { const r = e.currentTarget.getBoundingClientRect(); globalMenu.x = Math.max(10, Math.min(window.innerWidth-140, r.left+(r.width/2)-65)); globalMenu.y = r.bottom+5; globalMenu.activeItem = i; globalMenu.visible = true; };
+                const toggleLock = () => { if (isReadOnly.value && settings.password) { showUnlockPrompt.value = true; return; } settings.isLocked = !settings.isLocked; isUnlocked.value = false; };
+                const attemptUnlock = () => { if (unlockPassword.value === settings.password) { settings.isLocked = false; isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; } else { alert('❌ 密碼錯誤！'); unlockPassword.value = ''; } };
+                const openGlobalMenu = (e, i) => { if(isReadOnly.value) return; const r = e.currentTarget.getBoundingClientRect(); globalMenu.x = Math.max(10, Math.min(window.innerWidth-140, r.left+(r.width/2)-65)); globalMenu.y = r.bottom+5; globalMenu.activeItem = i; globalMenu.visible = true; };
                 const closeGlobalMenu = () => { globalMenu.visible = false; globalMenu.activeItem = null; };
                 const confirmTypeSelection = (v) => { if(globalMenu.activeItem) globalMenu.activeItem.type = v; closeGlobalMenu(); };
                 const getTypeName = v => TYPES_LIST.find(t => t.val === v)?.label || '景點';
@@ -1738,7 +1750,7 @@
                     if (!value) return '';
                     try { const url = new URL(value); return ['http:','https:'].includes(url.protocol) ? url.href : ''; } catch (_) { return ''; }
                 };
-                const openCredentialForm = (entry = null) => {
+                const openCredentialForm = (entry = null) => { if(isReadOnly.value) return;
                     credentialFormError.value = ''; editingCredentialId.value = entry?.id || null;
                     clearCredentialForm();
                     if (entry) Object.assign(credentialForm, JSON.parse(JSON.stringify(entry)));
@@ -1763,7 +1775,7 @@
                     };
                     reader.readAsDataURL(file);
                 };
-                const saveCredential = async () => {
+                const saveCredential = async () => { if(isReadOnly.value) return;
                     credentialFormError.value = '';
                     if (!credentialForm.title.trim()) { credentialFormError.value = '請填寫憑證名稱。'; return; }
                     if (credentialForm.link && !safeCredentialUrl(credentialForm.link)) { credentialFormError.value = '連結需以 http:// 或 https:// 開頭。'; return; }
@@ -1779,7 +1791,7 @@
                     } catch (error) { console.error('Save credential failed:', error); vaultEntries.value = before; credentialFormError.value = '儲存失敗，請確認網路後再試一次。'; }
                     finally { vaultSaving.value = false; }
                 };
-                const deleteCredential = async () => {
+                const deleteCredential = async () => { if(isReadOnly.value) return;
                     if (!editingCredentialId.value || !confirm('確定刪除這張憑證？')) return;
                     vaultSaving.value = true;
                     const before = JSON.parse(JSON.stringify(vaultEntries.value));
@@ -1841,7 +1853,7 @@
                     return '#';
                 };
 
-                const openManualPinModal = () => {
+                const openManualPinModal = () => { if(isReadOnly.value) return;
                     manualPinData.gmapUrl = '';
                     manualPinData.lat = '';
                     manualPinData.lon = '';
@@ -1851,7 +1863,7 @@
                     showManualPinModal.value = true;
                 };
 
-                const openManualPinForItem = (item) => {
+                const openManualPinForItem = (item) => { if(isReadOnly.value) return;
                     manualPinData.gmapUrl = '';
                     manualPinData.lat = '';
                     manualPinData.lon = '';
@@ -1888,7 +1900,7 @@
                     return null;
                 };
 
-                const confirmManualPin = async () => {
+                const confirmManualPin = async () => { if(isReadOnly.value) return;
                     let lat, lon;
                     if (manualPinMode.value === 'gmap') {
                         const parsed = parseGoogleMapsInput(manualPinData.gmapUrl);
@@ -1910,7 +1922,7 @@
                     if (viewMode.value === 'map') { nextTick(() => drawRoute()); }
                 };
 
-                const clearManualPin = (item) => { item.lat = null; item.lon = null; item.isManualPin = false; checkLocation(item); };
+                const clearManualPin = (item) => { if(isReadOnly.value) return; item.lat = null; item.lon = null; item.isManualPin = false; checkLocation(item); };
 
                 const getAutomaticTheme = location => {
                     const loc = String(location || '').toLowerCase();
@@ -1956,7 +1968,7 @@
                         if(sortableInstance) { sortableInstance.destroy(); sortableInstance = null; } 
                         if(!el) return; 
                         sortableInstance = new Sortable(el, { 
-                            handle: '.drag-handle', animation: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                            handle: '.drag-handle', disabled: isReadOnly.value, animation: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
                             ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', chosenClass: 'sortable-chosen',
                             filter: '.no-drag', preventOnFilter: false, delay: 0, delayOnTouchOnly: false, touchStartThreshold: 3,
                             forceFallback: true, fallbackClass: 'sortable-drag', fallbackOnBody: true, fallbackTolerance: 3,
@@ -1964,7 +1976,7 @@
                             onStart: () => { document.body.classList.add('is-dragging'); if(navigator.vibrate) navigator.vibrate(30); },
                             onEnd: (e) => { 
                                 document.body.classList.remove('is-dragging');
-                                if(e.oldIndex === e.newIndex) return; 
+                                if(isReadOnly.value || e.oldIndex === e.newIndex) { if (isReadOnly.value) initSortable(); return; }
                                 const item = currentDay.value.items.splice(e.oldIndex, 1)[0]; 
                                 currentDay.value.items.splice(e.newIndex, 0, item); 
                                 if(currentDay.value.items.length > 0) currentDay.value.items[currentDay.value.items.length-1].connected = false; 
@@ -2122,21 +2134,22 @@
                 }, {deep:true, flush:'sync'});
 
                 const sortDays = (targetDate = null) => { const currentDate = targetDate || currentDay.value?.fullDate; days.value.sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate)); if (currentDate) { const newIndex = days.value.findIndex(d => d.fullDate === currentDate); if (newIndex !== -1) currentDayIdx.value = newIndex; } };
-                const addFlight = () => { flights.value.push({id:Date.now(), ...newFlight, connected:false}); };
+                const addFlight = () => { if(isReadOnly.value) return; flights.value.push({id:Date.now(), ...newFlight, connected:false}); };
                 const removeFlight = id => flights.value = flights.value.filter(x => x.id !== id);
-                const addDay = () => { let lastDate = days.value.length > 0 ? days.value[days.value.length - 1].fullDate : new Date().toISOString().split('T')[0]; const d = new Date(lastDate); d.setDate(d.getDate() + 1); const newDate = d.toISOString().split('T')[0]; days.value.push({ fullDate: newDate, title: '', items: [] }); sortDays(newDate); };
-                const addItem = () => { if (!currentDay.value?.items) return; currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false, isManualPin: false, lat: null, lon: null }); nextTick(() => { resizeAllTextareas(); initSortable(); }); };
-                const deleteItem = i => { currentDay.value.items.splice(i, 1); nextTick(() => initSortable()); };
-                const confirmAndDeleteDay = async () => { if(confirm('Delete Day?')) { const backedUp = await createAutomaticBackup('before-delete-day', currentTripId.value, true); if(!backedUp) { alert('自動備份失敗，已取消刪除。'); return; } days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } };
-                const addParticipant = () => { if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
-                const startEditingParticipant = (idx, name) => { editingParticipantIdx.value = idx; editingParticipantName.value = name; };
-                const finishEditingParticipant = (idx) => { const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
+                const addDay = () => { if(isReadOnly.value) return; let lastDate = days.value.length > 0 ? days.value[days.value.length - 1].fullDate : new Date().toISOString().split('T')[0]; const d = new Date(lastDate); d.setDate(d.getDate() + 1); const newDate = d.toISOString().split('T')[0]; days.value.push({ fullDate: newDate, title: '', items: [] }); sortDays(newDate); };
+                const addItem = () => { if(isReadOnly.value) return; if (!currentDay.value?.items) return; currentDay.value.items.push({ id: Date.now(), time: '10:00', type: 'spot', activity: '', location: '', connected: false, error: false, isManualPin: false, lat: null, lon: null }); nextTick(() => { resizeAllTextareas(); initSortable(); }); };
+                const deleteItem = i => { if(isReadOnly.value) return; currentDay.value.items.splice(i, 1); nextTick(() => initSortable()); };
+                const confirmAndDeleteDay = async () => { if(isReadOnly.value) return; if(confirm('Delete Day?')) { const backedUp = await createAutomaticBackup('before-delete-day', currentTripId.value, true); if(!backedUp) { alert('自動備份失敗，已取消刪除。'); return; } days.value.splice(currentDayIdx.value, 1); currentDayIdx.value = Math.max(0, currentDayIdx.value - 1); } };
+                const addParticipant = () => { if(isReadOnly.value) return; if(newParticipant.value.trim()) { participants.value.push(newParticipant.value.trim()); newParticipant.value = ''; } };
+                const startEditingParticipant = (idx, name) => { if(isReadOnly.value) return; editingParticipantIdx.value = idx; editingParticipantName.value = name; };
+                const finishEditingParticipant = (idx) => { if(isReadOnly.value) return; const oldName = participants.value[idx]; const newName = editingParticipantName.value.trim(); if(newName && newName !== oldName) { participants.value[idx] = newName; expenses.value.forEach(e => { if(e.payer === oldName) e.payer = newName; }); days.value.forEach(d => d.items?.forEach(i => { if(i.payer === oldName) i.payer = newName; })); } editingParticipantIdx.value = -1; };
                 const cancelExpenseEdit = () => {
                     editingExpenseTarget.value = null; expenseFormError.value = '';
                     Object.assign(newExpense, {item:'', amount:null, payer:'', isNTD:false, isSettled:false, splitType:'shared', actualTwd:null});
                 };
-                const expenseTapTimes = new WeakMap(), expenseLongPressed = new WeakSet();
+                let expenseTapTimes = new WeakMap(), expenseLongPressed = new WeakSet();
                 const handleExpenseTap = (expense, event) => {
+                    if(isReadOnly.value) return;
                     if(event.target?.closest('button,input,select,textarea')) return;
                     if(expenseLongPressed.has(expense)) { expenseLongPressed.delete(expense); expenseTapTimes.delete(expense); return; }
                     const now = Date.now(), previous = expenseTapTimes.get(expense);
@@ -2144,18 +2157,29 @@
                     else expenseTapTimes.set(expense, now);
                 };
                 const startExpenseEdit = expense => {
+                    if(isReadOnly.value) return;
                     clearLongPress(); editingExpenseTarget.value = expense; expenseFormError.value = '';
                     Object.assign(newExpense, {item:expense.item || '', amount:expense.originalAmount ?? expense.amount, payer:expense.payer || '', isNTD:expense.originalCurrency === 'TWD', isSettled:!!expense.isSettled, splitType:expense.splitType === 'personal' ? 'personal' : 'shared', actualTwd:expense.twdAmountSource === 'actual' && expense.originalCurrency !== 'TWD' ? expense.twdAmount : null});
                     nextTick(() => document.getElementById('expense-form')?.scrollIntoView({behavior:'smooth', block:'center'}));
                 };
                 const deleteExpense = expense => {
-                    clearLongPress(); if(!confirm(`刪除「${expense.item || '這筆費用'}」？`)) return;
+                    if(isReadOnly.value) return;
+                    clearLongPress();
+                    const idx = expenses.value.indexOf(expense); if(idx < 0) return;
+                    expenseDeleteTarget.value = expense; expenseDeleteTripId = currentTripId.value;
+                };
+                const confirmExpenseDeletion = () => {
+                    const expense = expenseDeleteTarget.value;
+                    expenseDeleteTarget.value = null;
+                    if(isReadOnly.value || !expense || expenseDeleteTripId !== currentTripId.value) return;
                     const idx = expenses.value.indexOf(expense); if(idx < 0) return;
                     if(editingExpenseTarget.value === expense) cancelExpenseEdit();
                     expenses.value.splice(idx, 1);
                 };
+                watch(expenseDeleteTarget, target => { if(target) nextTick(() => document.getElementById('expense-delete-cancel')?.focus()); });
                 watch(currentTripId, cancelExpenseEdit);
                 const addExpense = () => {
+                    if(isReadOnly.value) return;
                     expenseFormError.value = '';
                     const amount = Number(newExpense.amount), actual = newExpense.actualTwd;
                     const existing = editingExpenseTarget.value;
@@ -2172,17 +2196,42 @@
                     if(ledgerSelectedPerson.value && ledgerSelectedPerson.value !== record.payer) ledgerSelectedPerson.value = record.payer;
                     cancelExpenseEdit();
                 };
-                const setExpenseTwdAmount = (expense, value) => { if(value === '') { delete expense.twdAmount; delete expense.twdAmountSource; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) { expense.twdAmount = n; expense.twdAmountSource = 'actual'; } };
-                const setItineraryTwdAmount = (item, value) => { if(value === '') { delete item.settlementTwdAmount; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) item.settlementTwdAmount = n; };
-                const startLongPress = (item) => { clearLongPress(); if(item.splitType === 'personal') return; longPressTimer.value = setTimeout(() => { item.isSettled = !item.isSettled; expenseTapTimes.delete(item); expenseLongPressed.add(item); if(navigator.vibrate) navigator.vibrate(50); }, 600); };
+                const setExpenseTwdAmount = (expense, value) => { if(isReadOnly.value) return; if(value === '') { delete expense.twdAmount; delete expense.twdAmountSource; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) { expense.twdAmount = n; expense.twdAmountSource = 'actual'; } };
+                const setItineraryTwdAmount = (item, value) => { if(isReadOnly.value) return; if(value === '') { delete item.settlementTwdAmount; return; } const n = Number(value); if(Number.isInteger(n) && n >= 0) item.settlementTwdAmount = n; };
+                const startLongPress = (item) => {
+                    clearLongPress();
+                    if(isReadOnly.value || item.splitType === 'personal') return;
+                    const tripId = currentTripId.value;
+                    const expenseIndex = expenses.value.indexOf(item);
+                    const dayDate = days.value.find(day => day.items?.includes(item))?.fullDate;
+                    const before = TripSync.clone(item);
+                    longPressTimer.value = setTimeout(() => {
+                        longPressTimer.value = null;
+                        if(isReadOnly.value || tripId !== currentTripId.value) return;
+                        const target = expenseIndex >= 0 ? expenses.value[expenseIndex] : days.value.find(day => day.fullDate === dayDate)?.items.find(candidate => candidate.id === before.id);
+                        if(!target || target.splitType === 'personal' || !TripSync.equal(before, TripSync.clone(target))) return;
+                        target.isSettled = !target.isSettled; expenseTapTimes.delete(target); expenseLongPressed.add(target); if(navigator.vibrate) navigator.vibrate(50);
+                    }, 600);
+                };
                 const clearLongPress = () => { if(longPressTimer.value) { clearTimeout(longPressTimer.value); longPressTimer.value = null; } };
-                const addTodo = () => { if(newTodo.text) { todos.value.push({id:Date.now(), ...newTodo, completed:false}); newTodo.text = ''; newTodo.deadline = ''; } };
+                const addTodo = () => { if(isReadOnly.value) return; if(newTodo.text) { todos.value.push({id:Date.now(), ...newTodo, completed:false}); newTodo.text = ''; newTodo.deadline = ''; } };
                 const deleteTodo = id => todos.value = todos.value.filter(t => t.id !== id);
                 const getSortedTodosByCategory = (c) => { const filtered = todos.value.filter(t => t.category === c); return filtered.sort((a, b) => { if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline); if (a.deadline && !b.deadline) return -1; if (!a.deadline && b.deadline) return 1; return 0; }); };
-                const startTodoLongPress = (todo) => { todoLongPressTimer.value = setTimeout(() => { todoBeforeEdit.value = JSON.parse(JSON.stringify({text: todo.text, deadline: todo.deadline})); editingTodoId.value = todo.id; if(navigator.vibrate) navigator.vibrate(50); }, 600); };
+                const startTodoLongPress = (todo) => {
+                    clearTodoLongPress(); if(isReadOnly.value) return;
+                    const tripId = currentTripId.value;
+                    todoLongPressTimer.value = setTimeout(() => {
+                        todoLongPressTimer.value = null;
+                        if(isReadOnly.value || tripId !== currentTripId.value || !todos.value.includes(todo)) return;
+                        todoBeforeEdit.value = JSON.parse(JSON.stringify({text: todo.text, deadline: todo.deadline})); editingTodoId.value = todo.id; if(navigator.vibrate) navigator.vibrate(50);
+                    }, 600);
+                };
                 const clearTodoLongPress = () => { if(todoLongPressTimer.value) { clearTimeout(todoLongPressTimer.value); todoLongPressTimer.value = null; } };
                 const finishEditingTodo = () => { editingTodoId.value = null; todoBeforeEdit.value = null; };
                 const cancelEditingTodo = () => { if (todoBeforeEdit.value && editingTodoId.value) { const todo = todos.value.find(t => t.id === editingTodoId.value); if (todo) { todo.text = todoBeforeEdit.value.text; todo.deadline = todoBeforeEdit.value.deadline; } } editingTodoId.value = null; todoBeforeEdit.value = null; };
+                const cancelPendingGestures = () => { clearLongPress(); clearTodoLongPress(); expenseTapTimes = new WeakMap(); expenseLongPressed = new WeakSet(); cancelExpenseEdit(); expenseDeleteTarget.value = null; finishEditingTodo(); editingParticipantIdx.value = -1; globalMenu.visible = false; };
+                watch(isReadOnly, locked => { if (locked) cancelPendingGestures(); initSortable(); }, { flush:'sync' });
+                watch(currentTripId, () => { cancelPendingGestures(); isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; }, { flush:'sync' });
                 const calculateLayover = i => { const c = flights.value[i], n = flights.value[i+1]; if(!c || !n) return ''; const m = (t, d) => { const [h, mm] = t.split(':').map(Number); return h*60 + mm + (d ? 1440 : 0); }; let a = m(c.arrTime, c.nextDay), d = m(n.depTime, false); if(d < a) d += 1440; const df = d - a; return `${Math.floor(df/60)}h ${df%60}m`; };
 
                 // === 📦 導出行程資料功能 ===
@@ -2352,12 +2401,12 @@
                     settings, flights, newFlight, sortedFlights,
                     days, currentDayIdx, currentDay, todayDateKey,
                     expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson, editingExpenseTarget,
-                    startExpenseEdit, cancelExpenseEdit, deleteExpense, handleExpenseTap,
+                    startExpenseEdit, cancelExpenseEdit, deleteExpense, confirmExpenseDeletion, expenseDeleteTarget, handleExpenseTap,
                     expenseTwd, itineraryTwd, isExpenseTwdEstimated, isItineraryTwdEstimated, setExpenseTwdAmount, setItineraryTwdAmount,
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
                     todos, newTodo, editingTodoId,
-                    globalMenu, showUnlockPrompt, unlockPassword, isUnlocked,
+                    globalMenu, showUnlockPrompt, unlockPassword, isUnlocked, isReadOnly,
                     showShoppingRoute, shoppingZones, shoppingStores, shoppingPriorityStores, shoppingRouteLinks, selectedShoppingStore,
                     vaultEnvelope, vaultEntries, vaultUnlocked, vaultSaving, vaultPassphrase, vaultPassphraseConfirm, vaultError,
                     showCredentialForm, editingCredentialId, credentialForm, credentialFormError, revealedCredentials, sortedVaultEntries,
