@@ -37,5 +37,5 @@ const editors = [...main.matchAll(/<(?:input|textarea|select)\b[^>]*>/g)].map(ma
 assert(editors.every(tag => tag.includes(':disabled="isReadOnly"') || /class="[^"]*vault-browse/.test(tag)));
 assert(editors.filter(tag => /class="[^"]*vault-browse/.test(tag)).every(tag => tag.includes('v-model="credentialSearch"') || tag.includes('v-model="vaultPassphrase"')));
 assert(main.includes('@touchmove="clearLongPress"'));
-assert(html.includes('watch(isReadOnly, locked => { if (locked) cancelPendingGestures();'));
+assert(/watch\(isReadOnly, locked => \{ if \(locked\) \{?\s*cancelPendingGestures\(\);/.test(html));
 console.log('PASS locked/unlocked settlement, pending holds, trip changes, delete confirmation/cancel, locked delete, disabled fields');

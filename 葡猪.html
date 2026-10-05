@@ -1072,22 +1072,27 @@
                             <div v-if="isConnectedToPrev(idx) && !getPrevItem(idx)?.showTransport" class="group-divider"></div>
                             <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-md" :class="getTypeColor(item.type)"></div>
                             <div class="flex flex-col items-center w-20 shrink-0 gap-1 pt-1 relative">
-                                <input :disabled="isReadOnly" v-model="item.time" type="time" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-600">
-                                <button type="button" @click="openGlobalMenu($event, item)" class="type-selector-btn no-drag" :class="globalMenu.activeItem === item ? 'ring-2 ring-blue-200' : ''"><span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span></button>
-                                <span class="text-[9px] font-bold text-slate-400 mt-0.5 scale-90">{{ getTypeName(item.type) }}</span>
+                                <span v-if="!isReadOnly || hasItineraryDetailValue(item.time)" class="text-[9px] font-bold text-slate-500 tracking-wider">開始</span>
+                                <span v-if="isReadOnly && hasItineraryDetailValue(item.time)" class="itinerary-start-readonly text-xs font-black text-slate-700 py-1 tabular-nums">{{ item.time }}</span>
+                                <input v-else-if="!isReadOnly" :disabled="isReadOnly" v-model="item.time" type="time" aria-label="行程開始時間" class="text-xs font-black bg-transparent rounded px-1 w-full text-center border-none p-1 text-slate-700">
+                                <span v-if="isReadOnly" class="type-selector-btn"><span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span></span>
+                                <button v-else type="button" @click="openGlobalMenu($event, item)" class="type-selector-btn no-drag" :class="globalMenu.activeItem === item ? 'ring-2 ring-blue-200' : ''"><span class="text-base leading-none">{{ getTypeEmoji(item.type) }}</span></button>
+                                <span class="text-[9px] font-bold text-slate-500 mt-0.5 scale-90">{{ getTypeName(item.type) }}</span>
                             </div>
                             <div class="flex-1 min-w-0 space-y-2">
                                 <div class="flex justify-between items-start">
                                     <div class="min-w-0 flex-1">
-                                        <input :disabled="isReadOnly" v-model="item.activity" class="font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-300 focus:ring-0 text-slate-800 mt-1.5" placeholder="行程名稱">
+                                        <div v-if="isReadOnly" class="itinerary-title-readonly font-bold text-sm text-slate-800 leading-relaxed break-words whitespace-pre-wrap mt-1">{{ item.activity || '行程名稱待填' }}</div>
+                                        <textarea v-else :disabled="isReadOnly" v-model="item.activity" @input="autoResize($event)" rows="1" aria-label="行程名稱" class="auto-textarea font-bold text-sm border-none p-0 w-full bg-transparent placeholder-slate-400 focus:ring-0 text-slate-800 leading-relaxed mt-1" placeholder="行程名稱"></textarea>
                                         <span v-if="getMealSlot(item)" class="meal-slot-badge" :class="getMealCardClass(item)">{{ getMealSlot(item) }}</span>
                                     </div>
-                                    <div class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-xl text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
+                                    <div v-if="!isReadOnly" class="flex items-center gap-1 ml-1"><i class="ph-bold ph-dots-six-vertical drag-handle text-xl text-slate-300 hover:text-theme-main"></i><button @click="deleteItem(idx)" class="text-slate-200 hover:text-red-400 p-1"><i class="ph-bold ph-x"></i></button></div>
                                 </div>
                                 <div class="relative">
                                     <div class="flex items-center gap-2" :class="item.error ? 'text-red-500' : 'text-slate-600'">
                                         <i :class="item.error ? 'ph-warning-circle text-red-500' : (item.isManualPin ? 'ph-map-pin-plus text-purple-500' : 'ph-map-pin-fill text-teal-500')" class="ph-fill text-sm mt-0.5 shrink-0"></i>
-                                        <input :disabled="isReadOnly" v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
+                                        <span v-if="isReadOnly" class="itinerary-location-readonly flex-1 min-w-0 text-xs font-medium leading-relaxed break-words">{{ item.location || '地點待填' }}</span>
+                                        <input v-else :disabled="isReadOnly" v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
                                         <span v-if="item.isManualPin" class="manual-pin-badge">手動</span>
                                         <a v-if="item.location && (item.lat || !item.isManualPin)" :href="getGoogleMapUrl(item)" target="_blank" class="btn-gmap"><i class="ph-bold ph-navigation-arrow"></i></a>
                                     </div>
@@ -1101,23 +1106,28 @@
                                         <button @click="clearManualPin(item)" class="text-slate-400 hover:text-red-400 ml-1"><i class="ph-bold ph-x-circle text-xs"></i></button>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea :disabled="isReadOnly" v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
-                                <div v-if="!isReadOnly || hasItineraryFee(item) || hasItineraryDetailValue(item.openTime)" class="itinerary-details mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
-                                     <div v-if="!isReadOnly" class="flex items-center gap-2">
-                                        <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span><input :disabled="isReadOnly" v-model="item.ticket" class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="---"></div>
+                                <div v-if="!isReadOnly || hasItineraryDetailValue(item.note)" class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-500 text-sm mt-0.5 shrink-0"></i><p v-if="isReadOnly" class="itinerary-note-readonly text-xs text-orange-700 font-medium leading-relaxed break-words whitespace-pre-wrap">{{ item.note }}</p><textarea v-else :disabled="isReadOnly" v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-700 font-medium leading-relaxed placeholder-orange-300" placeholder="備註..."></textarea></div>
+                                <div v-if="hasItineraryFee(item) || hasItineraryDetailValue(item.openTime) || (!isReadOnly && (isItineraryFieldOpen(item, 'fee') || isItineraryFieldOpen(item, 'time')))" class="itinerary-details mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
+                                     <div v-if="!isReadOnly && isItineraryFieldOpen(item, 'fee')" class="flex items-center gap-2 flex-wrap">
+                                        <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-bold text-slate-500 whitespace-nowrap">費用</span><input :disabled="isReadOnly" v-model="item.ticket" aria-label="行程費用" class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-400" placeholder="選填"></div>
                                         <div data-edit-action @click="!isReadOnly && (item.isPaid = !item.isPaid)" class="cursor-pointer flex items-center text-lg active:scale-95 shrink-0"><i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i></div>
                                         <div v-if="item.isPaid" class="flex items-center gap-1 flex-input-safe">
                                             <span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">付款</span>
                                             <select :disabled="isReadOnly" v-model="item.payer" class="clean-select clean-input w-full text-xs font-bold text-blue-600"><option value="" disabled selected>誰?</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
                                         </div>
+                                        <button v-if="!hasItineraryFee(item)" type="button" @click="setItineraryFieldOpen(item, 'fee', false)" class="ml-auto text-slate-400 hover:text-slate-600 p-1" aria-label="收起空白費用欄位"><i class="ph-bold ph-minus-circle"></i></button>
                                     </div>
-                                    <div v-else-if="hasItineraryFee(item)" class="itinerary-fee-readonly flex items-start gap-2 flex-wrap text-xs">
+                                    <div v-else-if="isReadOnly && hasItineraryFee(item)" class="itinerary-fee-readonly flex items-start gap-2 flex-wrap text-xs">
                                         <span class="font-bold text-slate-500 shrink-0">費用</span>
                                         <span class="font-bold text-slate-700 break-words min-w-0">{{ hasItineraryDetailValue(item.ticket) ? item.ticket : (hasItineraryDetailValue(item.settlementTwdAmount) ? 'NT$ ' + item.settlementTwdAmount : '金額待填') }}</span>
                                         <span v-if="item.isPaid" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">已付<span v-if="item.payer"> · {{ item.payer }}</span></span>
                                     </div>
-                                    <div v-if="!isReadOnly" class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span><input :disabled="isReadOnly" v-model="item.openTime" class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="--:--"></div>
-                                    <div v-else-if="hasItineraryDetailValue(item.openTime)" class="itinerary-time-readonly flex items-start gap-2 text-xs"><span class="font-bold text-slate-500 shrink-0">時間</span><span class="font-bold text-slate-700 break-words min-w-0 whitespace-pre-wrap">{{ item.openTime }}</span></div>
+                                    <div v-if="!isReadOnly && isItineraryFieldOpen(item, 'time')" class="flex items-start gap-2"><span class="text-xs font-bold text-slate-500 whitespace-nowrap pt-0.5">時間資訊</span><textarea :disabled="isReadOnly" v-model="item.openTime" @input="autoResize($event)" rows="1" aria-label="時間資訊" class="auto-textarea clean-input flex-1 min-w-0 text-xs font-bold text-slate-700 placeholder-slate-400 leading-relaxed" placeholder="營業／入場時間等（選填）"></textarea><button v-if="!hasItineraryDetailValue(item.openTime)" type="button" @click="setItineraryFieldOpen(item, 'time', false)" class="text-slate-400 hover:text-slate-600 p-1" aria-label="收起空白時間欄位"><i class="ph-bold ph-minus-circle"></i></button></div>
+                                    <div v-else-if="isReadOnly && hasItineraryDetailValue(item.openTime)" class="itinerary-time-readonly flex items-start gap-2 text-xs"><span class="font-bold text-slate-500 shrink-0">時間資訊</span><span class="font-bold text-slate-700 break-words min-w-0 whitespace-pre-wrap">{{ item.openTime }}</span></div>
+                                </div>
+                                <div v-if="!isReadOnly && (!isItineraryFieldOpen(item, 'fee') || !isItineraryFieldOpen(item, 'time'))" class="itinerary-optional-fields flex items-center gap-3 pt-1 flex-wrap">
+                                    <button v-if="!isItineraryFieldOpen(item, 'fee')" type="button" @click="setItineraryFieldOpen(item, 'fee', true)" class="text-[11px] font-semibold text-slate-500 hover:text-theme-main py-1" aria-label="新增費用欄位"><i class="ph-bold ph-plus mr-0.5"></i>費用</button>
+                                    <button v-if="!isItineraryFieldOpen(item, 'time')" type="button" @click="setItineraryFieldOpen(item, 'time', true)" class="text-[11px] font-semibold text-slate-500 hover:text-theme-main py-1" aria-label="新增時間資訊欄位"><i class="ph-bold ph-plus mr-0.5"></i>時間資訊</button>
                                 </div>
                             </div>
                             <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="transport-connector-bridge">
@@ -1422,6 +1432,17 @@
                 const hasItineraryDetailValue = value => value !== undefined && value !== null && String(value).trim() !== '';
                 const hasItineraryFee = item => hasItineraryDetailValue(item.ticket) || hasItineraryDetailValue(item.settlementTwdAmount) || !!item.isPaid;
                 const showShoppingRoute = ref(false), selectedShoppingStore = ref(null);
+                // UI-only expansion: never write empty fields into the shared trip.
+                const itineraryFieldExpansion = reactive({});
+                const itineraryFieldKey = (item, field) => JSON.stringify([currentTripId.value, currentDay.value.fullDate, item.id ?? currentDay.value.items.indexOf(item), field]);
+                const isItineraryFieldOpen = (item, field) => (field === 'fee' ? hasItineraryFee(item) : hasItineraryDetailValue(item.openTime)) || !!itineraryFieldExpansion[itineraryFieldKey(item, field)];
+                const setItineraryFieldOpen = (item, field, open) => {
+                    if (isReadOnly.value || !['fee', 'time'].includes(field)) return;
+                    const key = itineraryFieldKey(item, field);
+                    if (open) itineraryFieldExpansion[key] = true; else delete itineraryFieldExpansion[key];
+                    resizeAllTextareas();
+                };
+                const clearItineraryFieldExpansion = () => Object.keys(itineraryFieldExpansion).forEach(key => delete itineraryFieldExpansion[key]);
                 const vaultEnvelope = ref(null), vaultEntries = ref([]), vaultUnlocked = ref(false), vaultSaving = ref(false);
                 const vaultPassphrase = ref(''), vaultPassphraseConfirm = ref(''), vaultError = ref('');
                 const showCredentialForm = ref(false), editingCredentialId = ref(null), credentialFormError = ref('');
@@ -2347,8 +2368,8 @@
                 const finishEditingTodo = () => { editingTodoId.value = null; todoBeforeEdit.value = null; };
                 const cancelEditingTodo = () => { if (todoBeforeEdit.value && editingTodoId.value) { const todo = todos.value.find(t => t.id === editingTodoId.value); if (todo) { todo.text = todoBeforeEdit.value.text; todo.deadline = todoBeforeEdit.value.deadline; } } editingTodoId.value = null; todoBeforeEdit.value = null; };
                 const cancelPendingGestures = () => { clearLongPress(); clearTodoLongPress(); expenseTapTimes = new WeakMap(); expenseLongPressed = new WeakSet(); cancelExpenseEdit(); expenseDeleteTarget.value = null; finishEditingTodo(); editingParticipantIdx.value = -1; globalMenu.visible = false; };
-                watch(isReadOnly, locked => { if (locked) cancelPendingGestures(); initSortable(); }, { flush:'sync' });
-                watch(currentTripId, () => { cancelPendingGestures(); isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; }, { flush:'sync' });
+                watch(isReadOnly, locked => { if (locked) { cancelPendingGestures(); clearItineraryFieldExpansion(); } initSortable(); resizeAllTextareas(); }, { flush:'sync' });
+                watch(currentTripId, () => { cancelPendingGestures(); clearItineraryFieldExpansion(); isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; }, { flush:'sync' });
                 const calculateLayover = i => { const c = flights.value[i], n = flights.value[i+1]; if(!c || !n) return ''; const m = (t, d) => { const [h, mm] = t.split(':').map(Number); return h*60 + mm + (d ? 1440 : 0); }; let a = m(c.arrTime, c.nextDay), d = m(n.depTime, false); if(d < a) d += 1440; const df = d - a; return `${Math.floor(df/60)}h ${df%60}m`; };
 
                 // === 📦 導出行程資料功能 ===
@@ -2524,6 +2545,7 @@
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
                     todos, newTodo, editingTodoId,
                     globalMenu, showUnlockPrompt, unlockPassword, isUnlocked, isReadOnly, hasItineraryDetailValue, hasItineraryFee,
+                    isItineraryFieldOpen, setItineraryFieldOpen,
                     showShoppingRoute, shoppingZones, shoppingStores, shoppingPriorityStores, shoppingRouteLinks, selectedShoppingStore,
                     vaultEnvelope, vaultEntries, vaultUnlocked, vaultSaving, vaultPassphrase, vaultPassphraseConfirm, vaultError,
                     showCredentialForm, editingCredentialId, credentialForm, credentialFormError, revealedCredentials, sortedVaultEntries,
