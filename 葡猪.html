@@ -1102,8 +1102,8 @@
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-2 mt-1"><i class="ph-fill ph-info text-orange-400 text-sm mt-0.5 shrink-0"></i><textarea :disabled="isReadOnly" v-model="item.note" @input="autoResize($event)" rows="1" class="auto-textarea text-xs text-orange-500 font-medium placeholder-orange-200/70" placeholder="備註..."></textarea></div>
-                                <div class="mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
-                                     <div class="flex items-center gap-2">
+                                <div v-if="!isReadOnly || hasItineraryFee(item) || hasItineraryDetailValue(item.openTime)" class="itinerary-details mt-3 p-2 bg-slate-50 rounded-lg flex flex-col gap-2">
+                                     <div v-if="!isReadOnly" class="flex items-center gap-2">
                                         <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">費用</span><input :disabled="isReadOnly" v-model="item.ticket" class="clean-input w-16 text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="---"></div>
                                         <div data-edit-action @click="!isReadOnly && (item.isPaid = !item.isPaid)" class="cursor-pointer flex items-center text-lg active:scale-95 shrink-0"><i :class="item.isPaid ? 'ph-fill ph-check-square text-theme-main' : 'ph-bold ph-square text-slate-300'"></i></div>
                                         <div v-if="item.isPaid" class="flex items-center gap-1 flex-input-safe">
@@ -1111,7 +1111,13 @@
                                             <select :disabled="isReadOnly" v-model="item.payer" class="clean-select clean-input w-full text-xs font-bold text-blue-600"><option value="" disabled selected>誰?</option><option v-for="p in participants" :value="p">{{ p }}</option></select>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span><input :disabled="isReadOnly" v-model="item.openTime" class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="--:--"></div>
+                                    <div v-else-if="hasItineraryFee(item)" class="itinerary-fee-readonly flex items-start gap-2 flex-wrap text-xs">
+                                        <span class="font-bold text-slate-500 shrink-0">費用</span>
+                                        <span class="font-bold text-slate-700 break-words min-w-0">{{ hasItineraryDetailValue(item.ticket) ? item.ticket : (hasItineraryDetailValue(item.settlementTwdAmount) ? 'NT$ ' + item.settlementTwdAmount : '金額待填') }}</span>
+                                        <span v-if="item.isPaid" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">已付<span v-if="item.payer"> · {{ item.payer }}</span></span>
+                                    </div>
+                                    <div v-if="!isReadOnly" class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 whitespace-nowrap">時間</span><input :disabled="isReadOnly" v-model="item.openTime" class="clean-input w-full text-xs font-bold text-slate-700 placeholder-slate-300" placeholder="--:--"></div>
+                                    <div v-else-if="hasItineraryDetailValue(item.openTime)" class="itinerary-time-readonly flex items-start gap-2 text-xs"><span class="font-bold text-slate-500 shrink-0">時間</span><span class="font-bold text-slate-700 break-words min-w-0 whitespace-pre-wrap">{{ item.openTime }}</span></div>
                                 </div>
                             </div>
                             <div v-if="item.connected && idx < currentDay.items.length - 1 && !item.showTransport" class="transport-connector-bridge">
@@ -1413,6 +1419,8 @@
                 const globalMenu=reactive({visible:false,x:0,y:0,activeItem:null});
                 const showUnlockPrompt = ref(false), unlockPassword = ref(''), isUnlocked = ref(false);
                 const isReadOnly = computed(() => settings.isLocked && !isUnlocked.value);
+                const hasItineraryDetailValue = value => value !== undefined && value !== null && String(value).trim() !== '';
+                const hasItineraryFee = item => hasItineraryDetailValue(item.ticket) || hasItineraryDetailValue(item.settlementTwdAmount) || !!item.isPaid;
                 const showShoppingRoute = ref(false), selectedShoppingStore = ref(null);
                 const vaultEnvelope = ref(null), vaultEntries = ref([]), vaultUnlocked = ref(false), vaultSaving = ref(false);
                 const vaultPassphrase = ref(''), vaultPassphraseConfirm = ref(''), vaultError = ref('');
@@ -2515,7 +2523,7 @@
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,
                     participants, newParticipant, editingParticipantIdx, editingParticipantName,
                     todos, newTodo, editingTodoId,
-                    globalMenu, showUnlockPrompt, unlockPassword, isUnlocked, isReadOnly,
+                    globalMenu, showUnlockPrompt, unlockPassword, isUnlocked, isReadOnly, hasItineraryDetailValue, hasItineraryFee,
                     showShoppingRoute, shoppingZones, shoppingStores, shoppingPriorityStores, shoppingRouteLinks, selectedShoppingStore,
                     vaultEnvelope, vaultEntries, vaultUnlocked, vaultSaving, vaultPassphrase, vaultPassphraseConfirm, vaultError,
                     showCredentialForm, editingCredentialId, credentialForm, credentialFormError, revealedCredentials, sortedVaultEntries,
