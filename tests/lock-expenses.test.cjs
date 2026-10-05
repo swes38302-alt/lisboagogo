@@ -38,4 +38,10 @@ assert(editors.every(tag => tag.includes(':disabled="isReadOnly"') || /class="[^
 assert(editors.filter(tag => /class="[^"]*vault-browse/.test(tag)).every(tag => tag.includes('v-model="credentialSearch"') || tag.includes('v-model="vaultPassphrase"')));
 assert(main.includes('@touchmove="clearLongPress"'));
 assert(/watch\(isReadOnly, locked => \{ if \(locked\) \{?\s*cancelPendingGestures\(\);/.test(html));
+assert(html.includes('.locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse):not(.ledger-browse)'));
+const browseButtons=[...main.matchAll(/<button\b[^>]*class="ledger-browse [^>]*>/g)].map(match=>match[0]);
+assert.equal(browseButtons.length,2);
+assert(browseButtons.every(tag=>/@click="ledgerSelectedPerson=(?:''|p)"/.test(tag)));
+assert(browseButtons.every(tag=>tag.includes(':aria-pressed="ledgerSelectedPerson===')));
+assert(!/<button\b[^>]*@click[^>]*(?:deleteExpense|addExpense|splitType)[^>]*class="ledger-browse/.test(main));
 console.log('PASS locked/unlocked settlement, pending holds, trip changes, delete confirmation/cancel, locked delete, disabled fields');

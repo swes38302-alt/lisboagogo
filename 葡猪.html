@@ -43,7 +43,7 @@
         .text-theme-main { color: var(--theme-primary); transition: color 0.5s ease; }
 
         .locked-mode input:not(.vault-browse), .locked-mode textarea, .locked-mode select,
-        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse), .locked-mode [data-edit-action] {
+        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse):not(.ledger-browse), .locked-mode [data-edit-action] {
             pointer-events: none; opacity: 0.7; cursor: not-allowed !important;
         }
         .locked-mode .drag-handle, .locked-mode .trip-drag-handle { display: none; }
@@ -1351,7 +1351,7 @@
                         <div class="flex gap-2"><button v-if="editingExpenseTarget" @click="cancelExpenseEdit" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">取消</button><button @click="addExpense" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i :class="editingExpenseTarget ? 'ph-bold ph-check' : 'ph-bold ph-plus'"></i> {{ editingExpenseTarget ? '儲存修改' : '新增費用' }}</button></div>
                     </div>
                 </div>
-                <div class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button @click="ledgerSelectedPerson=''" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">全部明細</button><button v-for="p in participants" :key="p" @click="ledgerSelectedPerson=p" class="rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'">{{ p }}</button></div>
+                <div id="ledger-person-filters" class="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs"><button type="button" @click="ledgerSelectedPerson=''" class="ledger-browse rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson==='' ? 'bg-theme-main text-white' : 'bg-white text-slate-600'" :aria-pressed="ledgerSelectedPerson===''">全部明細</button><button v-for="p in participants" :key="p" type="button" @click="ledgerSelectedPerson=p" class="ledger-browse rounded-full px-3 py-1.5 whitespace-nowrap" :class="ledgerSelectedPerson===p ? 'bg-theme-main text-white' : 'bg-white text-slate-600'" :aria-pressed="ledgerSelectedPerson===p">{{ p }}</button></div>
                 <div class="space-y-3 pb-10">
                      <div v-for="(exp, idx) in expenses" v-show="!ledgerSelectedPerson || exp.payer===ledgerSelectedPerson" :key="idx" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchmove="clearLongPress" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
                         <div class="expense-card-layout">
