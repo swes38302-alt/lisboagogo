@@ -33,7 +33,9 @@ state.expenseDeleteTarget.value=null;api.confirmExpenseDeletion();assert.equal(s
 api.deleteExpense(expense);state.isReadOnly.value=true;api.confirmExpenseDeletion();assert.equal(state.expenses.value.length,1);
 state.isReadOnly.value=false;api.deleteExpense(expense);api.confirmExpenseDeletion();assert.equal(state.expenses.value.length,0);
 const main = section('<main ', '</main>');
-assert(!/<(?:input|textarea|select)\b(?![^>]*:disabled="isReadOnly")/.test(main));
+const editors = [...main.matchAll(/<(?:input|textarea|select)\b[^>]*>/g)].map(match => match[0]);
+assert(editors.every(tag => tag.includes(':disabled="isReadOnly"') || /class="[^"]*vault-browse/.test(tag)));
+assert(editors.filter(tag => /class="[^"]*vault-browse/.test(tag)).every(tag => tag.includes('v-model="credentialSearch"') || tag.includes('v-model="vaultPassphrase"')));
 assert(main.includes('@touchmove="clearLongPress"'));
 assert(html.includes('watch(isReadOnly, locked => { if (locked) cancelPendingGestures();'));
 console.log('PASS locked/unlocked settlement, pending holds, trip changes, delete confirmation/cancel, locked delete, disabled fields');

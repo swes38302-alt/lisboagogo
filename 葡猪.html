@@ -42,8 +42,8 @@
         .bg-theme-main { background-color: var(--theme-primary); transition: background-color 0.5s ease; }
         .text-theme-main { color: var(--theme-primary); transition: color 0.5s ease; }
 
-        .locked-mode input, .locked-mode textarea, .locked-mode select,
-        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn), .locked-mode [data-edit-action] {
+        .locked-mode input:not(.vault-browse), .locked-mode textarea, .locked-mode select,
+        .locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse), .locked-mode [data-edit-action] {
             pointer-events: none; opacity: 0.7; cursor: not-allowed !important;
         }
         .locked-mode .drag-handle, .locked-mode .trip-drag-handle { display: none; }
@@ -325,6 +325,23 @@
         .vault-label { display: block; margin-bottom: .3rem; font-size: .65rem; line-height: 1rem; font-weight: 800; color: #94a3b8; letter-spacing: .04em; }
         .vault-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: .08em; overflow-wrap: anywhere; }
         .vault-image { width: 100%; max-height: 15rem; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .75rem; }
+        .vault-filter-row { display:flex; gap:6px; overflow-x:auto; padding:2px 0 10px; scrollbar-width:none; }
+        .vault-filter { flex-shrink:0; min-height:36px; padding:7px 12px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:12px; font-weight:700; }
+        .vault-filter.active { color:color-mix(in srgb,var(--theme-primary) 75%,#0f172a); background:color-mix(in srgb,var(--theme-primary) 9%,white); border-color:color-mix(in srgb,var(--theme-primary) 35%,white); }
+        .vault-title { font-weight:800; color:#1e293b; font-size:15px; line-height:1.45; overflow-wrap:anywhere; }
+        .vault-thumb { width:64px; height:82px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; object-fit:contain; flex-shrink:0; }
+        .vault-action { min-height:40px; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px; border-radius:11px; font-size:12px; font-weight:800; }
+        .vault-action.primary { background:color-mix(in srgb,var(--theme-primary) 10%,white); color:color-mix(in srgb,var(--theme-primary) 75%,#0f172a); }
+        .vault-action.secondary { background:#f8fafc; color:#475569; border:1px solid #e2e8f0; }
+        .vault-viewer { position:fixed; inset:0; z-index:12000; background:#111827; color:#fff; display:flex; flex-direction:column; height:100vh; height:100dvh; }
+        .vault-viewer-bar { display:flex; align-items:center; gap:8px; padding:12px 16px; padding-top:max(12px,env(safe-area-inset-top)); border-bottom:1px solid #334155; }
+        .vault-viewer-bar button { min-width:44px; min-height:44px; border-radius:12px; background:#334155; }
+        .vault-viewer-stage { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:16px; }
+        .vault-viewer-stage.fit { display:flex; align-items:center; justify-content:center; }
+        .vault-viewer-stage img { display:block; max-width:none; height:auto; background:#fff; }
+        .vault-viewer-stage.fit img { width:auto; max-width:100%; max-height:100%; object-fit:contain; }
+        .vault-viewer-tools { display:flex; justify-content:center; align-items:center; gap:12px; padding:10px 16px max(12px,env(safe-area-inset-bottom)); background:#1e293b; }
+        .vault-viewer-tools button { min-height:44px; min-width:44px; border-radius:10px; background:#334155; padding:8px 12px; font-size:13px; font-weight:700; }
         .clean-select { background: transparent; border: none !important; outline: none; box-shadow: none; appearance: none; text-align: center; padding-right: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 256 256'%3E%3Cpath fill='%2394a3b8' d='M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80A8 8 0 0 1 53.66 90.34L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right center; }
         
         .trip-drag-handle { cursor: grab; color: #CBD5E1; padding: 4px; border-radius: 6px; touch-action: none; }
@@ -716,6 +733,22 @@
         <div v-if="syncMessage" class="mx-3 mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
             <p>{{ syncMessage }}</p>
             <div class="flex gap-3 mt-1.5"><button @click="downloadSyncDraft" class="font-bold underline">下載草稿</button><button @click="retryTripSync" class="font-bold underline">重試同步</button><button @click="acceptLatestTrip" class="font-bold underline">載入最新</button></div>
+        </div>
+
+        <div v-if="credentialPreview" class="vault-viewer" role="dialog" aria-modal="true" aria-labelledby="vault-preview-title" @keydown.esc.stop="closeCredentialPreview" @keydown="handleCredentialPreviewKey">
+            <div class="vault-viewer-bar">
+                <div class="flex-1 min-w-0"><div id="vault-preview-title" class="font-bold text-sm truncate">{{ credentialPreview.title }}</div><div class="text-xs text-slate-300 mt-1">放大後可捲動查看票券</div></div>
+                <button id="vault-preview-close" @click="closeCredentialPreview" aria-label="關閉圖片"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div id="vault-preview-stage" class="vault-viewer-stage" :class="{fit: credentialPreviewFit}" @dblclick="zoomCredentialPreview(1)">
+                <div v-if="credentialPreviewError" class="text-center text-slate-200 py-12"><i class="ph-bold ph-image-broken text-4xl"></i><p class="mt-3">圖片無法載入，請重新上傳截圖。</p></div>
+                <img v-else :src="credentialPreview.src" :alt="credentialPreview.title + ' 憑證圖片'" :style="credentialPreviewFit ? {} : {width:(credentialPreviewZoom * 100)+'%'}" @error="credentialPreviewError = true">
+            </div>
+            <div class="vault-viewer-tools">
+                <button @click="zoomCredentialPreview(-1)" :disabled="credentialPreviewFit || credentialPreviewZoom <= 1" aria-label="縮小圖片" class="disabled:opacity-40"><i class="ph-bold ph-minus"></i></button>
+                <button @click="fitCredentialPreview">適合畫面</button>
+                <button @click="zoomCredentialPreview(1)" :disabled="!credentialPreviewFit && credentialPreviewZoom >= 4" aria-label="放大圖片" class="disabled:opacity-40"><i class="ph-bold ph-plus"></i></button>
+            </div>
         </div>
 
         <div v-if="expenseDeleteTarget" class="modal-overlay" @click.self="expenseDeleteTarget = null" @keydown.esc="expenseDeleteTarget = null">
@@ -1152,7 +1185,7 @@
                         <h2 class="font-black text-slate-800 text-lg flex items-center gap-2"><i class="ph-duotone ph-ticket text-theme-main text-2xl"></i> 旅程憑證</h2>
                         <p class="text-[11px] text-slate-400 mt-1">門票、住宿、租車與訂單編號集中保管</p>
                     </div>
-                    <button v-if="vaultUnlocked" @click="lockVault" class="shrink-0 px-3 py-2 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold"><i class="ph-bold ph-lock mr-1"></i>鎖定</button>
+                    <button v-if="vaultUnlocked" @click="lockVault" class="vault-browse shrink-0 px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold"><i class="ph-bold ph-lock mr-1"></i>鎖定</button>
                 </div>
 
                 <div v-if="!vaultEnvelope" class="vault-card p-5">
@@ -1172,41 +1205,54 @@
                     <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3"><i class="ph-duotone ph-lock-key text-3xl"></i></div>
                     <h3 class="font-black text-slate-700 text-center">憑證庫已鎖定</h3>
                     <p class="text-xs text-slate-400 text-center mt-2 mb-4">輸入憑證密碼即可查看訂單編號與票券圖片</p>
-                    <input :disabled="isReadOnly" v-model="vaultPassphrase" @keyup.enter="unlockVault" type="password" autocomplete="current-password" class="vault-field" placeholder="憑證密碼">
+                    <input :disabled="vaultSaving" v-model="vaultPassphrase" @keyup.enter="unlockVault" type="password" autocomplete="current-password" class="vault-field vault-browse" placeholder="憑證密碼">
                     <p v-if="vaultError" class="text-xs font-bold text-red-500 mt-2"><i class="ph-bold ph-warning-circle"></i> {{ vaultError }}</p>
-                    <button @click="unlockVault" :disabled="vaultSaving" class="w-full bg-theme-main text-white py-3 rounded-xl font-bold text-sm mt-3 disabled:opacity-50"><i class="ph-bold ph-lock-open mr-1"></i>{{ vaultSaving ? '解鎖中…' : '解鎖' }}</button>
+                    <button @click="unlockVault" :disabled="vaultSaving" class="vault-browse w-full bg-theme-main text-white py-3 rounded-xl font-bold text-sm mt-3 disabled:opacity-50"><i class="ph-bold ph-lock-open mr-1"></i>{{ vaultSaving ? '解鎖中…' : '解鎖' }}</button>
                     <button @click="resetVault" class="block mx-auto mt-5 text-[11px] text-slate-400 underline underline-offset-2">忘記密碼？清除並重建</button>
                 </div>
 
                 <template v-else>
-                    <button @click="openCredentialForm()" class="w-full bg-theme-main text-white py-3 rounded-xl font-bold text-sm shadow-sm mb-4"><i class="ph-bold ph-plus-circle mr-1"></i>新增憑證</button>
+                    <div class="flex items-center justify-between mb-3"><span class="text-xs font-bold text-slate-600">共 {{ vaultEntries.length }} 張憑證</span><button @click="openCredentialForm()" :disabled="isReadOnly" class="bg-theme-main text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm disabled:opacity-50"><i class="ph-bold ph-plus mr-1"></i>新增憑證</button></div>
+                    <div v-if="vaultEntries.length" class="mb-3">
+                        <div class="relative mb-2"><i class="ph-bold ph-magnifying-glass absolute left-3 top-3 text-slate-400"></i><input v-model="credentialSearch" class="vault-field vault-browse pl-9" type="search" placeholder="搜尋名稱、店家或訂單編號" aria-label="搜尋憑證"></div>
+                        <div class="vault-filter-row"><button v-for="filter in credentialFilters" :key="filter.val" @click="credentialFilter = filter.val" class="vault-filter vault-browse" :class="{active:credentialFilter === filter.val}" :aria-pressed="credentialFilter === filter.val">{{ filter.emoji }} {{ filter.label }} <span class="opacity-60">{{ filter.count }}</span></button></div>
+                    </div>
                     <div v-if="vaultEntries.length === 0" class="vault-card py-12 px-5 text-center">
                         <i class="ph-duotone ph-ticket text-5xl text-slate-200"></i>
                         <div class="font-bold text-slate-400 mt-2">尚未加入憑證</div>
                         <div class="text-xs text-slate-300 mt-1">可先加入機票、迪士尼門票或住宿訂單</div>
                     </div>
-                    <div v-else class="space-y-3">
-                        <div v-for="entry in sortedVaultEntries" :key="entry.id" class="vault-card p-4">
-                            <div class="flex gap-3 items-start">
-                                <div class="vault-type-icon" :style="{background: getCredentialType(entry.type).bg, color: getCredentialType(entry.type).color}">{{ getCredentialType(entry.type).emoji }}</div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0"><div class="font-black text-slate-800 truncate">{{ entry.title }}</div><div class="text-[10px] font-bold text-slate-400 mt-0.5">{{ getCredentialType(entry.type).label }}<span v-if="entry.provider"> · {{ entry.provider }}</span></div></div>
-                                        <button @click="openCredentialForm(entry)" class="text-slate-300 hover:text-theme-main p-1"><i class="ph-bold ph-pencil-simple"></i></button>
+                    <div v-else-if="credentialGroups.length === 0" class="vault-card p-8 text-center"><i class="ph-duotone ph-magnifying-glass text-3xl text-slate-400"></i><div class="text-sm font-bold text-slate-600 mt-2">找不到符合的憑證</div><button @click="credentialSearch = ''; credentialFilter = 'all'" class="vault-browse text-theme-main text-xs font-bold mt-3">顯示全部</button></div>
+                    <div v-else class="space-y-5">
+                        <section v-for="group in credentialGroups" :key="group.key">
+                            <h3 class="text-xs font-bold text-slate-600 mb-2 flex items-center gap-2"><i class="ph-bold ph-calendar-blank text-theme-main"></i>{{ group.label }}<span class="text-slate-400 font-normal">{{ group.entries.length }} 張</span></h3>
+                            <div class="space-y-3">
+                            <article v-for="entry in group.entries" :key="entry.id" class="vault-card p-4">
+                                <div class="flex gap-3 items-start">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-[11px] font-bold mb-1.5 flex items-center gap-1.5" :style="{color:getCredentialType(entry.type).color}"><span>{{ getCredentialType(entry.type).emoji }}</span>{{ getCredentialType(entry.type).label }}<span v-if="entry.provider" class="text-slate-500 font-normal"> · {{ entry.provider }}</span></div>
+                                        <h4 class="vault-title">{{ entry.title }}</h4>
+                                        <div v-if="entry.dateTime" class="text-xs text-slate-600 mt-2 flex items-center gap-1"><i class="ph-bold ph-clock text-theme-main"></i>{{ formatCredentialDate(entry.dateTime) }}</div>
                                     </div>
-                                    <div v-if="entry.dateTime" class="text-xs text-slate-500 mt-2 flex items-center gap-1"><i class="ph-bold ph-calendar-blank text-theme-main"></i>{{ formatCredentialDate(entry.dateTime) }}</div>
+                                    <button v-if="credentialImageSrc(entry.image)" @click="openCredentialPreview(entry, $event)" class="vault-browse shrink-0" :aria-label="'查看 '+entry.title+' 圖片'"><img :src="credentialImageSrc(entry.image)" alt="憑證縮圖" class="vault-thumb" loading="lazy"></button>
+                                    <button @click="openCredentialForm(entry)" :disabled="isReadOnly" class="shrink-0 text-slate-500 hover:text-theme-main min-w-[32px] min-h-[36px] disabled:opacity-40" :aria-label="'編輯 '+entry.title"><i class="ph-bold ph-pencil-simple"></i></button>
                                 </div>
+                                <div v-if="entry.bookingNumber" class="bg-slate-50 rounded-xl px-3 py-2.5 mt-3 flex items-center gap-2">
+                                    <div class="flex-1 min-w-0"><div class="text-[10px] font-bold text-slate-500 mb-1">訂單編號</div><div class="vault-code text-xs font-bold text-slate-700">{{ maskedCredentialCode(entry) }}</div></div>
+                                    <button @click="toggleCredentialReveal(entry.id)" class="vault-browse w-10 h-10 rounded-lg text-slate-600" :aria-label="revealedCredentials[entry.id] ? '隱藏編號' : '顯示編號'"><i class="ph-bold" :class="revealedCredentials[entry.id] ? 'ph-eye-slash' : 'ph-eye'"></i></button>
+                                    <button @click="copyCredentialCode(entry.bookingNumber, entry.id)" class="vault-browse w-10 h-10 rounded-lg bg-white border border-slate-200 text-theme-main" :aria-label="copiedCredentialId === entry.id ? '已複製' : '複製編號'"><i class="ph-bold" :class="copiedCredentialId === entry.id ? 'ph-check' : 'ph-copy'"></i></button>
+                                </div>
+                                <div v-if="credentialImageSrc(entry.image) || safeCredentialUrl(entry.link)" class="flex gap-2 mt-3">
+                                    <button v-if="credentialImageSrc(entry.image)" @click="openCredentialPreview(entry, $event)" class="vault-browse vault-action primary flex-1"><i class="ph-bold ph-scan"></i>查看圖片</button>
+                                    <a v-if="safeCredentialUrl(entry.link)" :href="safeCredentialUrl(entry.link)" target="_blank" rel="noopener noreferrer" class="vault-action secondary flex-1"><i class="ph-bold ph-arrow-square-out"></i>開啟訂單</a>
+                                </div>
+                                <div v-if="entry.traveler || entry.notes" class="mt-3 border-t border-slate-100 pt-2">
+                                    <button @click="expandedCredentials[entry.id] = !expandedCredentials[entry.id]" class="vault-browse flex items-center justify-between w-full min-h-[32px] text-xs font-bold text-slate-600" :aria-expanded="!!expandedCredentials[entry.id]">姓名與備註<i class="ph-bold" :class="expandedCredentials[entry.id] ? 'ph-caret-up' : 'ph-caret-down'"></i></button>
+                                    <div v-if="expandedCredentials[entry.id]" class="mt-2 text-xs leading-relaxed text-slate-600"><div v-if="entry.traveler" class="mb-2"><i class="ph-bold ph-user mr-1"></i>{{ entry.traveler }}</div><p v-if="entry.notes" class="bg-slate-50 rounded-lg p-3 whitespace-pre-wrap break-words">{{ entry.notes }}</p></div>
+                                </div>
+                            </article>
                             </div>
-                            <div v-if="entry.bookingNumber" class="bg-slate-50 rounded-xl p-3 mt-3 flex items-center gap-2">
-                                <div class="flex-1 min-w-0"><div class="text-[9px] font-bold text-slate-400 mb-1">訂單／憑證編號</div><div class="vault-code text-sm font-black text-slate-700">{{ maskedCredentialCode(entry) }}</div></div>
-                                <button @click="toggleCredentialReveal(entry.id)" class="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-500"><i class="ph-bold" :class="revealedCredentials[entry.id] ? 'ph-eye-slash' : 'ph-eye'"></i></button>
-                                <button @click="copyCredentialCode(entry.bookingNumber)" class="w-9 h-9 rounded-lg bg-white border border-slate-200 text-theme-main"><i class="ph-bold ph-copy"></i></button>
-                            </div>
-                            <div v-if="entry.traveler" class="text-xs text-slate-500 mt-3"><i class="ph-bold ph-user mr-1 text-slate-400"></i>{{ entry.traveler }}</div>
-                            <div v-if="entry.notes" class="text-xs leading-relaxed text-slate-500 bg-amber-50/70 border border-amber-100 rounded-lg p-2.5 mt-3 whitespace-pre-wrap">{{ entry.notes }}</div>
-                            <a v-if="entry.image" :href="entry.image" target="_blank" class="block mt-3"><img :src="entry.image" alt="憑證圖片" class="vault-image"></a>
-                            <a v-if="safeCredentialUrl(entry.link)" :href="safeCredentialUrl(entry.link)" target="_blank" rel="noopener noreferrer" class="mt-3 w-full flex items-center justify-center gap-1.5 border border-slate-200 bg-white text-slate-600 py-2.5 rounded-xl text-xs font-bold"><i class="ph-bold ph-arrow-square-out"></i>開啟訂單／票券連結</a>
-                        </div>
+                        </section>
                     </div>
                 </template>
             </div>
@@ -1372,6 +1418,9 @@
                 const vaultPassphrase = ref(''), vaultPassphraseConfirm = ref(''), vaultError = ref('');
                 const showCredentialForm = ref(false), editingCredentialId = ref(null), credentialFormError = ref('');
                 const revealedCredentials = reactive({});
+                const credentialSearch = ref(''), credentialFilter = ref('all'), expandedCredentials = reactive({}), copiedCredentialId = ref(null);
+                const credentialPreview = ref(null), credentialPreviewFit = ref(true), credentialPreviewZoom = ref(1), credentialPreviewError = ref(false);
+                let credentialPreviewTrigger = null, credentialCopyTimer = null;
                 const credentialForm = reactive({ type:'ticket', title:'', provider:'', dateTime:'', bookingNumber:'', traveler:'', link:'', notes:'', image:'' });
                 const mapSearch = query => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 const shoppingZones = [
@@ -1685,6 +1734,7 @@
                 };
                 const clearCredentialForm = () => Object.assign(credentialForm, { type:'ticket', title:'', provider:'', dateTime:'', bookingNumber:'', traveler:'', link:'', notes:'', image:'' });
                 const createVault = async () => {
+                    if (isReadOnly.value || vaultSaving.value) return;
                     vaultError.value = '';
                     if (!window.crypto?.subtle) { vaultError.value = '此瀏覽器不支援加密功能，請改用新版 Safari 或 Chrome。'; return; }
                     if (vaultPassphrase.value.length < 6) { vaultError.value = '密碼至少需要 6 碼。'; return; }
@@ -1703,6 +1753,7 @@
                     finally { vaultSaving.value = false; }
                 };
                 const unlockVault = async () => {
+                    if (vaultSaving.value) return;
                     vaultError.value = '';
                     if (!vaultPassphrase.value) { vaultError.value = '請輸入憑證密碼。'; return; }
                     vaultSaving.value = true;
@@ -1714,11 +1765,14 @@
                     finally { vaultSaving.value = false; }
                 };
                 const lockVault = () => {
+                    closeCredentialPreview(); credentialSearch.value = ''; credentialFilter.value = 'all'; copiedCredentialId.value = null;
+                    clearTimeout(credentialCopyTimer); Object.keys(expandedCredentials).forEach(key => delete expandedCredentials[key]);
                     vaultKey = null; vaultEntries.value = []; vaultUnlocked.value = false; vaultPassphrase.value = ''; vaultPassphraseConfirm.value = ''; vaultError.value = '';
                     Object.keys(revealedCredentials).forEach(key => delete revealedCredentials[key]);
                     closeCredentialForm();
                 };
                 const resetVault = async () => {
+                    if (isReadOnly.value || vaultSaving.value) return;
                     const answer = prompt('這會永久刪除全部加密憑證。若確定，請輸入「清除」：');
                     if (answer !== '清除') return;
                     try {
@@ -1730,6 +1784,20 @@
                 };
                 const getCredentialType = type => CREDENTIAL_TYPES.find(item => item.val === type) || CREDENTIAL_TYPES[CREDENTIAL_TYPES.length - 1];
                 const sortedVaultEntries = computed(() => [...vaultEntries.value].sort((a,b) => (a.dateTime || '9999').localeCompare(b.dateTime || '9999')));
+                const credentialFilters = computed(() => [{val:'all', label:'全部', emoji:'', count:vaultEntries.value.length}, ...CREDENTIAL_TYPES.map(type => ({...type, count:vaultEntries.value.filter(entry => (CREDENTIAL_TYPES.some(t => t.val === entry.type) ? entry.type : 'other') === type.val).length})).filter(type => type.count)]);
+                const credentialGroups = computed(() => {
+                    const query = credentialSearch.value.trim().toLocaleLowerCase();
+                    const groups = new Map();
+                    for (const entry of sortedVaultEntries.value) {
+                        const type = getCredentialType(entry.type);
+                        if (credentialFilter.value !== 'all' && type.val !== credentialFilter.value) continue;
+                        if (query && ![entry.title, entry.provider, entry.bookingNumber, entry.traveler, entry.notes, type.label].some(value => String(value || '').toLocaleLowerCase().includes(query))) continue;
+                        const key = /^\d{4}-\d{2}-\d{2}/.test(entry.dateTime || '') && !Number.isNaN(new Date(entry.dateTime).getTime()) ? entry.dateTime.slice(0,10) : 'undated';
+                        if (!groups.has(key)) groups.set(key, {key, label:key === 'undated' ? '未設定日期' : new Intl.DateTimeFormat('zh-TW',{month:'numeric', day:'numeric', weekday:'short'}).format(new Date(key+'T12:00:00')), entries:[]});
+                        groups.get(key).entries.push(entry);
+                    }
+                    return [...groups.values()].sort((a,b) => a.key === 'undated' ? 1 : b.key === 'undated' ? -1 : a.key.localeCompare(b.key));
+                });
                 const formatCredentialDate = value => {
                     if (!value) return '';
                     const date = new Date(value);
@@ -1742,14 +1810,54 @@
                     return code.length <= 4 ? '••••' : `•••• •••• ${code.slice(-4)}`;
                 };
                 const toggleCredentialReveal = id => revealedCredentials[id] = !revealedCredentials[id];
-                const copyCredentialCode = async code => {
-                    try { await navigator.clipboard.writeText(String(code)); alert('已複製憑證編號'); }
+                const copyCredentialCode = async (code, id) => {
+                    const tripId = currentTripId.value;
+                    try { await navigator.clipboard.writeText(String(code)); if (currentTripId.value !== tripId || !vaultUnlocked.value) return; copiedCredentialId.value = id; clearTimeout(credentialCopyTimer); credentialCopyTimer = setTimeout(() => copiedCredentialId.value = null, 1800); }
                     catch (_) { prompt('請複製憑證編號：', String(code)); }
                 };
                 const safeCredentialUrl = value => {
                     if (!value) return '';
                     try { const url = new URL(value); return ['http:','https:'].includes(url.protocol) ? url.href : ''; } catch (_) { return ''; }
                 };
+                const credentialImageSrc = value => {
+                    if (typeof value !== 'string') return '';
+                    if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z\d+/=\s]+$/i.test(value)) return value;
+                    return safeCredentialUrl(value);
+                };
+                const closeCredentialPreview = () => {
+                    credentialPreview.value = null; credentialPreviewError.value = false;
+                    const trigger = credentialPreviewTrigger; credentialPreviewTrigger = null;
+                    nextTick(() => { if (trigger?.isConnected) trigger.focus(); });
+                };
+                const openCredentialPreview = (entry, event) => {
+                    if (!vaultUnlocked.value) return;
+                    const src = credentialImageSrc(entry.image); if (!src) return;
+                    credentialPreviewTrigger = event?.currentTarget || document.activeElement;
+                    credentialPreview.value = {id:entry.id, title:entry.title || '憑證圖片', src};
+                    credentialPreviewFit.value = true; credentialPreviewZoom.value = 1; credentialPreviewError.value = false;
+                    nextTick(() => document.getElementById('vault-preview-close')?.focus());
+                };
+                const fitCredentialPreview = () => { credentialPreviewFit.value = true; credentialPreviewZoom.value = 1; };
+                const zoomCredentialPreview = direction => {
+                    if (!credentialPreview.value) return;
+                    if (credentialPreviewFit.value) { if (direction < 0) return; credentialPreviewFit.value = false; credentialPreviewZoom.value = 1; }
+                    else credentialPreviewZoom.value = Math.max(1, Math.min(4, credentialPreviewZoom.value + (direction > 0 ? .5 : -.5)));
+                };
+                const handleCredentialPreviewKey = event => {
+                    if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomCredentialPreview(1); }
+                    if (event.key === '-') { event.preventDefault(); zoomCredentialPreview(-1); }
+                    if (event.key === 'Tab') {
+                        const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')];
+                        const first = buttons[0], last = buttons.at(-1);
+                        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+                    }
+                };
+                watch([vaultUnlocked, currentTripId, viewMode], () => { closeCredentialPreview(); });
+                watch(isReadOnly, locked => { if (locked) closeCredentialForm(); });
+                watch(currentTripId, () => { credentialSearch.value = ''; credentialFilter.value = 'all'; copiedCredentialId.value = null; Object.keys(expandedCredentials).forEach(key => delete expandedCredentials[key]); Object.keys(revealedCredentials).forEach(key => delete revealedCredentials[key]); }, {flush:'sync'});
+                watch(credentialFilters, filters => { if (!filters.some(filter => filter.val === credentialFilter.value)) credentialFilter.value = 'all'; });
+                watch(vaultEntries, entries => { if (credentialPreview.value && !entries.some(entry => entry.id === credentialPreview.value.id && credentialImageSrc(entry.image) === credentialPreview.value.src)) closeCredentialPreview(); }, {deep:true});
                 const openCredentialForm = (entry = null) => { if(isReadOnly.value) return;
                     credentialFormError.value = ''; editingCredentialId.value = entry?.id || null;
                     clearCredentialForm();
@@ -1758,6 +1866,7 @@
                 };
                 const closeCredentialForm = () => { showCredentialForm.value = false; editingCredentialId.value = null; credentialFormError.value = ''; clearCredentialForm(); };
                 const handleCredentialImage = event => {
+                    if (isReadOnly.value) return;
                     const file = event.target.files?.[0]; if (!file) return;
                     if (!file.type.startsWith('image/')) { credentialFormError.value = '只能上傳圖片格式。'; return; }
                     const reader = new FileReader();
@@ -2410,6 +2519,9 @@
                     showShoppingRoute, shoppingZones, shoppingStores, shoppingPriorityStores, shoppingRouteLinks, selectedShoppingStore,
                     vaultEnvelope, vaultEntries, vaultUnlocked, vaultSaving, vaultPassphrase, vaultPassphraseConfirm, vaultError,
                     showCredentialForm, editingCredentialId, credentialForm, credentialFormError, revealedCredentials, sortedVaultEntries,
+                    credentialSearch, credentialFilter, credentialFilters, credentialGroups, expandedCredentials, copiedCredentialId,
+                    credentialPreview, credentialPreviewFit, credentialPreviewZoom, credentialPreviewError,
+                    credentialImageSrc, openCredentialPreview, closeCredentialPreview, fitCredentialPreview, zoomCredentialPreview, handleCredentialPreviewKey,
                     showManualPinModal, manualPinMode, manualPinData,
                     TYPES_LIST, CREDENTIAL_TYPES, THEME_CHOICES, autoThemeColor, setThemeColor,
                     addFlight, removeFlight, calculateLayover, formatFlightDate,
