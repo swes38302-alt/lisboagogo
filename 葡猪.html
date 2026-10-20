@@ -1594,6 +1594,7 @@
                     markersLayer = L.layerGroup().addTo(map);
                 };
                 let applyingTripData = false;
+                let itineraryDragSession = null, deferredDragTripReload = null, sortableInitQueued = false;
                 const syncStates = new Map();
                 const syncMessage = ref('');
                 const draftKey = id => `travelDraft:v1:${id}`;
@@ -2105,26 +2106,70 @@
                     } catch(e) {}
                 };
                 
-                const initSortable = () => { 
-                    nextTick(() => { 
-                        const el = document.getElementById('itinerary-list'); 
-                        if(sortableInstance) { sortableInstance.destroy(); sortableInstance = null; } 
-                        if(!el) return; 
-                        sortableInstance = new Sortable(el, { 
+                const finishItineraryDrag = () => {
+                    const session = itineraryDragSession;
+                    // Restore Vue's original DOM before applying a keyed-array update.
+                    if (session) session.nodes.forEach(node => {
+                        if (node.parentNode === session.el) session.el.appendChild(node);
+                        node.classList.remove('sortable-ghost', 'sortable-drag', 'sortable-chosen');
+                        ['transform', 'transition', 'will-change'].forEach(property => node.style.removeProperty(property));
+                    });
+                    // Fallback clones live outside Vue; interrupted touch gestures may leave one behind.
+                    document.querySelectorAll('body > .itinerary-drag-fallback').forEach(node => node.remove());
+                    itineraryDragSession = null;
+                    document.body?.classList.remove('is-dragging');
+                    const reload = deferredDragTripReload; deferredDragTripReload = null;
+                    if (reload && reload === currentTripId.value) loadCurrentTripData();
+                    return session;
+                };
+                const cancelItineraryDrag = () => {
+                    if (!itineraryDragSession) return;
+                    itineraryDragSession.cancelled = true;
+                    const instance = sortableInstance; sortableInstance = null;
+                    try { instance?.destroy(); } finally { finishItineraryDrag(); initSortable(); }
+                };
+                const handleDragVisibility = () => { if (document.visibilityState !== 'visible') cancelItineraryDrag(); };
+                const initSortable = () => {
+                    if (sortableInitQueued) return;
+                    sortableInitQueued = true;
+                    nextTick(() => {
+                        sortableInitQueued = false;
+                        if (itineraryDragSession) return; // Never destroy an active fallback ghost.
+                        const el = document.getElementById('itinerary-list');
+                        if (sortableInstance?.el === el && el && viewMode.value === 'plan') { sortableInstance.option('disabled', isReadOnly.value); return; }
+                        if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+                        if (!el || viewMode.value !== 'plan') return;
+                        sortableInstance = new Sortable(el, {
+                            draggable: '.itinerary-wrapper',
                             handle: '.drag-handle', disabled: isReadOnly.value, animation: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
                             ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', chosenClass: 'sortable-chosen',
                             filter: '.no-drag', preventOnFilter: false, delay: 0, delayOnTouchOnly: false, touchStartThreshold: 3,
-                            forceFallback: true, fallbackClass: 'sortable-drag', fallbackOnBody: true, fallbackTolerance: 3,
+                            forceFallback: true, fallbackClass: 'itinerary-drag-fallback', fallbackOnBody: true, fallbackTolerance: 3,
                             scrollSensitivity: 80, scrollSpeed: 15, bubbleScroll: true,
+                            onChoose: () => {
+                                if (isReadOnly.value) return;
+                                itineraryDragSession = { tripId: currentTripId.value, date: currentDay.value.fullDate, ids: currentDay.value.items.map(item => item.id), el, nodes: Array.from(el.children).filter(node => node.matches('.itinerary-wrapper')), cancelled: false };
+                            },
                             onStart: () => { document.body.classList.add('is-dragging'); if(navigator.vibrate) navigator.vibrate(30); },
-                            onEnd: (e) => { 
-                                document.body.classList.remove('is-dragging');
-                                if(isReadOnly.value || e.oldIndex === e.newIndex) { if (isReadOnly.value) initSortable(); return; }
-                                const item = currentDay.value.items.splice(e.oldIndex, 1)[0]; 
-                                currentDay.value.items.splice(e.newIndex, 0, item); 
-                                if(currentDay.value.items.length > 0) currentDay.value.items[currentDay.value.items.length-1].connected = false; 
-                                if(viewMode.value === 'map') nextTick(() => drawRoute()); 
-                            } 
+                            onUnchoose: () => {
+                                const session = itineraryDragSession;
+                                nextTick(() => { if (session && itineraryDragSession === session) finishItineraryDrag(); });
+                            },
+                            onEnd: e => {
+                                try {
+                                    const session = finishItineraryDrag();
+                                    if (!session || session.cancelled || isReadOnly.value || currentTripId.value !== session.tripId || currentDay.value.fullDate !== session.date || viewMode.value !== 'plan') return;
+                                    const from = e.oldDraggableIndex ?? e.oldIndex, to = e.newDraggableIndex ?? e.newIndex;
+                                    if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= session.ids.length || to >= session.ids.length || from === to) return;
+                                    // Resolve against the freshly merged day, not a stale array/index.
+                                    const day = currentDay.value;
+                                    if (!TripSync.equal(day.items.map(item => item.id), session.ids)) { syncMessage.value = '拖曳期間此日行程順序或卡片已更新，已保留最新內容，請再拖曳一次。'; return; }
+                                    const next = [...day.items], [item] = next.splice(from, 1);
+                                    next.splice(to, 0, item);
+                                    if (next.length) next[next.length - 1].connected = false;
+                                    day.items = next; // One atomic reorder; never persist a temporary missing card.
+                                } finally { document.body?.classList.remove('is-dragging'); resizeAllTextareas(); initSortable(); }
+                            }
                         }); 
                     }); 
                 };
@@ -2190,6 +2235,7 @@
                 };
                 
                 const loadCurrentTripData = () => {
+                    if (itineraryDragSession) { deferredDragTripReload = currentTripId.value; return; }
                     const t = allTrips.value[currentTripId.value]; if(!t) return;
                     const tripId = currentTripId.value;
                     const incoming = TripSync.editable(t);
@@ -2257,11 +2303,13 @@
                 };
 
                 watch(viewMode, (newVal) => {
+                    if (newVal !== 'plan') cancelItineraryDrag();
                     if (loadedTripId === currentTripId.value) localStorage.setItem(`lastView:${currentTripId.value}`, newVal);
                     if (newVal === 'map') { nextTick(() => { setTimeout(() => { initializeMap(); map.invalidateSize(); drawRoute(); }, 100); }); }
                     if (newVal === 'plan') { resizeAllTextareas(); initSortable(); centerSelectedDay(); }
                 });
                 watch(currentDayIdx, () => {
+                    if (itineraryDragSession && currentDay.value.fullDate !== itineraryDragSession.date) cancelItineraryDrag();
                     if (loadedTripId === currentTripId.value && currentDay.value.fullDate) localStorage.setItem(`lastDay:${currentTripId.value}`, currentDay.value.fullDate);
                     initSortable(); resizeAllTextareas(); if (viewMode.value === 'map') nextTick(() => drawRoute());
                 });
@@ -2381,8 +2429,8 @@
                 const finishEditingTodo = () => { editingTodoId.value = null; todoBeforeEdit.value = null; };
                 const cancelEditingTodo = () => { if (todoBeforeEdit.value && editingTodoId.value) { const todo = todos.value.find(t => t.id === editingTodoId.value); if (todo) { todo.text = todoBeforeEdit.value.text; todo.deadline = todoBeforeEdit.value.deadline; } } editingTodoId.value = null; todoBeforeEdit.value = null; };
                 const cancelPendingGestures = () => { clearLongPress(); clearTodoLongPress(); expenseTapTimes = new WeakMap(); expenseLongPressed = new WeakSet(); cancelExpenseEdit(); expenseDeleteTarget.value = null; finishEditingTodo(); editingParticipantIdx.value = -1; globalMenu.visible = false; };
-                watch(isReadOnly, locked => { if (locked) { cancelPendingGestures(); clearItineraryFieldExpansion(); } initSortable(); resizeAllTextareas(); }, { flush:'sync' });
-                watch(currentTripId, () => { cancelPendingGestures(); clearItineraryFieldExpansion(); isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; }, { flush:'sync' });
+                watch(isReadOnly, locked => { if (locked) { cancelPendingGestures(); cancelItineraryDrag(); clearItineraryFieldExpansion(); } initSortable(); resizeAllTextareas(); }, { flush:'sync' });
+                watch(currentTripId, () => { cancelPendingGestures(); cancelItineraryDrag(); clearItineraryFieldExpansion(); isUnlocked.value = false; showUnlockPrompt.value = false; unlockPassword.value = ''; }, { flush:'sync' });
                 const calculateLayover = i => { const c = flights.value[i], n = flights.value[i+1]; if(!c || !n) return ''; const m = (t, d) => { const [h, mm] = t.split(':').map(Number); return h*60 + mm + (d ? 1440 : 0); }; let a = m(c.arrTime, c.nextDay), d = m(n.depTime, false); if(d < a) d += 1440; const df = d - a; return `${Math.floor(df/60)}h ${df%60}m`; };
 
                 // === 📦 導出行程資料功能 ===
@@ -2543,8 +2591,8 @@
                     const index = days.value.findIndex(day => day.fullDate === date);
                     if (index >= 0) { currentDayIdx.value = index; viewMode.value = 'plan'; centerSelectedDay(); }
                 };
-                onMounted(() => { syncData(); applyGlobalTheme(false); document.addEventListener('visibilitychange', updateDayWhenReturning); });
-                onUnmounted(() => document.removeEventListener('visibilitychange', updateDayWhenReturning));
+                onMounted(() => { syncData(); applyGlobalTheme(false); document.addEventListener('visibilitychange', updateDayWhenReturning); document.addEventListener('visibilitychange', handleDragVisibility); document.addEventListener('touchcancel', cancelItineraryDrag); window.addEventListener?.('blur', cancelItineraryDrag); });
+                onUnmounted(() => { cancelItineraryDrag(); sortableInstance?.destroy(); document.removeEventListener('visibilitychange', updateDayWhenReturning); document.removeEventListener('visibilitychange', handleDragVisibility); document.removeEventListener('touchcancel', cancelItineraryDrag); window.removeEventListener?.('blur', cancelItineraryDrag); });
                 
                 return {
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, syncMessage,
