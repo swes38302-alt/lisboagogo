@@ -16,7 +16,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    <script src="assets/trip-sync.js?v=20261002"></script>
+    <script src="assets/trip-sync.js?v=20261109"></script>
+    <script src="assets/map-links.js?v=20261109"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
@@ -777,6 +778,15 @@
                         </div>
                     </div>
                     <div>
+                        <label for="external-map-provider" class="text-[10px] font-bold text-slate-400 uppercase">地圖跳轉</label>
+                        <select id="external-map-provider" v-model="settings.mapProvider" :disabled="isReadOnly" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-theme-main outline-none">
+                            <option value="auto">自動（韓國 NAVER／其他 Google）</option>
+                            <option value="google">Google Maps</option>
+                            <option value="naver">NAVER Map</option>
+                        </select>
+                        <p class="text-[11px] text-slate-500 mt-1">目前使用 {{ mapProviderLabel }}</p>
+                    </div>
+                    <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase">行程主題色</label>
                         <div class="flex flex-wrap items-center gap-2 mt-1">
                             <button type="button" @click="setThemeColor('')" class="h-9 px-3 rounded-lg border text-xs font-bold" :class="!settings.themeColor ? 'border-[var(--theme-primary)] bg-white text-theme-main' : 'border-slate-200 bg-white text-slate-500'" :aria-pressed="!settings.themeColor">依地點自動</button>
@@ -1099,7 +1109,7 @@
                                         <span v-if="isReadOnly" class="itinerary-location-readonly flex-1 min-w-0 text-xs font-medium leading-relaxed break-words">{{ item.location || '地點待填' }}</span>
                                         <input v-else :disabled="isReadOnly" v-model="item.location" @blur="checkLocation(item)" @input="item.error = false" class="input-invisible text-xs font-medium placeholder-slate-300" :class="{'text-red-500 font-bold': item.error}" placeholder="輸入地點">
                                         <span v-if="item.isManualPin" class="manual-pin-badge">手動</span>
-                                        <a v-if="item.location && (item.lat || !item.isManualPin)" :href="getGoogleMapUrl(item)" target="_blank" class="btn-gmap"><i class="ph-bold ph-navigation-arrow"></i></a>
+                                        <a v-if="item.location || (item.isManualPin && item.lat != null && item.lon != null)" :href="getExternalMapUrl(item)" :data-naver-app="getExternalMapAppUrl(item) || null" :title="mapProviderLabel" :aria-label="'使用 ' + mapProviderLabel + ' 開啟地點'" target="_blank" rel="noopener noreferrer" class="btn-gmap"><i class="ph-bold ph-navigation-arrow"></i></a>
                                     </div>
                                     <div v-if="item.error" class="location-error-hint">
                                         <i class="ph-bold ph-warning"></i><span>地址搜尋不到</span>
@@ -1407,7 +1417,7 @@
             setup() {
                 const viewMode=ref('plan'), loading=ref(false), loadingText=ref(''), isConnected=ref(false), showSettings=ref(false), showTripList=ref(false);
                 const allTrips=ref({}), currentTripId=ref(localStorage.getItem('currentTripId')||null), tripOrder=ref([]);
-                const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '', themeColor: '' });
+                const settings = reactive({ name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '', themeColor: '', mapProvider: 'auto' });
                 const flights=ref([]), newFlight=reactive({dep:'TPE',arr:'LIS',depTime:'23:30',arrTime:'06:15',flightNumber:'CI000',nextDay:false,depDate:new Date().toISOString().split('T')[0]});
                 const currentDayIdx=ref(0), days=ref([{fullDate:new Date().toISOString().split('T')[0],title:'Day 1',items:[]}]);
                 const todayDateKey=ref('');
@@ -1984,18 +1994,11 @@
                 const getPrevItem = i => i > 0 ? currentDay.value.items[i-1] : null;
                 const getWeatherIcon = i => i === 'sun' ? 'ph-fill ph-sun text-yellow-300' : (i === 'rain' ? 'ph-fill ph-cloud-rain text-blue-300' : 'ph-fill ph-cloud text-white/90');
 
-                const getGoogleMapUrl = (item) => {
-                    if (item.isManualPin && item.lat && item.lon) {
-                        return `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
-                    }
-                    const searchTerm = item.location?.trim() || item.activity?.trim();
-                    if (searchTerm) {
-                        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchTerm)}`;
-                    } else if (item.lat && item.lon) {
-                        return `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
-                    }
-                    return '#';
-                };
+                const getExternalMapLinks = item => TripMapLinks.build(item, settings, window.location.href);
+                const getExternalMapUrl = item => getExternalMapLinks(item).href;
+                const getExternalMapAppUrl = item => getExternalMapLinks(item).appUrl;
+                const mapProviderLabel = computed(() => TripMapLinks.providerLabel(TripMapLinks.resolveProvider(settings)));
+                const externalMapNavigation = TripMapLinks.createNavigation({ window, document, navigator });
 
                 const openManualPinModal = () => { if(isReadOnly.value) return;
                     manualPinData.gmapUrl = '';
@@ -2228,7 +2231,7 @@
                 
                 const createNewTrip = () => { 
                     const id = 't_' + Date.now(); 
-                    const d = { settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:'', themeColor:''}, days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], participants:[], todos:[] };
+                    const d = { settings: {name:'My Travel', location:'', currency:'€', rate:34.5, isLocked:false, password:'', themeColor:'', mapProvider:'auto'}, days: [{fullDate:new Date().toISOString().split('T')[0], title:'Day 1', items:[]}], participants:[], todos:[] };
                     allTrips.value[id] = d; currentTripId.value = id; localStorage.setItem('currentTripId', id); 
                     if(db) { db.ref('trips/' + id).set(d); const newOrder = [id, ...tripOrder.value]; tripOrder.value = newOrder; db.ref('tripOrder').set(newOrder); } 
                     loadCurrentTripData(); return id; 
@@ -2551,8 +2554,10 @@
                     if (item.isManualPin) { metaHtml += `<span class="map-popup-tag" style="background:#F3E8FF;color:#7C3AED;border-color:#E9D5FF;">📍 手動標記</span>`; }
                     let noteHtml = '';
                     if (item.note) { noteHtml = `<div class="map-popup-note"><i class="ph-fill ph-info"></i><span>${escapeHtml(item.note)}</span></div>`; }
-                    const gmapUrl = getGoogleMapUrl(item);
-                    return `<div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};"><div class="map-popup-header"><div class="map-popup-header-icon">${escapeHtml(emoji)}</div><div class="map-popup-header-content"><div class="map-popup-title">${escapeHtml(item.activity || '未命名地點')}</div><div class="map-popup-time"><i class="ph-bold ph-clock"></i> ${escapeHtml(item.time || '--:--')} · D${dayIdx + 1} · ${escapeHtml(typeName)}</div></div></div><div class="map-popup-body"><div class="map-popup-location"><i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i><span>${escapeHtml(item.location || '未設定地址')}</span></div>${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}${noteHtml}<div class="map-popup-actions">${gmapUrl !== '#' ? `<a href="${escapeHtml(gmapUrl)}" target="_blank" rel="noopener noreferrer" class="map-popup-btn map-popup-btn-secondary"><i class="ph-bold ph-navigation-arrow"></i> Google Maps</a>` : ''}</div></div></div>`;
+                    const externalMapLinks = getExternalMapLinks(item);
+                    const gmapUrl = externalMapLinks.href;
+                    const mapAppAttribute = externalMapLinks.appUrl ? ` data-naver-app="${escapeHtml(externalMapLinks.appUrl)}"` : '';
+                    return `<div class="map-popup-card" style="--header-color-1: ${headerColor1}; --header-color-2: ${headerColor2};"><div class="map-popup-header"><div class="map-popup-header-icon">${escapeHtml(emoji)}</div><div class="map-popup-header-content"><div class="map-popup-title">${escapeHtml(item.activity || '未命名地點')}</div><div class="map-popup-time"><i class="ph-bold ph-clock"></i> ${escapeHtml(item.time || '--:--')} · D${dayIdx + 1} · ${escapeHtml(typeName)}</div></div></div><div class="map-popup-body"><div class="map-popup-location"><i class="ph-fill ph-map-pin" style="color:${item.isManualPin ? '#8B5CF6' : '#14B8A6'}"></i><span>${escapeHtml(item.location || '未設定地址')}</span></div>${metaHtml ? `<div class="map-popup-meta">${metaHtml}</div>` : ''}${noteHtml}<div class="map-popup-actions">${gmapUrl !== '#' ? `<a href="${escapeHtml(gmapUrl)}"${mapAppAttribute} target="_blank" rel="noopener noreferrer" class="map-popup-btn map-popup-btn-secondary"><i class="ph-bold ph-navigation-arrow"></i> ${escapeHtml(externalMapLinks.label)}</a>` : ''}</div></div></div>`;
                 };
 
                 const drawRoute = async () => {
@@ -2591,8 +2596,8 @@
                     const index = days.value.findIndex(day => day.fullDate === date);
                     if (index >= 0) { currentDayIdx.value = index; viewMode.value = 'plan'; centerSelectedDay(); }
                 };
-                onMounted(() => { syncData(); applyGlobalTheme(false); document.addEventListener('visibilitychange', updateDayWhenReturning); document.addEventListener('visibilitychange', handleDragVisibility); document.addEventListener('touchcancel', cancelItineraryDrag); window.addEventListener?.('blur', cancelItineraryDrag); });
-                onUnmounted(() => { cancelItineraryDrag(); sortableInstance?.destroy(); document.removeEventListener('visibilitychange', updateDayWhenReturning); document.removeEventListener('visibilitychange', handleDragVisibility); document.removeEventListener('touchcancel', cancelItineraryDrag); window.removeEventListener?.('blur', cancelItineraryDrag); });
+                onMounted(() => { document.addEventListener('click', externalMapNavigation.handleClick); syncData(); applyGlobalTheme(false); document.addEventListener('visibilitychange', updateDayWhenReturning); document.addEventListener('visibilitychange', handleDragVisibility); document.addEventListener('touchcancel', cancelItineraryDrag); window.addEventListener?.('blur', cancelItineraryDrag); });
+                onUnmounted(() => { document.removeEventListener('click', externalMapNavigation.handleClick); externalMapNavigation.dispose(); cancelItineraryDrag(); sortableInstance?.destroy(); document.removeEventListener('visibilitychange', updateDayWhenReturning); document.removeEventListener('visibilitychange', handleDragVisibility); document.removeEventListener('touchcancel', cancelItineraryDrag); window.removeEventListener?.('blur', cancelItineraryDrag); });
                 
                 return {
                     viewMode, loading, loadingText, isConnected, showSettings, showTripList, syncMessage,
@@ -2622,7 +2627,7 @@
                     applyGlobalTheme, getWeatherIcon, autoSetRate,
                     getTypeName, getTypeEmoji, getTypeColor, getMealSlot, getMealCardClass, autoResize, resizeAllTextareas,
                     isConnectedToNext, isConnectedToPrev, getPrevItem, 
-                    checkLocation, getGoogleMapUrl, getWeekdayAbbr,
+                    checkLocation, getExternalMapUrl, getExternalMapAppUrl, mapProviderLabel, getWeekdayAbbr,
                     openGlobalMenu, closeGlobalMenu, confirmTypeSelection,
                     addParticipant, startEditingParticipant, finishEditingParticipant,
                     addTodo, deleteTodo, getSortedTodosByCategory,

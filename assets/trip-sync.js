@@ -12,7 +12,7 @@
     const editable = trip => ({
         days: (trip.days || []).map(day => ({ ...clone(day), items: (Array.isArray(day.items) ? day.items : []).map(item => ({ ...clone(item), error: item.error || false })) })).sort((a, b) => String(a.fullDate || '').localeCompare(String(b.fullDate || ''))),
         expenses: clone(trip.expenses || []),
-        settings: { name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '', themeColor: '', ...clone(trip.settings || {}) },
+        settings: { name: '新旅程', location: '', currency: '€', rate: 34.5, isLocked: false, password: '', themeColor: '', mapProvider: 'auto', ...clone(trip.settings || {}) },
         participants: clone(trip.participants || []), todos: clone(trip.todos || []),
         flights: trip.flights ? clone(Object.values(trip.flights)) : []
     });
