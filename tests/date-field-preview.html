@@ -1,0 +1,6 @@
+<!doctype html><html lang="zh-TW"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日期欄位獨立測試（不連線雲端）</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script><script src="../assets/date-display.js"></script>
+<style>body{font:16px sans-serif;padding:24px}.date-field{display:inline-flex;position:relative;padding:12px;background:#f1f5f9}.date-field .date-field-native{position:absolute;inset:0;width:100%;height:100%;opacity:0}output{display:block;padding:12px}.date-field-text{pointer-events:none}</style>
+<main id="app"><p>僅測試本頁資料，不存取行程或 Firebase。</p><date-field v-model="date" label="測試日期" :disabled="locked"></date-field><output>{{date}}</output><date-field v-model="stamp" type="datetime-local" label="測試憑證日期" :disabled="locked"></date-field><output>{{stamp}}</output><button @click="locked=!locked">{{locked?'解鎖':'上鎖'}}</button></main>
+<script>const app=Vue.createApp({data:()=>({date:'2026-12-17',stamp:'2026-12-17T09:05',locked:false})});app.component('date-field',DateDisplay.component);app.mount('#app');</script></html>

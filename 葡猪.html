@@ -18,9 +18,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
     <script src="assets/trip-sync.js?v=20261109"></script>
     <script src="assets/map-links.js?v=20261109"></script>
+    <script src="assets/date-display.js?v=20261109"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
+        .date-field { display:inline-flex; position:relative; align-items:center; justify-content:center; min-width:0; min-height:28px; font-variant-numeric:tabular-nums; cursor:pointer; }
+        .date-field-text { white-space:nowrap; pointer-events:none; }
+        .date-field .date-field-native { position:absolute; inset:0; width:100%; height:100%; min-width:0; opacity:0; cursor:pointer; }
+        .locked-mode .date-field .date-field-native { opacity:0; }
+        .date-field:focus-within { outline:2px solid var(--theme-primary); outline-offset:2px; border-radius:6px; }
+        .date-field-disabled { cursor:default; }
+        .date-field-disabled .date-field-native { pointer-events:none; }
         :root {
             --theme-primary: #006C84;
             --theme-light: #6EB5C0;
@@ -845,7 +853,7 @@
                             <div class="trip-drag-handle pt-1 flex-shrink-0"><i class="ph-bold ph-dots-six-vertical text-xl"></i></div>
                             <div class="flex-1 min-w-0" @click.stop="switchTrip(id)">
                                 <div class="font-bold text-base text-slate-800 mb-0.5 truncate">{{ allTrips[id]?.settings?.name || '未命名旅程' }}</div>
-                                <div class="text-[10px] text-slate-400 uppercase font-medium flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> {{ allTrips[id]?.days?.[0]?.fullDate || 'Plan' }}<span v-if="allTrips[id]?.days">• {{ allTrips[id].days.length }} 天</span></div>
+                                <div class="text-[10px] text-slate-400 uppercase font-medium flex items-center gap-1"><i class="ph-fill ph-calendar-blank"></i> {{ formatDate(allTrips[id]?.days?.[0]?.fullDate) || 'Plan' }}<span v-if="allTrips[id]?.days">• {{ allTrips[id].days.length }} 天</span></div>
                             </div>
                             <div class="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div v-if="currentTripId === id" class="bg-theme-main text-white text-[10px] px-2 py-0.5 rounded-full font-bold">CURRENT</div>
@@ -968,7 +976,7 @@
                         <input :disabled="isReadOnly" v-model="newFlight.arr" @input="e => newFlight.arr = e.target.value.toUpperCase()" placeholder="ARR" class="w-1/2 bg-slate-50 p-2 rounded text-sm uppercase font-bold text-center border-none">
                     </div>
                     <div class="mb-2 relative z-10">
-                        <input :disabled="isReadOnly" v-model="newFlight.depDate" type="date" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600">
+                        <date-field :disabled="isReadOnly" v-model="newFlight.depDate" label="新增航班日期" class="w-full bg-slate-50 p-2 rounded text-sm border-none text-center font-medium text-slate-600"></date-field>
                     </div>
                     <div class="flex gap-2 items-center mb-3 relative z-10">
                         <div class="flex-[2]"><input :disabled="isReadOnly" v-model="newFlight.depTime" type="time" class="w-full bg-slate-50 p-2 rounded text-sm border-none"></div>
@@ -1000,7 +1008,7 @@
                         </div>
                         <div class="flight-body">
                             <div class="mb-3 -mt-1">
-                                <input :disabled="isReadOnly" v-model="flight.depDate" type="date" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500">
+                                <date-field :disabled="isReadOnly" v-model="flight.depDate" label="航班日期" class="w-full bg-slate-50 p-1.5 rounded text-xs border-none text-center font-medium text-slate-500"></date-field>
                             </div>
                             <div class="flex justify-between items-center mb-4">
                                 <div class="text-left">
@@ -1072,7 +1080,7 @@
                 <div class="bg-white p-3 rounded-xl shadow-sm mb-4 border border-slate-100">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                            <input :disabled="isReadOnly" type="date" v-model="currentDay.fullDate" @change="sortDays()" class="text-xs text-slate-400 bg-transparent border-none p-0">
+                            <date-field :disabled="isReadOnly" v-model="currentDay.fullDate" label="行程日期" @change="sortDays()" class="text-xs text-slate-500 bg-transparent border-none p-0"></date-field>
                             <span class="text-xs text-slate-300 font-bold">{{ getWeekdayAbbr(currentDay.fullDate) }}</span>
                         </div>
                         <button @click="confirmAndDeleteDay" class="text-slate-300 hover:text-red-400"><i class="ph-bold ph-trash"></i></button>
@@ -1185,7 +1193,7 @@
                     <h2 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2"><i class="ph-duotone ph-check-square text-theme-main text-lg"></i> 新增待辦事項</h2>
                     <div class="space-y-2">
                         <input :disabled="isReadOnly" v-model="newTodo.text" @keyup.enter="addTodo" placeholder="例如：訂門票、換外幣" class="w-full bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700">
-                        <div class="flex gap-2"><select :disabled="isReadOnly" v-model="newTodo.category" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"><option value="before">出發前</option><option value="during">旅程中</option><option value="after">返家後</option></select><input :disabled="isReadOnly" v-model="newTodo.deadline" type="date" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"></div>
+                        <div class="flex gap-2"><select :disabled="isReadOnly" v-model="newTodo.category" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"><option value="before">出發前</option><option value="during">旅程中</option><option value="after">返家後</option></select><date-field :disabled="isReadOnly" v-model="newTodo.deadline" label="待辦截止日期" class="flex-1 bg-white border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-600"></date-field></div>
                         <button @click="addTodo" class="w-full bg-theme-main text-white py-2 rounded-lg font-bold text-sm"><i class="ph-bold ph-plus mr-1"></i> 新增</button>
                     </div>
                 </div>
@@ -1195,12 +1203,12 @@
                         <div v-for="todo in getSortedTodosByCategory(cat)" :key="todo.id" class="todo-item bg-white shadow-sm border border-slate-100" :class="{ 'completed': todo.completed, 'editing': editingTodoId === todo.id }" @touchstart="startTodoLongPress(todo)" @touchmove="clearTodoLongPress" @touchcancel="clearTodoLongPress" @touchend="clearTodoLongPress" @mousedown="startTodoLongPress(todo)" @mouseup="clearTodoLongPress" @mouseleave="clearTodoLongPress">
                             <div v-if="editingTodoId !== todo.id" class="flex items-start gap-3">
                                 <input :disabled="isReadOnly" type="checkbox" v-model="todo.completed" class="todo-checkbox mt-0.5 flex-shrink-0">
-                                <div class="flex-1 min-w-0"><div class="todo-text font-bold text-sm text-slate-700">{{ todo.text }}</div><div v-if="todo.deadline" class="text-xs text-slate-400 mt-1 flex items-center gap-1"><i class="ph-bold ph-calendar-blank"></i> {{ todo.deadline }}</div></div>
+                                <div class="flex-1 min-w-0"><div class="todo-text font-bold text-sm text-slate-700">{{ todo.text }}</div><div v-if="todo.deadline" class="text-xs text-slate-400 mt-1 flex items-center gap-1"><i class="ph-bold ph-calendar-blank"></i> {{ formatDate(todo.deadline) }}</div></div>
                                 <button @click="deleteTodo(todo.id)" class="text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><i class="ph-bold ph-trash"></i></button>
                             </div>
                             <div v-else class="space-y-2">
                                 <input :disabled="isReadOnly" v-model="todo.text" @keyup.enter="finishEditingTodo" class="todo-edit-input" placeholder="待辦事項">
-                                <input :disabled="isReadOnly" v-model="todo.deadline" type="date" class="todo-edit-input">
+                                <date-field :disabled="isReadOnly" v-model="todo.deadline" label="待辦截止日期" class="todo-edit-input"></date-field>
                                 <div class="flex gap-2"><button @click="finishEditingTodo" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-xs font-bold">完成</button><button @click="cancelEditingTodo" class="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold">取消</button></div>
                             </div>
                         </div>
@@ -1294,7 +1302,7 @@
                     <div class="space-y-3">
                         <div><label class="vault-label">類型</label><select :disabled="isReadOnly" v-model="credentialForm.type" class="vault-field"><option v-for="type in CREDENTIAL_TYPES" :key="type.val" :value="type.val">{{ type.emoji }} {{ type.label }}</option></select></div>
                         <div><label class="vault-label">名稱 *</label><input :disabled="isReadOnly" v-model="credentialForm.title" class="vault-field" placeholder="例如：東京迪士尼海洋門票"></div>
-                        <div class="grid grid-cols-2 gap-2"><div><label class="vault-label">平台／店家</label><input :disabled="isReadOnly" v-model="credentialForm.provider" class="vault-field" placeholder="Klook、飯店…"></div><div><label class="vault-label">日期時間</label><input :disabled="isReadOnly" v-model="credentialForm.dateTime" type="datetime-local" class="vault-field"></div></div>
+                        <div class="grid grid-cols-2 gap-2"><div><label class="vault-label">平台／店家</label><input :disabled="isReadOnly" v-model="credentialForm.provider" class="vault-field" placeholder="Klook、飯店…"></div><div><label class="vault-label">日期時間</label><date-field :disabled="isReadOnly" v-model="credentialForm.dateTime" type="datetime-local" label="憑證日期時間" class="vault-field w-full"></date-field></div></div>
                         <div><label class="vault-label">訂單／憑證編號</label><input :disabled="isReadOnly" v-model="credentialForm.bookingNumber" class="vault-field vault-code" autocomplete="off" placeholder="Booking ID、票券編號…"></div>
                         <div><label class="vault-label">旅客／訂房姓名</label><input :disabled="isReadOnly" v-model="credentialForm.traveler" class="vault-field" placeholder="護照英文姓名"></div>
                         <div><label class="vault-label">訂單或票券連結</label><input :disabled="isReadOnly" v-model="credentialForm.link" type="url" class="vault-field" placeholder="https://..."></div>
@@ -1838,17 +1846,12 @@
                         if (credentialFilter.value !== 'all' && type.val !== credentialFilter.value) continue;
                         if (query && ![entry.title, entry.provider, entry.bookingNumber, entry.traveler, entry.notes, type.label].some(value => String(value || '').toLocaleLowerCase().includes(query))) continue;
                         const key = /^\d{4}-\d{2}-\d{2}/.test(entry.dateTime || '') && !Number.isNaN(new Date(entry.dateTime).getTime()) ? entry.dateTime.slice(0,10) : 'undated';
-                        if (!groups.has(key)) groups.set(key, {key, label:key === 'undated' ? '未設定日期' : new Intl.DateTimeFormat('zh-TW',{month:'numeric', day:'numeric', weekday:'short'}).format(new Date(key+'T12:00:00')), entries:[]});
+                        if (!groups.has(key)) groups.set(key, {key, label:key === 'undated' ? '未設定日期' : DateDisplay.formatDate(key), entries:[]});
                         groups.get(key).entries.push(entry);
                     }
                     return [...groups.values()].sort((a,b) => a.key === 'undated' ? 1 : b.key === 'undated' ? -1 : a.key.localeCompare(b.key));
                 });
-                const formatCredentialDate = value => {
-                    if (!value) return '';
-                    const date = new Date(value);
-                    if (Number.isNaN(date.getTime())) return value;
-                    return new Intl.DateTimeFormat('zh-TW', { month:'numeric', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false }).format(date);
-                };
+                const formatCredentialDate = DateDisplay.formatDateTime;
                 const maskedCredentialCode = entry => {
                     const code = String(entry.bookingNumber || '');
                     if (revealedCredentials[entry.id]) return code;
@@ -1969,15 +1972,8 @@
                     return weekdays[new Date(dateStr).getDay()];
                 };
                 
-                const formatFlightDate = (dateStr) => {
-                    if (!dateStr) return '';
-                    const date = new Date(dateStr);
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    const weekday = weekdays[date.getDay()];
-                    return `${month}/${day} (${weekday})`;
-                };
+                const formatDate = DateDisplay.formatDate;
+                const formatFlightDate = formatDate;
                 
                 const checkLocation = async (item) => { 
                     if (!item.location?.trim()) { item.error = false; return; } 
@@ -2444,8 +2440,7 @@
                     text += `${'═'.repeat(40)}\n\n`;
                     
                     days.value.forEach((day, idx) => {
-                        const dateObj = new Date(day.fullDate);
-                        const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+                        const dateStr = formatDate(day.fullDate);
                         text += `📅 Day ${idx + 1} - ${dateStr} (${getWeekdayFull(day.fullDate)})\n`;
                         if (day.title) text += `   主題：${day.title}\n`;
                         text += `${'─'.repeat(35)}\n`;
@@ -2469,7 +2464,7 @@
                         text += `\n✈️ 航班資訊\n${'─'.repeat(35)}\n`;
                         flights.value.forEach(f => {
                             text += `${f.flightNumber || 'N/A'}: ${f.dep} → ${f.arr}\n`;
-                            text += `   出發：${f.depDate || ''} ${f.depTime}  抵達：${f.arrTime}${f.nextDay ? ' (+1)' : ''}\n`;
+                            text += `   出發：${formatDate(f.depDate)} ${f.depTime}  抵達：${f.arrTime}${f.nextDay ? ' (+1)' : ''}\n`;
                         });
                     }
                     
@@ -2487,8 +2482,7 @@
                     csv += '天數,日期,星期,時間,類型,行程名稱,地點,備註,費用,營業時間\n';
                     
                     days.value.forEach((day, idx) => {
-                        const dateObj = new Date(day.fullDate);
-                        const dateStr = `${dateObj.getFullYear()}/${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+                        const dateStr = formatDate(day.fullDate);
                         const weekday = getWeekdayFull(day.fullDate);
                         
                         if (day.items && day.items.length > 0) {
@@ -2515,7 +2509,7 @@
                     if (flights.value.length > 0) {
                         csv += '\n航班編號,出發地,目的地,日期,出發時間,抵達時間,跨日\n';
                         flights.value.forEach(f => {
-                            csv += `${f.flightNumber || ''},${f.dep},${f.arr},${f.depDate || ''},${f.depTime},${f.arrTime},${f.nextDay ? '+1' : ''}\n`;
+                            csv += `${f.flightNumber || ''},${f.dep},${f.arr},${formatDate(f.depDate)},${f.depTime},${f.arrTime},${f.nextDay ? '+1' : ''}\n`;
                         });
                     }
                     
@@ -2620,7 +2614,7 @@
                     credentialImageSrc, openCredentialPreview, closeCredentialPreview, fitCredentialPreview, zoomCredentialPreview, handleCredentialPreviewKey,
                     showManualPinModal, manualPinMode, manualPinData,
                     TYPES_LIST, CREDENTIAL_TYPES, THEME_CHOICES, autoThemeColor, setThemeColor,
-                    addFlight, removeFlight, calculateLayover, formatFlightDate,
+                    addFlight, removeFlight, calculateLayover, formatFlightDate, formatDate,
                     addDay, addItem, deleteItem, confirmAndDeleteDay, sortDays,
                     drawRoute, locateUser, switchMapDay,
                     addExpense, startLongPress, clearLongPress,
@@ -2642,6 +2636,7 @@
                 };
             }
         });
+        app.component('date-field', DateDisplay.component);
         app.mount('#app');
     </script>
 </body>

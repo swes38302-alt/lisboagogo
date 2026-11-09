@@ -6,6 +6,7 @@ const html = fs.readFileSync(path.join(__dirname,'../葡猪.html'),'utf8');
 const section = (a,b) => html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 const ref = value=>({value});
 const state = {
+    DateDisplay:require('../assets/date-display.js'),
     computed:fn=>({get value(){return fn();}}),watch(){},nextTick:fn=>fn(),URL,Intl,Date,
     vaultEntries:ref([{id:'h',type:'hotel',title:'Hotel',dateTime:'2026-10-30T15:00',bookingNumber:'ABC123',image:'data:image/png;base64,AAAA'},{id:'t',type:'ticket',title:'USJ',dateTime:'2026-10-28T09:00'},{id:'u',type:'unknown',title:'Undated'}]),
     credentialSearch:ref(''),credentialFilter:ref('all'),vaultUnlocked:ref(true),currentTripId:ref('A'),viewMode:ref('voucher'),isReadOnly:ref(false),
