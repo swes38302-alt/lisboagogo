@@ -3,7 +3,7 @@
  const {createApp,ref,computed,nextTick,onMounted}=Vue,M=ExploreModel;
  createApp({setup(){
   const tab=ref('explore'),country=ref(''),month=ref(0),onlyNow=ref(false),state=ref(M.empty()),status=ref('此裝置儲存'),syncEnabled=ref(false),hasConflict=ref(false),selected=ref(null),detailTab=ref('值得體驗'),detailDialog=ref(null),customDialog=ref(null),newTask=ref(''),toast=ref(''),formError=ref(''),custom=ref({});
-  const world=TravelWorld,stages=['了解中','準備中','已確定出行','已去過','擱置'],tabs=[{id:'explore',label:'探索地圖'},{id:'inbox',label:'🐷 TG 收件匣'},{id:'saved',label:'我的收藏'},{id:'plans',label:'我的規劃'},{id:'calendar',label:'準備日曆'}];
+  const world=TravelWorld,pig=PigInbox.use(),stages=['了解中','準備中','已確定出行','已去過','擱置'],tabs=[{id:'explore',label:'探索地圖'},{id:'saved',label:'我的收藏'},{id:'plans',label:'我的規劃'},{id:'calendar',label:'準備日曆'}];
   const years=Array.from({length:10},(_,i)=>new Date().getFullYear()+i);
   let store,db,toastTimer;
   const entries=computed(()=>Object.values(state.value.entries).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
@@ -17,11 +17,16 @@
    return {id:entry.id,name:entry.name||'旅行想法',country:entry.country||'',location:entry.location||world.countries.find(c=>c.id===entry.country)?.name||'地點待補',emoji:entry.kind==='節慶活動'?'🎉':entry.kind==='景點'?'📍':'🧭',months:entry.month?[Number(entry.month)]:[],season:entry.month?entry.month+' 月・個人想法':'月份尚未決定',summary:entry.note||'先把這個想法留下來，等想出發時再慢慢準備。',leadMonths:6,date:'',dateStatus:'待查核',experiences:[],facts:entry.link?[{title:'收藏的參考連結',value:'個人收藏，尚未查核年度與預約資訊。',status:'待查核',source:entry.link}]:[],tasks:[{title:'了解想體驗的內容與參與方式',kind:'研究',state:'ready'}],next:'先了解喜歡的體驗與參與方式',reason:'你收藏的想法已接近想去的月份，可以開始研究。'};
   };
   const allEvents=computed(()=>[...TravelEvents,...entries.value.filter(e=>e.id.startsWith('custom-')).map(eventFor)]);
+  const collectionIdeas=computed(()=>[...entries.value.map(e=>PigIdeaModel.manual(e,eventFor(e))),...pig.items.value.map(item=>PigIdeaModel.view(item,world))]);
+  const collectionCountries=computed(()=>PigIdeaModel.counts(collectionIdeas.value,world));
+  function selectCountry(id){country.value=id;if(collectionCountries.value.some(c=>c.id===id))tab.value='saved';}
+  function openManual(id){const e=state.value.entries[id];if(e)openEvent(eventFor(e));}
+  function removeManual(id){const e=state.value.entries[id];if(e)removeEntry(e);}
   const upcoming=e=>M.upcoming(e);
   const filteredEvents=computed(()=>allEvents.value.filter(e=>(!country.value||e.country===country.value)&&(!month.value||e.months.includes(month.value))&&(!onlyNow.value||upcoming(e)?.recommend)));
   const recommendations=computed(()=>TravelEvents.filter(e=>upcoming(e)?.recommend).sort((a,b)=>upcoming(a).distance-upcoming(b).distance));
-  const mapEvents=computed(()=>filteredEvents.value.filter(e=>e.country&&point(e)));
-  const hasCountryEvents=id=>allEvents.value.some(e=>e.country===id);
+  const mapEvents=computed(()=>filteredEvents.value.filter(e=>e.country&&point(e)&&!collectionCountries.value.some(c=>c.id===e.country)));
+  const hasCountryEvents=id=>allEvents.value.some(e=>e.country===id)||collectionCountries.value.some(c=>c.id===id);
   function point(e){return world.points[e.id]||world.countries.find(c=>c.id===e.country)?.center;}
   const activeEntry=computed(()=>selected.value?entryFor(selected.value):null);
   const completedTasks=computed(()=>Object.values(activeEntry.value?.tasks||{}).filter(t=>t.done).length);
@@ -41,7 +46,7 @@
   function openCustom(){custom.value={name:'',kind:'景點',country:country.value,month:month.value,location:'',link:'',note:''};formError.value='';customDialog.value.showModal();}
   function saveCustom(){if(!custom.value.name.trim()){formError.value='先幫這個想法取個名字';return;}if(custom.value.link&&!M.safeURL(custom.value.link)){formError.value='請使用 http 或 https 的參考連結';return;}const id='custom-'+M.uid();edit(s=>s.entries[id]={...M.createEntry({id}),...custom.value,link:M.safeURL(custom.value.link),id,eventId:id});customDialog.value.close();notify('已收藏你的旅行想法');tab.value='saved';}
   function closeOnBackdrop(event,dialog){if(event.target!==dialog)return;const box=dialog.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)dialog.close();}
-  function exportBackup(){const value={app:'lisboagogo-travel-ideas',exportedAt:new Date().toISOString(),data:store.getSnapshot()};const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='旅行靈感備份-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function exportBackup(){const value={app:'lisboagogo-travel-ideas',exportedAt:new Date().toISOString(),data:store.getSnapshot(),telegram:pig.connected.value?{version:1,items:pig.items.value}:null};const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='旅行靈感備份-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function getDb(){if(db)return db;const config={apiKey:'AIzaSyC_mIkGuJCMKAcoRf78bipUJzzodTk_zVs',authDomain:'lisboaaa-2c65b.firebaseapp.com',databaseURL:'https://lisboaaa-2c65b-default-rtdb.firebaseio.com',projectId:'lisboaaa-2c65b',appId:'1:391483387676:web:d527043aee656dfc5854d9'};db=firebase.initializeApp(config,'travel-inspiration').database();return db;}
   function syncPreference(value){try{localStorage.setItem(M.STORAGE_KEY+':sync',value?'yes':'no');}catch{}}
   function connect(){try{store.connect(getDb());syncEnabled.value=true;syncPreference(true);}catch{status.value='暫時無法連上雲端，資料保留在此裝置。';}}
@@ -49,7 +54,7 @@
   function retrySync(){store.disconnect();syncEnabled.value=false;connect();}
   function acceptRemote(){if(confirm('以雲端版本取代此裝置草稿？如果有未同步修改，請先下載備份。'))store.acceptRemote();}
   store=ExploreStore.create({storage:localStorage,merge:TripSync.merge,onChange:s=>state.value=s,onStatus:message=>{status.value=message;hasConflict.value=!!store?.getConflicts().length;}});
-  onMounted(()=>{const openInbox=()=>{if(location.hash.startsWith('#pig=')||location.hash==='#inbox')tab.value='inbox';};openInbox();window.addEventListener('hashchange',openInbox);try{if(localStorage.getItem(M.STORAGE_KEY+':sync')==='yes')connect();}catch{}});
-  return {tab,country,month,onlyNow,state,status,syncEnabled,hasConflict,selected,detailTab,detailDialog,customDialog,newTask,toast,formError,custom,world,stages,tabs,years,entries,plans,countriesSorted,countryName,entryFor,eventFor,upcoming,filteredEvents,recommendations,mapEvents,hasCountryEvents,point,activeEntry,completedTasks,calendarItems,progress,safeURL:M.safeURL,saveEvent,openEvent,startPlan,toggleExperience,updateField,updateTask,removeTask,addTask,removeEntry,openCustom,saveCustom,closeOnBackdrop,exportBackup,toggleSync,retrySync,acceptRemote};
+  onMounted(()=>{const openInbox=()=>{if(location.hash.startsWith('#pig=')||location.hash==='#inbox'||location.hash==='#saved')tab.value='saved';};openInbox();window.addEventListener('hashchange',openInbox);try{if(localStorage.getItem(M.STORAGE_KEY+':sync')==='yes')connect();}catch{}});
+  return {tab,country,month,onlyNow,state,status,syncEnabled,hasConflict,selected,detailTab,detailDialog,customDialog,newTask,toast,formError,custom,world,stages,tabs,years,entries,plans,countriesSorted,countryName,entryFor,eventFor,upcoming,filteredEvents,recommendations,mapEvents,hasCountryEvents,point,activeEntry,completedTasks,calendarItems,progress,safeURL:M.safeURL,saveEvent,openEvent,startPlan,toggleExperience,updateField,updateTask,removeTask,addTask,removeEntry,openCustom,saveCustom,closeOnBackdrop,exportBackup,toggleSync,retrySync,acceptRemote,pig,collectionIdeas,collectionCountries,selectCountry,openManual,removeManual};
  }}).component('pig-inbox',window.PigInbox||{template:'<p>收件匣暫時無法載入，請重新整理；原有收藏與規劃不受影響。</p>'}).mount('#explore-app');
 })();

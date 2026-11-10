@@ -1,58 +1,65 @@
 (function(root){
  'use strict';
- const {ref,computed,onMounted,onUnmounted}=Vue,C=PigInboxCrypto;
- root.PigInbox={
-  setup(){
-   const secret=ref(''),connected=ref(false),busy=ref(false),message=ref('尚未連接 Pig Me Up'),items=ref([]),country=ref(''),kind=ref(''),search=ref(''),lastUpdate=ref(''),imageURLs=ref({}),imageBusy=ref({}),remembered=ref(false);
-   let ctx=null,timer=null,generation=0;
-   const countries=computed(()=>[...new Set(items.value.map(i=>i.classification?.country||'待分類'))].sort((a,b)=>a.localeCompare(b,'zh-Hant')));
-   const kinds=['景點','美食','咖啡','購物','住宿','交通','撇步','準備提醒','待分類'];
-   const icons={'景點':'📍','美食':'🍽️','咖啡':'☕','購物':'🛍️','住宿':'🏡','交通':'🚗','撇步':'💡','準備提醒':'🗓️','待分類':'📥'};
-   const filtered=computed(()=>items.value.filter(i=>(!country.value||(i.classification?.country||'待分類')===country.value)&&(!kind.value||(i.classification?.category||'待分類')===kind.value)&&(!search.value||[i.raw,i.sender,i.classification?.city,...(i.urls||[])].join(' ').toLowerCase().includes(search.value.toLowerCase()))));
-   const waiting=computed(()=>items.value.filter(i=>i.classification?.needsReview).length);
-   const date=value=>{const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;};
-   function clearImages(){Object.values(imageURLs.value).forEach(u=>URL.revokeObjectURL(u));imageURLs.value={};}
-   async function refresh(){
-    if(!ctx||busy.value)return;busy.value=true;const ticket=generation,current=ctx;
-    try{
-     const bytes=await C.read(current,'index');if(ticket!==generation)return;
-     if(!bytes){message.value='已連接，等待電腦完成第一次同步。';return;}
-     const data=JSON.parse(C.decode(bytes));if(data.version!==1||!Array.isArray(data.items))throw new Error('format');
-     items.value=data.items.filter(i=>i&&typeof i.id==='string'&&typeof i.raw==='string').sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
-     lastUpdate.value=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});message.value='已解密載入・查看的是旅行靈感，不是正式行程';
-    }catch{if(ticket===generation)message.value='暫時讀取失敗，或私人連結不符。已載入內容仍保留，可稍後重試。';}
-    finally{if(ticket===generation)busy.value=false;}
-   }
-   async function connect(){
-    if(busy.value)return;busy.value=true;
-    try{
-     const next=await C.context(secret.value.trim());generation++;clearImages();ctx=next;connected.value=true;message.value='正在讀取並解密私人收件匣…';
-     try{sessionStorage.setItem('pigmeup:private-key',secret.value.trim());}catch{}
-     busy.value=false;await refresh();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)refresh();},30000);
-    }catch{message.value='請從電腦右下角 Pig Me Up 選單取得完整私人連結。';busy.value=false;}
-   }
-   function disconnect(){generation++;ctx=null;clearInterval(timer);clearImages();connected.value=false;busy.value=false;items.value=[];secret.value='';remembered.value=false;message.value='已在此裝置斷開連線';try{sessionStorage.removeItem('pigmeup:private-key');localStorage.removeItem('pigmeup:private-key');}catch{}}
-   function remember(){try{localStorage.setItem('pigmeup:private-key',secret.value.trim());remembered.value=true;message.value='此裝置已記住私人連線；共用電腦請勿使用。';}catch{message.value='瀏覽器不允許儲存，請保管原本的私人連結。';}}
-   async function showImage(media){
-    if(!ctx||!media.available||!/^[a-f0-9]{64}$/.test(media.id)||imageURLs.value[media.id])return;
-    const ticket=generation,current=ctx;imageBusy.value={...imageBusy.value,[media.id]:true};
-    try{const bytes=await C.read(current,'media/'+media.id);if(ticket!==generation||!bytes)return;imageURLs.value={...imageURLs.value,[media.id]:URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}))};}
-    catch{message.value='圖片暫時無法載入，原始附件仍保存在接收電腦。';}
-    finally{imageBusy.value={...imageBusy.value,[media.id]:false};}
-   }
-   function exportPrivate(){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify({app:'PigMeUp-private-inbox',version:1,items:items.value},null,2)],{type:'application/json'}));a.href=u;a.download='PigMeUp-私人靈感備份.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
-   function loadLink(){const key=new URLSearchParams(location.hash.slice(1)).get('pig');if(!key)return;if(connected.value)disconnect();secret.value=key;connect();history.replaceState(null,'',location.pathname+location.search+'#inbox');}
-   onMounted(()=>{window.addEventListener('hashchange',loadLink);if(location.hash.startsWith('#pig=')){loadLink();return;}let key='';try{key=localStorage.getItem('pigmeup:private-key')||sessionStorage.getItem('pigmeup:private-key')||'';remembered.value=!!localStorage.getItem('pigmeup:private-key');}catch{}if(key){secret.value=key;connect();}});
-   onUnmounted(()=>{window.removeEventListener('hashchange',loadLink);generation++;clearInterval(timer);clearImages();});
-   return {secret,connected,busy,message,items,country,kind,search,lastUpdate,imageURLs,imageBusy,remembered,countries,kinds,icons,filtered,waiting,date,connect,refresh,disconnect,remember,showImage,exportPrivate,safeURL:C.safeURL};
+ const {ref,computed,watch,onMounted,onUnmounted}=Vue,C=PigInboxCrypto,M=PigIdeaModel;
+ function use(){
+  const secret=ref(''),connected=ref(false),busy=ref(false),message=ref('未連接 TG'),items=ref([]),lastUpdate=ref(''),imageURLs=ref({}),imageBusy=ref({}),remembered=ref(false);
+  let ctx=null,timer=null,generation=0;
+  function clearImages(){Object.values(imageURLs.value).forEach(u=>URL.revokeObjectURL(u));imageURLs.value={};}
+  async function refresh(){
+   if(!ctx||busy.value)return;busy.value=true;const ticket=generation,current=ctx;
+   try{const bytes=await C.read(current,'index');if(ticket!==generation)return;
+    if(!bytes){message.value='已連接，等待電腦同步';return;}
+    const data=JSON.parse(C.decode(bytes));if(data.version!==1||!Array.isArray(data.items))throw new Error('format');
+    items.value=data.items.filter(i=>i&&typeof i.id==='string'&&typeof i.raw==='string');
+    lastUpdate.value=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});message.value='TG 已同步';
+   }catch{if(ticket===generation)message.value='TG 暫時離線，已載入內容保留';}finally{if(ticket===generation)busy.value=false;}
+  }
+  async function connect(){
+   if(busy.value)return;busy.value=true;
+   try{const next=await C.context(secret.value.trim());generation++;clearImages();ctx=next;connected.value=true;message.value='正在解密…';
+    try{sessionStorage.setItem('pigmeup:private-key',secret.value.trim());}catch{}
+    busy.value=false;await refresh();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)refresh();},30000);
+   }catch{message.value='請使用小豬選單提供的完整私人連結';busy.value=false;}
+  }
+  function disconnect(){generation++;ctx=null;clearInterval(timer);clearImages();connected.value=false;busy.value=false;items.value=[];secret.value='';remembered.value=false;message.value='未連接 TG';try{sessionStorage.removeItem('pigmeup:private-key');localStorage.removeItem('pigmeup:private-key');}catch{}}
+  function remember(){try{localStorage.setItem('pigmeup:private-key',secret.value.trim());remembered.value=true;message.value='此裝置已記住連線';}catch{message.value='瀏覽器不允許儲存，請保管私人連結';}}
+  async function showImage(media){
+   if(!ctx||!media.available||!/^[a-f0-9]{64}$/.test(media.id)||imageURLs.value[media.id])return;
+   const ticket=generation,current=ctx;imageBusy.value={...imageBusy.value,[media.id]:true};
+   try{const bytes=await C.read(current,'media/'+media.id);if(ticket!==generation||!bytes)return;imageURLs.value={...imageURLs.value,[media.id]:URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}))};}
+   catch{message.value='圖片暫時無法載入，原始附件仍在接收電腦';}finally{imageBusy.value={...imageBusy.value,[media.id]:false};}
+  }
+  function exportPrivate(){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify({app:'PigMeUp-private-inbox',version:1,items:items.value},null,2)],{type:'application/json'}));a.href=u;a.download='PigMeUp-私人靈感備份.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+  function loadLink(){const key=new URLSearchParams(location.hash.slice(1)).get('pig');if(!key)return;if(connected.value)disconnect();secret.value=key;connect();history.replaceState(null,'',location.pathname+location.search+'#saved');}
+  onMounted(()=>{window.addEventListener('hashchange',loadLink);if(location.hash.startsWith('#pig=')){loadLink();return;}let key='';try{key=localStorage.getItem('pigmeup:private-key')||sessionStorage.getItem('pigmeup:private-key')||'';remembered.value=!!localStorage.getItem('pigmeup:private-key');}catch{}if(key){secret.value=key;connect();}});
+  onUnmounted(()=>{window.removeEventListener('hashchange',loadLink);generation++;clearInterval(timer);clearImages();});
+  return {secret,connected,busy,message,items,lastUpdate,imageURLs,imageBusy,remembered,connect,refresh,disconnect,remember,showImage,exportPrivate};
+ }
+ root.PigInbox={use,
+  props:{controller:Object,view:String,countryId:String,cards:Array,world:Object},emits:['country','open-manual','remove-manual','explore'],
+  setup(props){
+   const kind=ref(''),search=ref(''),settings=ref(false),i=props.controller;
+   let mapNavigation;
+   onMounted(()=>{mapNavigation=TripMapLinks.createNavigation({window,document,navigator});document.addEventListener('click',mapNavigation.handleClick);});
+   onUnmounted(()=>{if(mapNavigation){document.removeEventListener('click',mapNavigation.handleClick);mapNavigation.dispose();}});
+   watch(()=>props.countryId,()=>{kind.value='';search.value='';});
+   watch(()=>props.view,(next,previous)=>{if(next==='saved'&&previous==='explore'){kind.value='';search.value='';}});
+   const filtered=computed(()=>props.cards.filter(c=>(!props.countryId||c.countryId===props.countryId)&&(!kind.value||c.category===kind.value)&&(!search.value||[c.title,c.summary,c.location,c.raw,...c.urls].join(' ').toLowerCase().includes(search.value.toLowerCase()))).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))));
+   const countries=computed(()=>M.counts(props.cards,props.world).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')));
+   const kinds=computed(()=>[...new Set(props.cards.map(c=>c.category))]);
+   const date=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:'';};
+   const map=card=>TripMapLinks.build({location:card.mapQuery},{mapProvider:card.countryId==='KOR'?'naver':'google'});
+   return {...i,kind,search,settings,filtered,countries,kinds,date,map,safeURL:C.safeURL};
   },
-  template:`<section class="pig-inbox" aria-label="Pig Me Up TG 收件匣">
-   <div class="pig-heading"><div><div class="eyebrow">PIG ME UP · A LITTLE IDEA, A FUTURE TRIP</div><h2>🐷 丟進群組，慢慢變成旅行。</h2><p>景點、好吃的、購票線索，先收在這裡。不會更動已排好的旅程。</p></div><span class="pig-private">🔐 私人加密收件匣</span></div>
-   <div v-if="!connected" class="pig-connect"><h3>連接你們的 PigMeUpBot</h3><p>在接收電腦右下角的 Pig Me Up 選單，選「開啟旅行靈感」；手機則開啟同一份私人連結。</p><form @submit.prevent="connect"><label>私人鑰匙<input type="password" v-model.trim="secret" autocomplete="off" placeholder="通常由私人連結自動帶入，不是 BotFather Token"></label><button class="primary" :disabled="busy">連接收件匣</button></form><small>沒有額外 AI 費用。私人連結就像鑰匙，只分享給同行的人。</small></div>
-   <div class="pig-status" role="status"><span>{{message}}</span><span v-if="connected">{{items.length}} 則 · {{waiting}} 則待確認<span v-if="lastUpdate"> · {{lastUpdate}} 更新</span></span></div>
-   <template v-if="connected"><div class="pig-actions"><button class="quiet" @click="refresh" :disabled="busy">{{busy?'更新中…':'↻ 更新'}}</button><button class="quiet" @click="remember" :disabled="remembered">{{remembered?'此裝置已記住 ✓':'記住此裝置'}}</button><button class="text-button" @click="exportPrivate">下載 TG 備份</button><button class="text-button muted" @click="disconnect">斷開連線</button></div>
-   <div class="pig-filters"><label>國家<select v-model="country"><option value="">全部國家</option><option v-for="c in countries" :key="c">{{c}}</option></select></label><label>分類<select v-model="kind"><option value="">全部分類</option><option v-for="k in kinds" :key="k">{{k}}</option></select></label><label class="pig-search">搜尋<input v-model="search" type="search" placeholder="店名、城市、分享的內容…"></label></div>
-   <div class="pig-cards"><article v-for="item in filtered" :key="item.id" class="pig-card"><div class="pig-card-top"><span class="tag">{{icons[item.classification?.category]||'📥'}} {{item.classification?.category||'待分類'}}</span><span class="pig-date">{{date(item.createdAt)}}</span></div><h3>{{[item.classification?.country,item.classification?.city].filter(Boolean).join('・')||'地點待分類'}}</h3><p class="pig-raw">{{item.raw||'先收下一張圖片，等靈感慢慢成形。'}}</p><div v-if="item.preparationHints?.length" class="pig-hints"><strong>🗓️ 準備線索</strong><p v-for="(hint,index) in item.preparationHints" :key="index">{{hint.text}}</p><small>你們提供的筆記・尚未核實・未設定通知。沒有年份或精確日期就先留白。</small></div><div class="pig-links"><a v-for="url in item.urls" v-show="safeURL(url)" :key="url" :href="safeURL(url)" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">查看原始分享 ↗ <small>{{safeURL(url).slice(0,80)}}</small></a></div><div v-for="(media,index) in item.media" :key="index" class="pig-media"><button v-if="media.available&&!imageURLs[media.id]" class="quiet" @click="showImage(media)" :disabled="imageBusy[media.id]">{{imageBusy[media.id]?'圖片解密中…':'📷 查看圖片'}}</button><a v-if="imageURLs[media.id]" :href="imageURLs[media.id]" target="_blank" rel="noopener"><img :src="imageURLs[media.id]" alt="群組分享的圖片；點擊放大" loading="lazy"></a><small v-if="!media.available">📎 {{media.name||'附件'}} · {{media.note}}</small></div><footer><span>{{item.sender||'群組分享'}}<span v-if="item.duplicate"> · 重複連結，備註仍保留</span></span><span>{{item.classification?.needsReview?'待確認':'規則初分／已手動調整'}}</span></footer></article></div><div v-if="!filtered.length" class="empty"><span>📥</span><h3>{{items.length?'換個分類找找看':'先丟一個旅行想法進 TG 吧'}}</h3><p>電腦連網並持續接收時，這裡約每 30 秒檢查更新。分類可在 TG 按鈕修正。</p></div><p class="pig-footnote">收件匣只讀，不會改動原有收藏、規劃與行程。分類用關鍵字，不是 AI；圖片不做文字辨識。需要保留資料時，請下載私人備份。</p></template>
+  template:`<section v-show="view==='explore'||view==='saved'" class="idea-collection" aria-label="整合旅行收藏">
+   <div class="idea-connection"><span><i :class="['status-dot',{online:connected}]"></i>{{message}}<small v-if="connected"> · {{items.length}} 則私人想法</small></span><button class="text-button" @click="settings=!settings">{{settings?'收起設定':connected?'連線設定':'連接 TG'}}</button></div>
+   <div v-if="settings" class="idea-settings"><p>同一份收藏，多一個 TG 輸入入口。私人內容只在解密後顯示，不會改動正式旅程。</p><form v-if="!connected" @submit.prevent="connect"><label>私人鑰匙<input type="password" v-model.trim="secret" autocomplete="off" placeholder="從電腦小豬選單的私人連結開啟即可自動帶入"></label><button class="primary" :disabled="busy">連接</button></form><div v-else class="idea-settings-actions"><button class="quiet" @click="refresh" :disabled="busy">更新 TG</button><button class="quiet" @click="remember" :disabled="remembered">{{remembered?'此裝置已記住 ✓':'記住此裝置'}}</button><button class="text-button" @click="exportPrivate">下載私人備份</button><button class="text-button muted" @click="disconnect">斷開連線</button></div><small>私人連結只給同行的人；共用電腦不要記住。{{lastUpdate?'上次更新 '+lastUpdate:''}}</small></div>
+   <template v-if="view==='saved'"><div class="idea-heading"><div><h2>想去的，都收在一起。</h2><p>網站收藏或丟進 TG 都可以。選國家，再慢慢挑想吃、想逛的地方。</p></div><button class="quiet" @click="$emit('explore')">🗺️ 用地圖找</button></div>
+   <div class="idea-filters"><label>國家<select :value="countryId" @change="$emit('country',$event.target.value)"><option value="">全部國家</option><option v-for="c in countries" :value="c.id" :key="c.id">{{c.name}} · {{c.count}}</option><option v-if="countryId&&!countries.some(c=>c.id===countryId)" :value="countryId">{{world.countries.find(c=>c.id===countryId)?.name||countryId}}</option></select></label><label>分類<select v-model="kind"><option value="">全部分類</option><option v-for="k in kinds" :key="k">{{k}}</option></select></label><label class="idea-search">搜尋<input type="search" v-model="search" placeholder="店名、城市、想法…"></label></div>
+   <div class="idea-grid"><article v-for="card in filtered" :key="card.id" class="idea-card"><div class="idea-card-meta"><span>{{card.emoji}} {{card.category}}<small v-if="card.subtag"> · {{card.subtag}}</small></span><small v-if="card.source==='telegram'" title="私人 TG 收藏">TG 🔒</small><small v-else>網站收藏</small></div><h3>{{card.title}}</h3><p class="idea-location">{{card.location}}</p><p v-if="card.dateHint" class="idea-date-hint">🗓️ {{card.dateHint}} <small>購票準備筆記</small></p><p v-if="card.summary&&card.category!=='準備提醒'" class="idea-summary">{{card.summary}}</p><p v-if="card.address" class="idea-address">{{card.address}}</p>
+   <div class="idea-card-actions"><a v-if="card.mapQuery" :href="map(card).href" :data-naver-app="map(card).appUrl||undefined" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">📍 {{card.countryId==='KOR'?'NAVER 地圖':'查看地圖'}} ↗</a><a v-if="safeURL(card.urls[0])" :href="safeURL(card.urls[0])" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">原始分享 ↗</a><button v-if="card.source==='manual'" class="text-button" @click="$emit('open-manual',card.originalId)">查看／規劃 →</button><span v-if="card.needsReview" class="idea-review">地點／分類待確認</span></div>
+   <details class="idea-details"><summary>{{card.source==='telegram'?'原文與備註':'收藏內容'}}</summary><p v-if="card.category==='準備提醒'" class="idea-warning">這是你們的準備筆記，未核實為官方售票日，也未設定通知。</p><p class="idea-original">{{card.raw||card.summary||'還沒有補充內容'}}</p><a v-for="url in card.urls.slice(1)" v-show="safeURL(url)" :key="url" :href="safeURL(url)" target="_blank" rel="noopener noreferrer">其他參考連結 ↗</a><div v-for="(media,index) in card.media" :key="index" class="pig-media"><button v-if="media.available&&!imageURLs[media.id]" class="quiet" @click="showImage(media)" :disabled="imageBusy[media.id]">{{imageBusy[media.id]?'載入中…':'📷 查看圖片'}}</button><a v-if="imageURLs[media.id]" :href="imageURLs[media.id]" target="_blank" rel="noopener"><img :src="imageURLs[media.id]" alt="分享圖片，點擊放大"></a><small v-if="!media.available">📎 {{media.name||'附件'}} · {{media.note}}</small></div><div class="idea-detail-footer"><span>{{card.source==='telegram'?(card.original.sender||'TG 分享'):'網站手動收藏'}} · {{date(card.createdAt)}}</span><span v-if="card.source==='telegram'">分類可在 TG 修改</span><button v-else class="text-button muted" @click="$emit('remove-manual',card.originalId)">移除收藏</button></div></details>
+   </article></div><div v-if="!filtered.length" class="empty"><span>🧭</span><h3>{{cards.length?'這個篩選還沒有收藏':'先把一個想去的地方留下來'}}</h3><p>可以在 TG 丟想法，也可以用網站的「收藏一個想法」。<br v-if="!connected"><span v-if="!connected">若已經用 TG 收藏，請先用私人連結連接。</span></p><button class="quiet" @click="kind='';search='';$emit('country','')">查看全部收藏</button></div></template>
   </section>`
  };
 })(globalThis);
