@@ -3,12 +3,13 @@
 <head>
  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
  <meta name="theme-color" content="#174c46"><title>旅行靈感・長期規劃 | 你是什麼豬</title>
- <link rel="icon" href="assets/travel-icon-halloween-32.png"><link rel="stylesheet" href="assets/explore.css?v=20261007">
+ <meta name="referrer" content="no-referrer">
+ <link rel="icon" href="assets/travel-icon-halloween-32.png"><link rel="stylesheet" href="assets/explore.css?v=20261110-pig1">
  <script defer src="https://unpkg.com/vue@3.5.22/dist/vue.global.prod.js"></script>
  <script defer src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
  <script defer src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
  <script defer src="assets/trip-sync.js?v=20261002"></script><script defer src="assets/world-map.js?v=20261007"></script>
- <script defer src="assets/explore-data.js?v=20261007"></script><script defer src="assets/explore-model.js?v=20261007"></script><script defer src="assets/explore-store.js?v=20261007"></script><script defer src="assets/explore.js?v=20261007"></script>
+ <script defer src="assets/explore-data.js?v=20261007"></script><script defer src="assets/explore-model.js?v=20261007"></script><script defer src="assets/explore-store.js?v=20261007"></script><script defer src="assets/pigmeup-crypto.js?v=20261110-pig1"></script><script defer src="assets/pigmeup-inbox.js?v=20261110-pig1"></script><script defer src="assets/explore.js?v=20261110-pig1"></script>
 </head>
 <body>
 <div id="explore-app" v-cloak>
@@ -16,7 +17,8 @@
  <main class="shell">
   <section class="hero"><div><div class="eyebrow">A LITTLE DREAM, A FUTURE JOURNEY</div><h1>下一趟，慢慢想。</h1><p>從世界地圖找靈感，收藏心動的地方。<br>等你想出發時，這裡陪你把準備一件件理清。</p></div><button class="primary" @click="openCustom">＋ 收藏一個想法</button></section>
   <div class="toolbar"><nav class="page-tabs" aria-label="旅行靈感頁面"><button v-for="t in tabs" :key="t.id" :class="{active:tab===t.id}" :aria-current="tab===t.id?'page':undefined" @click="tab=t.id">{{t.label}}<span v-if="t.id==='saved'">{{entries.length}}</span><span v-if="t.id==='plans'">{{plans.length}}</span></button></nav><button class="quiet backup" @click="exportBackup">↓ 下載備份</button></div>
-  <div class="sync-bar"><span class="status-dot" :class="{online:syncEnabled}"></span><span role="status">{{status}}</span><button class="text-button" @click="toggleSync">{{syncEnabled?'暫停同步':'啟用共用同步'}}</button><button v-if="syncEnabled" class="text-button" @click="retrySync">重試</button><button v-if="hasConflict" class="text-button" @click="acceptRemote">載入雲端版本</button></div>
+  <div v-if="tab!=='inbox'" class="sync-bar"><span class="status-dot" :class="{online:syncEnabled}"></span><span role="status">{{status}}</span><button class="text-button" @click="toggleSync">{{syncEnabled?'暫停同步':'啟用共用同步'}}</button><button v-if="syncEnabled" class="text-button" @click="retrySync">重試</button><button v-if="hasConflict" class="text-button" @click="acceptRemote">載入雲端版本</button></div>
+  <pig-inbox v-if="tab==='inbox'"></pig-inbox>
   <section v-if="tab==='explore'" aria-label="探索地圖">
    <div class="filters"><label>國家<select aria-label="探索國家" v-model="country"><option value="">全世界</option><option v-for="c in countriesSorted" :value="c.id">{{c.name}}</option></select></label><label>旅行月份<select v-model.number="month"><option :value="0">全年都看看</option><option v-for="m in 12" :value="m">{{m}} 月</option></select></label><label class="check-filter"><input type="checkbox" v-model="onlyNow">現在適合開始準備</label><button v-if="country||month||onlyNow" class="text-button" @click="country='';month=0;onlyNow=false">清除篩選</button></div>
    <div class="explore-grid"><div class="map-column"><section class="map-card"><div class="map-heading"><span>你的世界，還有很多可能。</span><span class="subtle">{{countryName||'點一個國家，開始看看'}}</span></div><svg class="world-map" viewBox="0 0 1000 500" role="img" aria-label="世界活動地圖；也可使用上方國家選單選擇"><path v-for="c in world.countries" :key="c.id" :d="c.path" :class="['country',{selected:country===c.id,hasEvents:hasCountryEvents(c.id)}]" @click="country=country===c.id?'':c.id"><title>{{c.name}}</title></path><g v-for="e in mapEvents" :key="e.id" :transform="'translate('+point(e).join(',')+')'" class="map-marker" role="button" tabindex="0" :aria-label="'查看'+e.name" @click.stop="openEvent(e)" @keydown.enter.prevent="openEvent(e)" @keydown.space.prevent="openEvent(e)"><circle r="13" class="marker-halo"/><circle r="6"/><text y="-20" text-anchor="middle">{{e.emoji}} {{e.location.split('・')[0]}}</text></g></svg><div class="map-footer"><span><i class="legend-dot"></i> 有活動或收藏的國家</span><span>資料逐步增加中・也可以自己收藏景點</span></div></section>

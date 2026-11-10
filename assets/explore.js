@@ -3,7 +3,7 @@
  const {createApp,ref,computed,nextTick,onMounted}=Vue,M=ExploreModel;
  createApp({setup(){
   const tab=ref('explore'),country=ref(''),month=ref(0),onlyNow=ref(false),state=ref(M.empty()),status=ref('此裝置儲存'),syncEnabled=ref(false),hasConflict=ref(false),selected=ref(null),detailTab=ref('值得體驗'),detailDialog=ref(null),customDialog=ref(null),newTask=ref(''),toast=ref(''),formError=ref(''),custom=ref({});
-  const world=TravelWorld,stages=['了解中','準備中','已確定出行','已去過','擱置'],tabs=[{id:'explore',label:'探索地圖'},{id:'saved',label:'我的收藏'},{id:'plans',label:'我的規劃'},{id:'calendar',label:'準備日曆'}];
+  const world=TravelWorld,stages=['了解中','準備中','已確定出行','已去過','擱置'],tabs=[{id:'explore',label:'探索地圖'},{id:'inbox',label:'🐷 TG 收件匣'},{id:'saved',label:'我的收藏'},{id:'plans',label:'我的規劃'},{id:'calendar',label:'準備日曆'}];
   const years=Array.from({length:10},(_,i)=>new Date().getFullYear()+i);
   let store,db,toastTimer;
   const entries=computed(()=>Object.values(state.value.entries).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
@@ -49,7 +49,7 @@
   function retrySync(){store.disconnect();syncEnabled.value=false;connect();}
   function acceptRemote(){if(confirm('以雲端版本取代此裝置草稿？如果有未同步修改，請先下載備份。'))store.acceptRemote();}
   store=ExploreStore.create({storage:localStorage,merge:TripSync.merge,onChange:s=>state.value=s,onStatus:message=>{status.value=message;hasConflict.value=!!store?.getConflicts().length;}});
-  onMounted(()=>{try{if(localStorage.getItem(M.STORAGE_KEY+':sync')==='yes')connect();}catch{}});
+  onMounted(()=>{const openInbox=()=>{if(location.hash.startsWith('#pig=')||location.hash==='#inbox')tab.value='inbox';};openInbox();window.addEventListener('hashchange',openInbox);try{if(localStorage.getItem(M.STORAGE_KEY+':sync')==='yes')connect();}catch{}});
   return {tab,country,month,onlyNow,state,status,syncEnabled,hasConflict,selected,detailTab,detailDialog,customDialog,newTask,toast,formError,custom,world,stages,tabs,years,entries,plans,countriesSorted,countryName,entryFor,eventFor,upcoming,filteredEvents,recommendations,mapEvents,hasCountryEvents,point,activeEntry,completedTasks,calendarItems,progress,safeURL:M.safeURL,saveEvent,openEvent,startPlan,toggleExperience,updateField,updateTask,removeTask,addTask,removeEntry,openCustom,saveCustom,closeOnBackdrop,exportBackup,toggleSync,retrySync,acceptRemote};
- }}).mount('#explore-app');
+ }}).component('pig-inbox',window.PigInbox||{template:'<p>收件匣暫時無法載入，請重新整理；原有收藏與規劃不受影響。</p>'}).mount('#explore-app');
 })();
