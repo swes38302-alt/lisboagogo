@@ -45,6 +45,25 @@
   const result=new Map();for(const card of cards){const country=world.countries.find(c=>c.id===card.countryId);if(!country)continue;
    if(!result.has(country.id))result.set(country.id,{...country,count:0});result.get(country.id).count++;}return [...result.values()];
  }
- const api={KINDS,ICONS,FOOD,countryId,dateHint,view,manual,counts};root.PigIdeaModel=api;
+ function views(items,world,organization){
+  const base=items.map(i=>view(i,world)),byId=new Map(base.map(c=>[c.original.id,c])),used=new Set(),grouped=[];
+  for(const g of organization?.groups||[]){
+   if(!g||!Array.isArray(g.sources)||!g.sources.length||!KINDS.includes(g.category)||typeof g.title!=='string'||typeof g.summary!=='string')continue;
+   const ids=g.sources.map(s=>s.id),members=ids.map(id=>byId.get(id));
+   if(new Set(ids).size!==ids.length||members.some(c=>!c||used.has(c.original.id))||!ids.includes(g.anchorId))continue;
+   const anchor=byId.get(g.anchorId),text=v=>typeof v==='string'?v:'',raw=members.map(c=>`${c.original.sender||'TG 分享'}\n${c.raw}`).join('\n\n───\n\n');
+   grouped.push({...anchor,title:g.title,summary:g.summary,address:text(g.address),
+    location:[...new Set([g.country,g.city].filter(Boolean))].join('・'),countryId:countryId(g.country,world),
+    category:g.category,subtag:text(g.subtag),emoji:ICONS[g.category],mapQuery:text(g.mapQuery),
+    needsReview:!!g.needsReview,dateHint:g.category==='準備提醒'?dateHint(raw):'',raw,
+    urls:[...new Set(members.flatMap(c=>c.urls))],media:members.flatMap(c=>c.media),
+    sourceCards:members,organized:true,sourceCount:members.length,
+    cautions:Array.isArray(g.cautions)?g.cautions.filter(v=>typeof v==='string'):[],
+    createdAt:members.map(c=>c.createdAt).sort().at(-1),organizedAt:g.organizedAt});
+   ids.forEach(id=>used.add(id));
+  }
+  return [...base.filter(c=>!used.has(c.original.id)),...grouped];
+ }
+ const api={KINDS,ICONS,FOOD,countryId,dateHint,view,views,manual,counts};root.PigIdeaModel=api;
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);

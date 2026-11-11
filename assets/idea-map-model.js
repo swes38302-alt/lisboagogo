@@ -18,7 +18,11 @@
   }catch{}}
   return null; // @lat,lon and ll parameters are viewport centres, NOT place coordinates.
  }
- function point(card,placements){const saved=placements[card.id];if(saved&&saved.query===queryKey(card)&&valid(saved))return saved;return explicit(card);}
+ function point(card,placements){const saved=placements[card.id];if(saved&&saved.query===queryKey(card)&&valid(saved))return saved;
+  // Consolidation never deletes original pins. Only reuse unambiguous, still-matching source pins.
+  const pins=(card.sourceCards||[]).map(c=>placements[c.id]).filter((p,i)=>p&&p.query===queryKey(card.sourceCards[i])&&valid(p));
+  if(pins.length&&pins.every(p=>p.lat===pins[0].lat&&p.lon===pins[0].lon))return pins[0];
+  return explicit(card);}
  function region(cards){
   const text=cards.map(c=>c.location||'').join(' '),ids=[...new Set(cards.map(c=>c.countryId).filter(Boolean))];
   if(ids.length!==1)return {lat:25,lon:25,zoom:2,label:'收藏地區總覽，未定位的收藏不會偽裝成店家標記'};
