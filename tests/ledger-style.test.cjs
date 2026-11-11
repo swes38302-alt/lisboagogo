@@ -9,6 +9,9 @@ test('expense form has compact split switches, no manual before/during classific
  const form=html.slice(html.indexOf('<div v-if="showExpenseForm" id="expense-form"'),html.indexOf('<div id="ledger-person-filters"'));
  assert(!form.includes('費用分類'));assert(!form.includes('v-model="newExpense.expensePhase"'));assert(form.includes('aria-label="分攤方式"'));assert(form.includes('setLedgerAllocationMode(mode.key)'));assert(css.includes('border-radius:999px'));
 });
+test('single beneficiary is inline with payer and shared badge, not a separate footer',()=>{
+ const match=html.match(/<div class="expense-card-meta">([\s\S]*?)<\/div>/);assert(match);assert(match[1].includes('class="ledger-expense-single"'));assert(match[1].includes('ledgerAllocationLabel(exp)'));assert(!html.includes('<div v-else-if="exp.splitType'));assert(!css.includes('.ledger-expense-single{margin-top:'));
+});
 test('all, family and person filters share one compact strip without removing settlement controls',()=>{
  const strip=html.slice(html.indexOf('<div id="ledger-person-filters"'),html.indexOf('<div class="space-y-3 pb-10">'));
  assert(strip.includes('ledger-filter-strip'));assert(strip.includes('ledgerSelectedAccount=account.key'));assert(strip.includes('ledgerSelectedPerson===p'));assert(strip.includes('>全部</button>'));

@@ -19,7 +19,7 @@
     <script src="assets/trip-sync.js?v=20261111-family1"></script>
     <script src="assets/family-ledger.js?v=20261111-style2"></script>
     <script src="assets/amount-expression.js?v=20261111-calc1"></script>
-    <link rel="stylesheet" href="assets/family-ledger.css?v=20261111-calc1">
+    <link rel="stylesheet" href="assets/family-ledger.css?v=20261111-inline1">
     <script src="assets/map-links.js?v=20261109"></script>
     <script src="assets/date-display.js?v=20261109"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
@@ -1419,12 +1419,11 @@
                     <h3 class="ledger-section-title">{{ section.label }}</h3>
                      <div v-for="exp in section.items" :key="exp.id || expenses.indexOf(exp)" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchmove="clearLongPress" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
                         <div class="expense-card-layout">
-                            <div class="min-w-0"><div class="expense-card-title">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle expense-settled-icon"></i></div><div class="expense-card-meta"><span class="expense-card-payer"><i class="ph ph-user"></i>{{ exp.payer || '未指定付款人' }}</span><span class="expense-kind" :class="{personal: exp.splitType==='personal'}"><i :class="exp.splitType==='personal' ? 'ph ph-user' : 'ph ph-users'"></i>{{ exp.splitType==='personal' ? '個人' : '共同' }}</span></div></div>
+                            <div class="min-w-0"><div class="expense-card-title">{{ exp.item }}<i v-if="exp.isSettled && exp.splitType !== 'personal'" class="ph-fill ph-check-circle expense-settled-icon"></i></div><div class="expense-card-meta"><span class="expense-card-payer"><i class="ph ph-user"></i>{{ exp.payer || '未指定付款人' }}</span><span class="expense-kind" :class="{personal: exp.splitType==='personal'}"><i :class="exp.splitType==='personal' ? 'ph ph-user' : 'ph ph-users'"></i>{{ exp.splitType==='personal' ? '個人' : '共同' }}</span><span v-if="exp.splitType!=='personal' && ledgerAllocationDetails(exp).length<=1" class="ledger-expense-single">→ {{ ledgerAllocationLabel(exp) }}</span></div></div>
                             <div class="expense-card-value"><span class="amount"><span class="expense-card-currency">{{ exp.originalCurrency === 'TWD' ? 'NT$' : settings.currency }}</span>{{ Number(exp.originalAmount ?? exp.amount).toLocaleString() }}</span><span v-if="exp.originalCurrency !== 'TWD'" class="expense-card-conversion">{{ isExpenseTwdEstimated(exp) ? '≈ ' : '' }}NT$ {{ expenseTwd(exp).toLocaleString() }}</span><span v-if="!isReadOnly && !exp.isSettled && exp.splitType !== 'personal' && !exp.allocation" class="press-hint">長按標記結清</span></div>
                             <button @click.stop="deleteExpense(exp)" @touchstart.stop @mousedown.stop class="expense-delete" aria-label="刪除費用" title="刪除"><i class="ph ph-trash"></i></button>
                         </div>
                         <details v-if="exp.splitType!=='personal' && ledgerAllocationDetails(exp).length>1" class="ledger-expense-detail" @click.stop @touchstart.stop @mousedown.stop><summary>{{ ledgerAllocationLabel(exp) }}</summary><div v-for="share in ledgerAllocationDetails(exp)" :key="share.name" class="ledger-amount-row"><span>{{ share.name }}</span><span>NT$ {{ share.amount.toLocaleString() }}</span></div><div v-if="!exp.allocation" class="text-xs text-slate-500">全體均分的尾差在總結算統一分配。</div></details>
-                        <div v-else-if="exp.splitType!=='personal'" class="ledger-expense-single">→ {{ ledgerAllocationLabel(exp) }}</div>
                     </div>
                     <template v-for="{day,item} in section.itinerary" :key="day.fullDate+':'+item.id">
                         <div v-if="item.isPaid && Number(item.ticket)>0 && ledgerMatches(item,true)" class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm itinerary-expense-card" :class="{'settled': item.isSettled}" @touchstart="startLongPress(item)" @touchmove="clearLongPress" @touchend="clearLongPress" @mousedown="startLongPress(item)" @mouseup="clearLongPress" @mouseleave="clearLongPress">

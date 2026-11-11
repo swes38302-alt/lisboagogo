@@ -35,7 +35,7 @@
 .ledger-split-modes{display:flex;align-items:center;gap:3px;padding:3px;background:#f1f5f9;border-radius:999px}
 .ledger-split-modes button{min-height:36px;min-width:42px;padding:6px 8px;border-radius:999px;color:#64748b;font-size:12px;font-weight:600;white-space:nowrap}.ledger-split-modes button.active{background:#fff;color:var(--theme-primary);box-shadow:0 1px 5px rgba(30,41,59,.08)}
 .ledger-total-input{width:112px;min-width:0}.ledger-calculation-result{text-align:right;font-size:12px;font-weight:600;color:var(--theme-primary);font-variant-numeric:tabular-nums}
-.ledger-expense-single{margin-top:9px;font-size:12px;color:#59697f;overflow-wrap:anywhere}
+.ledger-expense-single{display:inline-flex;align-items:center;font-size:inherit;color:inherit;overflow-wrap:anywhere}
 .ledger-empty{padding:22px 0;text-align:center;font-size:13px;color:#64748b}
 .ledger-editor-amounts{display:flex;flex-direction:column;gap:8px}.ledger-amount-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#526175;min-width:0}
 .ledger-amount-row>span:first-child{min-width:0;overflow-wrap:anywhere}.ledger-amount-row>span:last-child{display:flex;align-items:center;gap:6px;flex-shrink:0}.ledger-amount-row input{width:100px}
