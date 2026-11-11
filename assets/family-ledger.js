@@ -106,6 +106,13 @@
         if(!row.allocation)return true;
         return row.allocation.entries?.some(e=>{const unit=ctx.units.find(u=>u.key===e.key);return unit&&unit.members.some(p=>targets.includes(p));})||false;
     }
-    root.FamilyLedger={personKey,groupKey,context,distribute,makeAllocation,shares,calculate,matches};
+    function phase(item, days, itineraryDate='') {
+        const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
+        const dates=days.map(d=>d.fullDate).filter(validDate).sort();
+        const date=[item.expenseDate,item.createdDate,itineraryDate].find(validDate);
+        if(date&&dates.length){if(date<dates[0])return 'before';if(date>dates.at(-1))return 'after';return 'during';}
+        return ['before','during','after'].includes(item.expensePhase)?item.expensePhase:itineraryDate?'during':'before';
+    }
+    root.FamilyLedger={personKey,groupKey,context,distribute,makeAllocation,shares,calculate,matches,phase};
     if(typeof module!=='undefined'&&module.exports)module.exports=root.FamilyLedger;
 })(globalThis);

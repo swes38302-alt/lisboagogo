@@ -40,7 +40,7 @@ assert(main.includes('@touchmove="clearLongPress"'));
 assert(/watch\(isReadOnly, locked => \{ if \(locked\) \{?\s*cancelPendingGestures\(\);/.test(html));
 assert(html.includes('.locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse):not(.ledger-browse)'));
 const browseButtons=[...main.matchAll(/<button\b(?:[^"'>]|"[^"]*"|'[^']*')*>/g)].map(match=>match[0]).filter(tag=>/class="ledger-browse(?: |")/.test(tag));
-assert(browseButtons.length>=7);
+assert(browseButtons.length>=6);
 assert(browseButtons.some(tag=>tag.includes("ledgerTab='settlement'")));
 assert(browseButtons.some(tag=>tag.includes('ledgerSelectedPerson=ledgerSelectedPerson===p')));
 assert(browseButtons.some(tag=>tag.includes('ledgerSelectedAccount=account.key')));

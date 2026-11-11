@@ -17,8 +17,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
     <script src="assets/trip-sync.js?v=20261111-family1"></script>
-    <script src="assets/family-ledger.js?v=20261111-family1"></script>
-    <link rel="stylesheet" href="assets/family-ledger.css?v=20261111-family1">
+    <script src="assets/family-ledger.js?v=20261111-style2"></script>
+    <link rel="stylesheet" href="assets/family-ledger.css?v=20261111-style2">
     <script src="assets/map-links.js?v=20261109"></script>
     <script src="assets/date-display.js?v=20261109"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
@@ -1318,14 +1318,15 @@
 
             <!-- Money View -->
             <div v-show="viewMode === 'money'" class="p-4 pb-20">
+                <div class="ledger-total mb-4">
+                    <div class="ledger-total-label">總紀錄（共同＋個人）</div>
+                    <div class="ledger-total-value"><span>{{ settings.currency }}</span> {{ totalExpense.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1}) }}</div>
+                    <div class="ledger-total-twd">NT$ {{ totalExpenseTwd.toLocaleString() }}</div>
+                    <div v-if="estimatedTwdCount" class="ledger-total-estimate">含 {{ estimatedTwdCount }} 筆台幣估算</div>
+                </div>
                 <div class="ledger-tabs" role="tablist" aria-label="分帳視角">
                     <button type="button" role="tab" id="ledger-detail-tab" aria-controls="ledger-detail" :aria-selected="ledgerTab==='detail'" @click="ledgerTab='detail'" class="ledger-browse" :class="{active:ledgerTab==='detail'}">明細</button>
                     <button type="button" role="tab" id="ledger-settlement-tab" aria-controls="ledger-settlement" :aria-selected="ledgerTab==='settlement'" @click="ledgerTab='settlement'" class="ledger-browse" :class="{active:ledgerTab==='settlement'}">結算</button>
-                </div>
-                <div v-show="ledgerTab==='detail'" class="ledger-total mb-4">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">總紀錄（共同＋個人）</div>
-                    <div class="ledger-total-value">NT$ {{ totalExpenseTwd.toLocaleString() }}</div>
-                    <span v-if="estimatedTwdCount" class="text-xs text-slate-500">含 {{ estimatedTwdCount }} 筆估算</span>
                 </div>
                 <div v-show="ledgerTab==='settlement'" id="ledger-settlement" role="tabpanel" aria-labelledby="ledger-settlement-tab">
                  <details class="ledger-management mb-4">
@@ -1382,9 +1383,9 @@
                 <details v-if="splitCalculation.summary.length" class="ledger-management mb-4"><summary>個人花費</summary><div v-for="person in splitCalculation.summary" :key="person.name" class="ledger-payment"><strong>{{ person.name }}</strong><span>分攤 NT$ {{ person.owedTwd.toLocaleString() }} · 個人 NT$ {{ person.personalTwd.toLocaleString() }}</span></div><div v-for="account in splitCalculation.accounts.filter(a=>a.unallocatedTwd)" :key="account.key" class="text-xs text-slate-600 py-2">{{ account.name }} 另有整組費用 NT$ {{ account.unallocatedTwd.toLocaleString() }}</div></details>
                 </div>
                 <div v-if="splitCalculation.unassignedCount || splitCalculation.invalidPayments || splitCalculation.invalidGroups" class="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">有 {{ splitCalculation.unassignedCount }} 筆費用、{{ splitCalculation.invalidPayments }} 筆還款或 {{ splitCalculation.invalidGroups }} 個群組的對象／金額待確認，暫未納入結算。</div>
-                <div v-if="estimatedTwdCount" class="mb-4 rounded-xl bg-cyan-50 border border-cyan-200 p-3 text-xs text-cyan-900">有 {{ estimatedTwdCount }} 筆台幣是依匯率估算。要讓結算與刷卡帳單一致，請在明細補入實際台幣；未補前的應收／應付為估算。</div>
+                <div v-if="estimatedTwdCount && ledgerTab==='settlement'" class="mb-4 rounded-xl bg-cyan-50 border border-cyan-200 p-3 text-xs text-cyan-900">有 {{ estimatedTwdCount }} 筆台幣是依匯率估算。要讓結算與刷卡帳單一致，請在明細補入實際台幣；未補前的應收／應付為估算。</div>
                 <div v-show="ledgerTab==='detail'" id="ledger-detail" role="tabpanel" aria-labelledby="ledger-detail-tab">
-                <div class="ledger-detail-actions"><button v-if="!isReadOnly && !showExpenseForm" type="button" @click="openNewLedgerExpense" class="ledger-primary"><i class="ph-bold ph-plus"></i> 新增支出</button><button type="button" @click="ledgerTab='settlement'" class="ledger-browse ledger-text-button">旅伴・一起結帳</button></div>
+                <div v-if="!isReadOnly && !showExpenseForm" class="ledger-detail-actions"><button type="button" @click="openNewLedgerExpense" class="ledger-primary"><i class="ph-bold ph-plus"></i> 新增支出</button></div>
                 <div v-if="showExpenseForm" id="expense-form" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
                     <div class="space-y-2">
                         <div class="flex justify-between items-center mb-1">
@@ -1398,11 +1399,10 @@
                         <input :disabled="isReadOnly" v-model="newExpense.item" placeholder="項目 (例如: Uber)" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2">
                         <div class="flex gap-2"><select :disabled="isReadOnly" v-model="newExpense.payer" class="flex-1 bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600"><option value="" disabled selected>選擇付款人</option><option v-for="p in participants" :value="p">{{ p }}</option></select><input :disabled="isReadOnly" v-model.number="newExpense.amount" type="number" :placeholder="newExpense.isNTD ? '台幣金額' : '金額'" class="w-24 bg-slate-50 border-none rounded-lg text-sm p-2"></div>
                         <div v-if="!newExpense.isNTD"><input :disabled="isReadOnly" v-model="newExpense.actualTwd" type="number" min="0" step="1" placeholder="實際台幣（選填；留空用匯率估算）" class="w-full bg-slate-50 border-none rounded-lg text-sm p-2"><div class="text-[10px] text-slate-400 mt-1">刷卡入帳後補上實際台幣，分帳就不會因換匯產生尾差。</div></div>
-                        <label class="ledger-field">費用分類<select :disabled="isReadOnly" v-model="newExpense.expensePhase" class="ledger-input"><option value="before">事前費用</option><option value="during">旅途費用</option></select></label>
                         <div v-if="newExpense.splitType==='shared'" class="ledger-allocation">
-                            <label class="ledger-field">這筆分給誰<select :disabled="isReadOnly" v-model="newExpense.allocationMode" @change="newExpense.allocationKeys=[]" class="ledger-input"><option value="all">全體旅伴均分</option><option value="equal">指定旅伴均分</option><option value="amount">指定各自金額</option><option v-if="ledgerGroups.length" value="group">整組一筆・不拆個人</option></select></label>
-                            <label v-if="newExpense.allocationMode==='group'" class="ledger-field">結帳群組<select :disabled="isReadOnly" :value="newExpense.allocationKeys[0] || ''" @change="newExpense.allocationKeys=[$event.target.value]" class="ledger-input"><option value="" disabled>選擇群組</option><option v-for="g in ledgerGroups" :key="g.id" :value="'g:'+g.id">{{ g.name }} · {{ g.representative }} 代表</option></select></label>
-                            <div v-if="['equal','amount'].includes(newExpense.allocationMode)" class="ledger-chips"><button v-for="unit in ledgerContext.units.filter(u=>newExpense.allocationMode==='amount'||u.kind==='person')" :key="unit.key" type="button" @click="toggleAllocationTarget(unit.key)" :aria-pressed="newExpense.allocationKeys.includes(unit.key)" class="ledger-choice" :class="{active:newExpense.allocationKeys.includes(unit.key)}">{{ unit.name }}<span v-if="unit.kind==='group'">（整組）</span></button></div>
+                            <div class="ledger-allocation-header"><span>分攤</span><div class="ledger-split-modes" role="group" aria-label="分攤方式"><button v-for="mode in [{key:'all',label:'全體'},{key:'equal',label:'選人'},{key:'amount',label:'金額'},...(ledgerGroups.length?[{key:'group',label:'整組'}]:[])]" :key="mode.key" type="button" @click="setLedgerAllocationMode(mode.key)" :aria-pressed="newExpense.allocationMode===mode.key" :class="{active:newExpense.allocationMode===mode.key}">{{ mode.label }}</button></div></div>
+                            <div v-if="newExpense.allocationMode==='group'" class="ledger-chips"><button v-for="g in ledgerGroups" :key="g.id" type="button" @click="!isReadOnly && (newExpense.allocationKeys=['g:'+g.id])" :aria-pressed="newExpense.allocationKeys[0]==='g:'+g.id" class="ledger-choice" :class="{active:newExpense.allocationKeys[0]==='g:'+g.id}">{{ g.name }}</button></div>
+                            <div v-if="['equal','amount'].includes(newExpense.allocationMode)" class="ledger-chips"><button v-for="unit in ledgerContext.units.filter(u=>newExpense.allocationMode==='amount'||u.kind==='person')" :key="unit.key" type="button" @click="toggleAllocationTarget(unit.key)" :aria-pressed="newExpense.allocationKeys.includes(unit.key)" class="ledger-choice" :class="{active:newExpense.allocationKeys.includes(unit.key)}"><i v-if="newExpense.allocationKeys.includes(unit.key)" class="ph-bold ph-check" aria-hidden="true"></i>{{ unit.name }}<span v-if="unit.kind==='group'">（整組）</span></button></div>
                             <div v-if="newExpense.allocationMode==='amount'" class="ledger-editor-amounts"><label v-for="key in newExpense.allocationKeys" :key="key" class="ledger-amount-row"><span>{{ ledgerContext.units.find(u=>u.key===key)?.name }}</span><span>{{ newExpense.isNTD?'NT$':settings.currency }} <input :disabled="isReadOnly" type="number" min="0" step="0.01" v-model="newExpense.allocationAmounts[key]" :aria-label="(ledgerContext.units.find(u=>u.key===key)?.name || '')+' 分攤金額'" class="ledger-input"></span></label><div v-if="newExpense.allocationKeys.length" class="text-xs text-slate-600">已分配 {{ newExpense.isNTD?'NT$':settings.currency }} {{ newExpense.allocationKeys.reduce((s,k)=>s+(Number(newExpense.allocationAmounts[k])||0),0).toLocaleString() }} ／ {{ newExpense.amount || 0 }}</div></div>
                         </div>
                         <div v-if="newExpense.splitType==='personal'" class="text-[10px] text-slate-500">個人花費會出現在本人明細與旅程總花費，不計入應收／應付。</div>
@@ -1410,9 +1410,9 @@
                         <div class="flex gap-2"><button @click="cancelExpenseEdit" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">取消</button><button @click="addExpense" class="flex-1 bg-theme-main text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><i :class="editingExpenseTarget ? 'ph-bold ph-check' : 'ph-bold ph-plus'"></i> {{ editingExpenseTarget ? '儲存修改' : '新增費用' }}</button></div>
                     </div>
                 </div>
-                <div class="ledger-chips mb-2"><button type="button" @click="ledgerSelectedAccount='';ledgerSelectedPerson=''" class="ledger-browse ledger-filter" :class="{active:!ledgerSelectedAccount&&!ledgerSelectedPerson}">全部</button><button v-for="account in ledgerContext.accounts.filter(a=>a.key.startsWith('g:'))" :key="account.key" type="button" @click="ledgerSelectedAccount=account.key;ledgerSelectedPerson=''" class="ledger-browse ledger-filter" :class="{active:ledgerSelectedAccount===account.key}">{{ account.name }}</button></div>
-                <div id="ledger-person-filters" class="ledger-chips mb-4"><button v-for="p in ledgerVisiblePeople" :key="p" type="button" @click="ledgerSelectedPerson=ledgerSelectedPerson===p?'':p" class="ledger-browse ledger-filter" :class="{active:ledgerSelectedPerson===p}" :aria-pressed="ledgerSelectedPerson===p">{{ p }}</button></div>
+                <div id="ledger-person-filters" class="ledger-filter-strip mb-2"><button type="button" @click="ledgerSelectedAccount='';ledgerSelectedPerson=''" class="ledger-browse ledger-filter" :class="{active:!ledgerSelectedAccount&&!ledgerSelectedPerson}" :aria-pressed="!ledgerSelectedAccount&&!ledgerSelectedPerson">全部</button><button v-for="account in ledgerContext.accounts.filter(a=>a.key.startsWith('g:'))" :key="account.key" type="button" @click="ledgerSelectedAccount=account.key;ledgerSelectedPerson=''" class="ledger-browse ledger-filter" :class="{active:ledgerSelectedAccount===account.key}" :aria-pressed="ledgerSelectedAccount===account.key">{{ account.name }}</button><button v-for="p in ledgerVisiblePeople" :key="p" type="button" @click="ledgerSelectedPerson=ledgerSelectedPerson===p?'':p" class="ledger-browse ledger-filter" :class="{active:ledgerSelectedPerson===p}" :aria-pressed="ledgerSelectedPerson===p">{{ p }}</button></div>
                 <div class="space-y-3 pb-10">
+                    <p v-if="!expenseSections.length" class="ledger-empty">尚無費用紀錄</p>
                     <template v-for="section in expenseSections" :key="section.key">
                     <h3 class="ledger-section-title">{{ section.label }}</h3>
                      <div v-for="exp in section.items" :key="exp.id || expenses.indexOf(exp)" class="expense-card" :class="{'expense-item-settled': exp.isSettled}" @click="handleExpenseTap(exp, $event)" @touchstart="startLongPress(exp)" @touchmove="clearLongPress" @touchend="clearLongPress" @touchcancel="clearLongPress" @mousedown="startLongPress(exp)" @mouseup="clearLongPress" @mouseleave="clearLongPress">
@@ -1623,8 +1623,8 @@
                 const ledgerRows = computed(() => [...expenses.value.map(e=>ledgerRow(e)), ...days.value.flatMap(d=>(d.items||[]).filter(i=>i.isPaid&&Number(i.ticket)>0).map(i=>ledgerRow(i,true)))]);
                 const splitCalculation = computed(() => FamilyLedger.calculate(participants.value,ledgerGroups.value,ledgerRows.value,ledgerPayments.value));
                 const ledgerMatches = (item,itinerary=false) => FamilyLedger.matches(ledgerRow(item,itinerary),participants.value,ledgerGroups.value,ledgerSelectedPerson.value,ledgerSelectedAccount.value);
-                const ledgerPhase = (item,itinerary=false) => ['before','during'].includes(item.expensePhase) ? item.expensePhase : (itinerary || item.createdDate && days.value[0]?.fullDate && item.createdDate>=days.value[0].fullDate ? 'during' : 'before');
-                const expenseSections = computed(() => ['before','during'].map(key=>({key,label:key==='before'?'事前費用':'旅途費用',items:expenses.value.filter(e=>ledgerPhase(e)===key&&ledgerMatches(e)),itinerary:days.value.flatMap(day=>(day.items||[]).filter(item=>item.isPaid&&Number(item.ticket)>0&&ledgerPhase(item,true)===key&&ledgerMatches(item,true)).map(item=>({day,item})))})));
+                const ledgerPhase = (item,itinerary=false) => FamilyLedger.phase(item,days.value,itinerary?days.value.find(day=>day.items?.includes(item))?.fullDate||'':'');
+                const expenseSections = computed(() => ['before','during','after'].map(key=>({key,label:key==='before'?'事前費用':key==='during'?'旅途費用':'旅後費用',items:expenses.value.filter(e=>ledgerPhase(e)===key&&ledgerMatches(e)),itinerary:days.value.flatMap(day=>(day.items||[]).filter(item=>item.isPaid&&Number(item.ticket)>0&&ledgerPhase(item,true)===key&&ledgerMatches(item,true)).map(item=>({day,item})))})).filter(section=>section.items.length||section.itinerary.length));
                 const ledgerAllocationLabel = item => {
                     if(item.splitType==='personal')return '個人花費';
                     if(!item.allocation)return '全體均分';
@@ -1641,6 +1641,7 @@
                     newExpense.allocationKeys=newExpense.allocationKeys.filter(k=>!ledgerContext.value.units.find(u=>u.key===k)?.members.some(p=>target.members.includes(p)));
                     newExpense.allocationKeys.push(key);
                 };
+                const setLedgerAllocationMode = mode => {if(isReadOnly.value||newExpense.allocationMode===mode)return;newExpense.allocationMode=mode;newExpense.allocationKeys=[];expenseFormError.value='';};
                 const openLedgerGroup = (group=null) => {
                     if(isReadOnly.value)return;
                     ledgerGroupSession={tripId:currentTripId.value,before:group?TripSync.clone(group):null};
@@ -2429,13 +2430,13 @@
                 };
                 const openNewLedgerExpense = () => {
                     if(isReadOnly.value)return;
-                    cancelExpenseEdit();newExpense.expensePhase=days.value[0]?.fullDate&&getTodayDateKey(settings.location)>=days.value[0].fullDate?'during':'before';showExpenseForm.value=true;ledgerTab.value='detail';
+                    cancelExpenseEdit();showExpenseForm.value=true;ledgerTab.value='detail';
                 };
                 let expenseEditSession = null;
                 const cancelExpenseEdit = () => {
                     expenseEditSession = null;
                     editingExpenseTarget.value = null; editingItineraryExpense.value=false; expenseFormError.value = '';
-                    Object.assign(newExpense, {item:'', amount:null, payer:'', isNTD:false, isSettled:false, splitType:'shared', actualTwd:null,allocationMode:'all',allocationKeys:[],allocationAmounts:{},expensePhase:'before'});
+                    Object.assign(newExpense, {item:'', amount:null, payer:'', isNTD:false, isSettled:false, splitType:'shared', actualTwd:null,allocationMode:'all',allocationKeys:[],allocationAmounts:{}});
                     showExpenseForm.value=false;
                 };
                 let expenseTapTimes = new WeakMap(), expenseLongPressed = new WeakSet();
@@ -2496,10 +2497,9 @@
                     const keepEstimate = existing && !hasActual && !newExpense.isNTD && existing.twdAmountSource === 'estimate' && Number(existing.originalAmount ?? existing.amount) === amount && (existing.originalCurrency || settings.currency) === currency;
                     const record = { item:newExpense.item.trim(), amount:Number(finalAmount.toFixed(2)), originalAmount:amount, originalCurrency:currency, payer:newExpense.payer, isSettled:newExpense.splitType === 'shared' && newExpense.isSettled, splitType:newExpense.splitType, twdAmount:newExpense.isNTD ? Math.round(amount) : hasActual ? Number(actual) : keepEstimate ? existing.twdAmount : Math.round(amount * exchangeRate.value), twdAmountSource:newExpense.isNTD || hasActual ? 'actual' : 'estimate' };
                     try {record.allocation=newExpense.splitType==='personal'?null:FamilyLedger.makeAllocation(newExpense.allocationMode,newExpense.allocationKeys||[],newExpense.allocationAmounts||{},amount,participants.value,ledgerGroups.value);}catch(error){expenseFormError.value=error.message;return;}
-                    record.expensePhase=newExpense.expensePhase==='during'?'during':'before';
                     if(!existing){record.id=crypto.randomUUID();record.createdAt=new Date().toISOString();record.createdDate=getTodayDateKey(settings.location);}
                     if(existing&&expenseEditSession?.itinerary){
-                        Object.assign(existing,{activity:record.item,ticket:amount,payer:record.payer,isSettled:record.isSettled,splitType:record.splitType,allocation:record.allocation,expensePhase:record.expensePhase});
+                        Object.assign(existing,{activity:record.item,ticket:amount,payer:record.payer,isSettled:record.isSettled,splitType:record.splitType,allocation:record.allocation});
                         if(hasActual)existing.settlementTwdAmount=Number(actual);else delete existing.settlementTwdAmount;
                     }else if(existing) Object.assign(existing, record); else expenses.value.push(record);
                     if(ledgerSelectedPerson.value && ledgerSelectedPerson.value !== record.payer) ledgerSelectedPerson.value = record.payer;
@@ -2711,7 +2711,7 @@
                     days, currentDayIdx, currentDay, todayDateKey,
                     expenses, newExpense, totalExpense, totalExpenseTwd, estimatedTwdCount, splitCalculation, expenseFormError, ledgerSelectedPerson, editingExpenseTarget,editingItineraryExpense,
                     ledgerTab,showExpenseForm,ledgerSelectedAccount,ledgerGroups,ledgerPayments,ledgerContext,ledgerGroupForm,ledgerGroupError,ledgerGroupOpen,repaymentForm,repaymentOpen,repaymentError,
-                    ledgerMatches,expenseSections,ledgerAllocationLabel,ledgerAllocationDetails,ledgerVisiblePeople,toggleAllocationTarget,openLedgerGroup,saveLedgerGroup,deleteLedgerGroup,openRepayment,saveRepayment,deleteRepayment,openNewLedgerExpense,removeLedgerParticipant,
+                    ledgerMatches,expenseSections,ledgerAllocationLabel,ledgerAllocationDetails,ledgerVisiblePeople,toggleAllocationTarget,setLedgerAllocationMode,openLedgerGroup,saveLedgerGroup,deleteLedgerGroup,openRepayment,saveRepayment,deleteRepayment,openNewLedgerExpense,removeLedgerParticipant,
                     startExpenseEdit, cancelExpenseEdit, deleteExpense, confirmExpenseDeletion, expenseDeleteTarget, handleExpenseTap,
                     expenseTwd, itineraryTwd, isExpenseTwdEstimated, isItineraryTwdEstimated, setExpenseTwdAmount, setItineraryTwdAmount,
                     weather, allTrips, currentTripId, tripOrderList, tripOrder,

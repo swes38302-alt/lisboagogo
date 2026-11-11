@@ -63,6 +63,13 @@ test('empty trip produces no artificial debts',()=>{const c=L.calculate([],[],[]
 test('application script parses and phase grouping retains legacy entries',()=>{
  const html=fs.readFileSync(require('node:path').join(__dirname,'../葡猪.html'),'utf8');new vm.Script([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1]);
  const phase=html.slice(html.indexOf('const ledgerPhase ='),html.indexOf('const expenseSections ='));
- const get=vm.runInNewContext(phase+'\nledgerPhase',{days:{value:[{fullDate:'2026-12-17'}]}});
- assert.equal(get({}),'before');assert.equal(get({createdDate:'2026-12-16'}),'before');assert.equal(get({createdDate:'2026-12-17'}),'during');assert.equal(get({expensePhase:'before',createdDate:'2026-12-20'}),'before');
+ const get=vm.runInNewContext(phase+'\nledgerPhase',{FamilyLedger:L,days:{value:[{fullDate:'2026-12-17'},{fullDate:'2026-12-20'}]}});
+ assert.equal(get({}),'before');assert.equal(get({createdDate:'2026-12-16'}),'before');assert.equal(get({createdDate:'2026-12-17'}),'during');assert.equal(get({expensePhase:'before',createdDate:'2026-12-20'}),'during');
+});
+test('automatic trip period includes both boundary days, excludes later additions and keeps undated legacy entries',()=>{
+ const days=[{fullDate:'2026-12-20'},{fullDate:'2026-12-17'}];
+ for(const date of ['2026-12-17','2026-12-18','2026-12-19','2026-12-20'])assert.equal(L.phase({createdDate:date},days),'during');
+ assert.equal(L.phase({createdDate:'2026-12-16'},days),'before');assert.equal(L.phase({createdDate:'2026-12-21'},days),'after');
+ assert.equal(L.phase({expensePhase:'during'},days),'during');assert.equal(L.phase({},days),'before');assert.equal(L.phase({},days,'2026-12-20'),'during');
+ assert.equal(L.phase({expenseDate:'2026-12-18',createdDate:'2026-12-22'},days),'during');assert.equal(L.phase({createdDate:'2026-02-31'},days),'before');
 });
