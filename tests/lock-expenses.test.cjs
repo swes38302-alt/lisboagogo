@@ -39,9 +39,13 @@ assert(editors.filter(tag => /class="[^"]*vault-browse/.test(tag)).every(tag => 
 assert(main.includes('@touchmove="clearLongPress"'));
 assert(/watch\(isReadOnly, locked => \{ if \(locked\) \{?\s*cancelPendingGestures\(\);/.test(html));
 assert(html.includes('.locked-mode button:not(.unlock-btn):not(.lock-toggle-btn):not(.vault-browse):not(.ledger-browse)'));
-const browseButtons=[...main.matchAll(/<button\b[^>]*class="ledger-browse [^>]*>/g)].map(match=>match[0]);
-assert.equal(browseButtons.length,2);
-assert(browseButtons.every(tag=>/@click="ledgerSelectedPerson=(?:''|p)"/.test(tag)));
-assert(browseButtons.every(tag=>tag.includes(':aria-pressed="ledgerSelectedPerson===')));
-assert(!/<button\b[^>]*@click[^>]*(?:deleteExpense|addExpense|splitType)[^>]*class="ledger-browse/.test(main));
+const browseButtons=[...main.matchAll(/<button\b(?:[^"'>]|"[^"]*"|'[^']*')*>/g)].map(match=>match[0]).filter(tag=>/class="ledger-browse(?: |")/.test(tag));
+assert(browseButtons.length>=7);
+assert(browseButtons.some(tag=>tag.includes("ledgerTab='settlement'")));
+assert(browseButtons.some(tag=>tag.includes('ledgerSelectedPerson=ledgerSelectedPerson===p')));
+assert(browseButtons.some(tag=>tag.includes('ledgerSelectedAccount=account.key')));
+assert(!browseButtons.some(tag=>/(deleteExpense|addExpense|splitType|saveLedgerGroup|saveRepayment|deleteRepayment|toggleAllocationTarget|openNewLedgerExpense)/.test(tag)));
+state.isReadOnly.value=false;
+const targeted={splitType:'shared',isSettled:false,allocation:{version:1,mode:'equal',entries:[{key:'p:A',weight:1}]}};
+state.expenses.value=[targeted];api.startLongPress(targeted);runTimers();assert.equal(targeted.isSettled,false);
 console.log('PASS locked/unlocked settlement, pending holds, trip changes, delete confirmation/cancel, locked delete, disabled fields');
