@@ -57,7 +57,7 @@
     category:g.category,subtag:text(g.subtag),emoji:ICONS[g.category],mapQuery:text(g.mapQuery),
     needsReview:!!g.needsReview,dateHint:g.category==='準備提醒'?dateHint(raw):'',raw,
     urls:[...new Set(members.flatMap(c=>c.urls))],media:members.flatMap(c=>c.media),
-    sourceCards:members,organized:true,sourceCount:members.length,
+    sourceCards:members,organized:true,sourceCount:members.length,city:text(g.city),scope:text(g.scope),tags:Array.isArray(g.tags)?g.tags:[],experiences:Array.isArray(g.experiences)?g.experiences:[],
     cautions:Array.isArray(g.cautions)?g.cautions.filter(v=>typeof v==='string'):[],
     createdAt:members.map(c=>c.createdAt).sort().at(-1),organizedAt:g.organizedAt});
    ids.forEach(id=>used.add(id));
