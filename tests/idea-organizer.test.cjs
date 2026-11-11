@@ -12,3 +12,10 @@ test('consolidation retains a prior unambiguous user pin without deleting aliase
  const placements={[source.id]:p};assert.deepEqual(G.point(c,placements),p);assert.equal(placements[source.id],p);
  placements[c.sourceCards[0].id]={query:G.queryKey(c.sourceCards[0]),lat:35,lon:127};assert.equal(G.point(c,placements),null);
 });
+test('one screenshot can project separate places with stable IDs, distinct addresses and retained source',()=>{
+ const photo={id:'photo-a',available:true},source=[{...items[0],raw:'三家店的原始分享',media:[photo]}];
+ const places=['a','b','c'].map(id=>({id,title:'店家'+id,city:'濟州島',category:'美食',summary:'餐點'+id,address:'地址'+id,mapQuery:'查詢'+id,tags:['美食／餐廳'],urls:[],cautions:[]}));
+ const g={...group,sources:[{id:'msg-1'}],places},before=JSON.stringify(source),cards=M.views(source,{}, {groups:[g]});
+ assert.equal(cards.length,3);assert.equal(new Set(cards.map(c=>c.id)).size,3);assert.deepEqual(cards.map(c=>c.address),['地址a','地址b','地址c']);assert.ok(cards.every(c=>c.raw.includes('三家店的原始分享')&&c.media[0]===photo));assert.equal(JSON.stringify(source),before);
+ const reordered=M.views(source,{}, {groups:[{...g,places:[...places].reverse()}]});assert.equal(reordered.find(c=>c.title==='店家a').id,cards[0].id);
+});

@@ -52,14 +52,21 @@
    const ids=g.sources.map(s=>s.id),members=ids.map(id=>byId.get(id));
    if(new Set(ids).size!==ids.length||members.some(c=>!c||used.has(c.original.id))||!ids.includes(g.anchorId))continue;
    const anchor=byId.get(g.anchorId),text=v=>typeof v==='string'?v:'',raw=members.map(c=>`${c.original.sender||'TG 分享'}\n${c.raw}`).join('\n\n───\n\n');
-   grouped.push({...anchor,title:g.title,summary:g.summary,address:text(g.address),
+   const card={...anchor,title:g.title,summary:g.summary,address:text(g.address),
     location:[...new Set([g.country,g.city].filter(Boolean))].join('・'),countryId:countryId(g.country,world),
     category:g.category,subtag:text(g.subtag),emoji:ICONS[g.category],mapQuery:text(g.mapQuery),
     needsReview:!!g.needsReview,dateHint:g.category==='準備提醒'?dateHint(raw):'',raw,
     urls:[...new Set(members.flatMap(c=>c.urls))],media:members.flatMap(c=>c.media),
     sourceCards:members,organized:true,sourceCount:members.length,city:text(g.city),scope:text(g.scope),tags:Array.isArray(g.tags)?g.tags:[],experiences:Array.isArray(g.experiences)?g.experiences:[],
     cautions:Array.isArray(g.cautions)?g.cautions.filter(v=>typeof v==='string'):[],
-    createdAt:members.map(c=>c.createdAt).sort().at(-1),organizedAt:g.organizedAt});
+    createdAt:members.map(c=>c.createdAt).sort().at(-1),organizedAt:g.organizedAt};
+   const places=Array.isArray(g.places)?g.places.filter(p=>p&&/^[a-z0-9][a-z0-9-]{0,59}$/.test(p.id||'')&&typeof p.title==='string'&&KINDS.includes(p.category)):[];
+   if(places.length){const seenPlaces=new Set();for(const p of places){if(seenPlaces.has(p.id))continue;seenPlaces.add(p.id);
+    grouped.push({...card,id:card.id+'--'+p.id,parentId:card.id,placeId:p.id,title:p.title,summary:text(p.summary),city:text(p.city)||card.city,scope:'city',
+     location:[g.country,p.city||g.city].filter(Boolean).join('・'),address:text(p.address),mapQuery:text(p.mapQuery),category:p.category,subtag:text(p.subtag),emoji:ICONS[p.category],
+     tags:Array.isArray(p.tags)?p.tags:[],urls:[...new Set([...(Array.isArray(p.urls)?p.urls:[]),...card.urls])],cautions:Array.isArray(p.cautions)?p.cautions:[],
+     experiences:card.experiences.filter(r=>r.place===p.title),sourceCards:[]});
+   }}else grouped.push(card);
    ids.forEach(id=>used.add(id));
   }
   return [...base.filter(c=>!used.has(c.original.id)),...grouped];
